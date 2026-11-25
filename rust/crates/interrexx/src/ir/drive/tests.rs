@@ -877,10 +877,9 @@ fn a_reply_value_runs_from_its_compiled_ops() {
 
 /// A `RAISE`'s expressions run as the chunk's own ops: a call in one resolves
 /// at its call site once and answers from the site on every later
-/// invocation, which the walked expression never does. The check each part
-/// makes comes before the next expression is evaluated: an invalid `SYNTAX`
-/// number before `DESCRIPTION`, and `ADDITIONAL`'s conversion before
-/// `RETURN`, so a call in the later expression does not run.
+/// invocation, which the walked expression never does. A bad `SYNTAX`
+/// number is refused before `DESCRIPTION` runs. An `ADDITIONAL` array
+/// request waits for `RETURN`'s expression.
 #[test]
 fn a_raise_runs_its_expressions_from_its_compiled_ops() {
     let before = call_site_hits();
@@ -918,7 +917,7 @@ fn a_raise_runs_its_expressions_from_its_compiled_ops() {
             &b"signal on syntax name zs\nraise syntax 40.1 additional (.nil) \
                return (zf('r'))\nzs: say condition('o')~code\nexit\n\
                ::routine zf\n  say 'zf ran' arg(1)\n  return 1\n"[..],
-            "98.939\n",
+            "zf ran r\n98.939\n",
         ),
     ] {
         let outcome = execute(

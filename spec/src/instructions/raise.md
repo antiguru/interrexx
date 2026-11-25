@@ -404,11 +404,12 @@ subclass of `Array` gives that instance itself, whose items the message
 names. The null object `.nil` and an instance of the class
 Object cannot be made an array, and an ADDITIONAL with such a value raises
 `SYNTAX 98.939` in the raising code, as [the SYNTAX rule](r:instr.raise.here)
-says; whether an object of any other class is converted is not specified. The
-values of the array are what the message of the error names, and the text of
-the message is not specified. Every other
-condition has the entry only when the clause gave one, as [the rule for the
-options](r:instr.raise.additional) says.
+says; whether an object of any other class is converted is not specified. RAISE
+requests the array after evaluating the RETURN or EXIT expression, as [the
+operand order](r:instr.raise.order) specifies for the expressions. The values
+of the array are what the message of the error names, and the text of the
+message is not specified. Every other condition has the entry only when the
+clause gave one, as [the rule for the options](r:instr.raise.additional) says.
 
 ```rexx
 do i = 1 to 6
@@ -471,6 +472,26 @@ own: say 'caught' condition('o')~code
 ```output
 caught 98.939
 caught 98.939
+```
+
+```rexx
+signal on syntax name caught
+operand = .info~new
+raise syntax 40.1 additional (show('additional', operand)) return (show('return', 1))
+caught: say 'caught' condition('o')~code condition('o')~additional[1]
+exit
+show: say arg(1); return arg(2)
+::class info
+::method makeArray
+  say 'makeArray'
+  return .array~of('detail')
+```
+
+```output
+additional
+return
+makeArray
+caught 40.1 detail
 ```
 
 ## The options

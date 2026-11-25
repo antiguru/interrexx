@@ -54,15 +54,17 @@ impl ValidOps {
                 | Op::ExecValue { src, .. }
                 | Op::ExecWith { src, .. }
                 | Op::UseArg(UseArgOp::BindDefault { src, .. }) => inside(src),
-                // An item's register, or an omitted position; every other
-                // part's pair of registers.
+                // An item's register, or an omitted position.
                 Op::RaisePart {
                     part: crate::run::RaisePart::Item,
                     src,
                     ..
                 } => arg(src),
                 Op::RaisePart {
-                    part: crate::run::RaisePart::Array | crate::run::RaisePart::Result,
+                    part:
+                        crate::run::RaisePart::Additional
+                        | crate::run::RaisePart::Array
+                        | crate::run::RaisePart::Result,
                     src,
                     ..
                 } => inside(src),
