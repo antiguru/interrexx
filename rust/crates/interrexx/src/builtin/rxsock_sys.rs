@@ -119,10 +119,8 @@ pub(crate) fn poll(
     }
     let timeout = timeout.map(|left| Timespec {
         tv_sec: i64::try_from(left.as_secs()).unwrap_or(i64::MAX),
-        tv_nsec: left
-            .subsec_nanos()
-            .try_into()
-            .expect("nanoseconds fit in Timespec"),
+        // Subsecond nanoseconds fit even where Timespec uses a signed i32.
+        tv_nsec: left.subsec_nanos() as _,
     });
     with_sockets(&numbers, |sockets| {
         let mut descriptors: Vec<_> = sockets
