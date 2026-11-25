@@ -1294,6 +1294,11 @@ fn save(core: &mut Core, names: Option<&[&str]>) -> Reply {
     )
 }
 
+/// A macro is added, replaced, found, reordered and dropped. Any position is
+/// stored as given: measured, the oracle's `RexxAddMacro` and
+/// `RexxReorderMacro` answer 0 for positions 0, 3 and 65537 as for 1 and 2,
+/// and its `RexxQueryMacro` answers each through its `unsigned short`, so
+/// 65537 reads back as 1, as `librexxapi`'s does (#1054).
 #[test]
 fn macros_add_replace_query_reorder_drop() {
     let mut core = Core::new();

@@ -752,6 +752,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "interrexx-cast"
+version = "0.1.0"
+
+[[package]]
 name = "interrexx-classes"
 version = "0.1.0"
 dependencies = [

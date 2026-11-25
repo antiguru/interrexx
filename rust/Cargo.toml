@@ -12,6 +12,7 @@ repository = "https://github.com/antiguru/interrexx"
 [workspace.dependencies]
 interrexx = { path = "crates/interrexx", version = "0.1.0" }
 interrexx-api = { path = "crates/interrexx-api", version = "0.1.0" }
+interrexx-cast = { path = "crates/interrexx-cast", version = "0.1.0" }
 interrexx-classes = { path = "crates/interrexx-classes", version = "0.1.0" }
 interrexx-core = { path = "crates/interrexx-core", version = "0.1.0" }
 interrexx-inventory = { path = "crates/interrexx-inventory", version = "0.1.0" }
