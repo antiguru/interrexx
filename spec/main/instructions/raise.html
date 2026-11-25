@@ -532,11 +532,12 @@ subclass of <code>Array</code> gives that instance itself, whose items the messa
 names. The null object <code>.nil</code> and an instance of the class
 Object cannot be made an array, and an ADDITIONAL with such a value raises
 <code>SYNTAX 98.939</code> in the raising code, as <a href="#r-instr.raise.here">the SYNTAX rule</a>
-says; whether an object of any other class is converted is not specified. The
-values of the array are what the message of the error names, and the text of
-the message is not specified. Every other
-condition has the entry only when the clause gave one, as <a href="#r-instr.raise.additional">the rule for the
-options</a> says.</p>
+says; whether an object of any other class is converted is not specified. RAISE
+requests the array after evaluating the RETURN or EXIT expression, as <a href="#r-instr.raise.order">the
+operand order</a> specifies for the expressions. The values
+of the array are what the message of the error names, and the text of the
+message is not specified. Every other condition has the entry only when the
+clause gave one, as <a href="#r-instr.raise.additional">the rule for the options</a> says.</p>
 <pre><code class="language-rexx">do i = 1 to 6
   call go 'R'i
 end
@@ -591,6 +592,22 @@ own: say 'caught' condition('o')~code
 </code></pre>
 <pre><code class="language-output">caught 98.939
 caught 98.939
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name caught
+operand = .info~new
+raise syntax 40.1 additional (show('additional', operand)) return (show('return', 1))
+caught: say 'caught' condition('o')~code condition('o')~additional[1]
+exit
+show: say arg(1); return arg(2)
+::class info
+::method makeArray
+  say 'makeArray'
+  return .array~of('detail')
+</code></pre>
+<pre><code class="language-output">additional
+return
+makeArray
+caught 40.1 detail
 </code></pre>
 <h2 id="the-options"><a class="header" href="#the-options">The options</a></h2>
 <div class="rule" id="r-instr.raise.description"><a href="#r-instr.raise.description">[instr.raise.description]</a></div>
