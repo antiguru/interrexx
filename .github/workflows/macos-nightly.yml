@@ -27,11 +27,42 @@ defaults:
     working-directory: rust
 
 jobs:
+  # The nightly runs only when main has moved since the last scheduled run
+  # (`scripts/nightly-changed.sh`); a dispatch or a pull request always runs. On Linux, so a
+  # night with nothing new takes no macOS runner.
+  decide:
+    name: decide
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      # Reads this workflow's earlier runs.
+      actions: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'schedule'
+        with:
+          submodules: false
+      - id: decide
+        working-directory: .
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$EVENT" = schedule ]; then
+            scripts/nightly-changed.sh macos-nightly.yml >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # The `standalone` profile, as the Linux shards run it, on a checkout without the submodule.
   # The profile reads only the ooTest and documentation checkouts, which this job fetches at the
   # revisions `scripts/setup-third-party.sh` pins.
   standalone:
     name: macOS standalone tests
+    needs: decide
+    if: needs.decide.outputs.run == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7

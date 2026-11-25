@@ -179,8 +179,9 @@ From `rust/`, under the memory cap:
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under
   nextest: the group runner's quiet-machine and row bounds hold within one process. Release
   compiles out `debug_assert`, which carries some of the interpreter's invariants. CI runs the
-  gate this way in `.github/workflows/gate.yml`: nightly on main, on a change to the pinned
-  ooRexx or `scripts/setup-third-party.sh`, on a pull request labelled `gate`, and by hand.
+  gate this way in `.github/workflows/gate.yml`: nightly on main when main has moved since the
+  last nightly, on a change to the pinned ooRexx or `scripts/setup-third-party.sh`, on a pull
+  request labelled `gate`, and by hand.
 * `cargo test --workspace --no-fail-fast` runs the same tests, one binary after another, and
   stays supported. `cargo nextest run -p interrexx --test NAME` or `-E 'test(NAME)'` runs a
   subset; `cargo nextest list` shows what a filter matches.

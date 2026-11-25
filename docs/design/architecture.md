@@ -256,8 +256,8 @@ to compile for any other target.
 * On a pull request, the `macos-build` CI job builds, links and lints every target on macOS and
   is part of the required gate; it runs the `host` module's unit tests, which reach the raw calls
   only Apple's arms make, and the other tests run on Linux. The `standalone` profile runs on macOS
-  nightly (`.github/workflows/macos-nightly.yml`), which fetches the ooTest and documentation
-  checkouts itself and needs nothing of `third_party/`.
+  nightly (`.github/workflows/macos-nightly.yml`) when main has moved since the last nightly;
+  it fetches the ooTest and documentation checkouts itself and needs nothing of `third_party/`.
 
 ## Standing decisions
 

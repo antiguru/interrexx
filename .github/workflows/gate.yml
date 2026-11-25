@@ -23,15 +23,20 @@ defaults:
 jobs:
   # A pull request runs the gate when it carries the `gate` label or changes the pinned ooRexx
   # or its build script. Adding a label runs it only when that label is `gate`, so another label
-  # neither starts a second run nor cancels one. Every other event runs it.
+  # neither starts a second run nor cancels one. The nightly runs it only when main has moved
+  # since the last scheduled run (`scripts/nightly-changed.sh`). Every other event runs it.
   decide:
     name: decide
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      # The nightly reads this workflow's earlier runs.
+      actions: read
     outputs:
       run: ${{ steps.decide.outputs.run }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'schedule'
         with:
           submodules: false
           fetch-depth: 0
@@ -44,8 +49,11 @@ jobs:
           LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'gate') }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "$EVENT" = pull_request ] && [ "$ACTION" = labeled ] && [ "$ADDED" != gate ]; then
+          if [ "$EVENT" = schedule ]; then
+            scripts/nightly-changed.sh gate.yml >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" = pull_request ] && [ "$ACTION" = labeled ] && [ "$ADDED" != gate ]; then
             echo "run=false" >> "$GITHUB_OUTPUT"
           elif [ "$EVENT" != pull_request ] || [ "$LABELLED" = true ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
