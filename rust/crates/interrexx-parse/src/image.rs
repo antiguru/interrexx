@@ -10,9 +10,10 @@
 //! parse the text instead.
 //!
 //! The image of the interpreter's own library is read without that check, by
-//! [`program_from_static_image`] and the lazy body reader: the build wrote it from
-//! a parse that had already validated its arenas, and the check would read
-//! every body at startup, which that image exists to avoid.
+//! [`program_from_static_image`] and the lazy body reader: the build writes it
+//! with [`checked_program_image`], which runs the check in every profile, and
+//! the check would read every body at startup, which that image exists to
+//! avoid.
 
 use interrexx_cast::{CastFrom, CastTruncate};
 use std::collections::BTreeMap;
@@ -20,7 +21,9 @@ use std::ops::Range;
 
 use crate::Program;
 use crate::ast::*;
-use crate::exprs::{BytesRange, CallTarget, EdgeRange, ExprId, Exprs, Node, NodeKind};
+use crate::exprs::{
+    BytesRange, CallTarget, EdgeRange, ExprId, Exprs, Inconsistent, Node, NodeKind,
+};
 use crate::selector::{Selector, SelectorTable};
 use crate::source::{ProgramSource, SourceKind};
 use crate::token::{Operator, SymbolId, SymbolTable};
@@ -45,6 +48,18 @@ pub fn program_image(program: &Program) -> Vec<u8> {
     program.main.put(&mut out);
     program.directives.put(&mut out);
     out.0
+}
+
+/// [`program_image`] for an image that will be read without the arena check,
+/// such as one built into the interpreter: the check runs here instead.
+///
+/// # Errors
+///
+/// The first arena invariant `program` breaks, as [`Program::check`] reports
+/// it, and then no image is written.
+pub fn checked_program_image(program: &Program) -> Result<Vec<u8>, Inconsistent> {
+    program.check()?;
+    Ok(program_image(program))
 }
 
 /// The program `image` holds, given the text it was parsed from, or `None`

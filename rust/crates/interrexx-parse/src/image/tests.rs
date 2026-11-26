@@ -1,7 +1,8 @@
 use super::{
-    FORMAT, MAGIC, fingerprint, program_from_image, program_from_static_image, program_image,
+    FORMAT, MAGIC, checked_program_image, fingerprint, program_from_image,
+    program_from_static_image, program_image,
 };
-use crate::exprs::{ExprId, NodeKind};
+use crate::exprs::{ExprId, Inconsistent, NodeKind};
 use crate::token::SymbolId;
 use crate::{
     CodeBody, ConstantValue, DirectiveKind, InstructionKind, Program, parse_known_program,
@@ -371,6 +372,21 @@ fn an_image_with_a_byte_changed_never_panics_the_reader() {
             let _ = program_from_image(&changed, ARENA_TEXT);
         }
     }
+}
+
+/// An image that will be read without the arena check is not written for a
+/// program whose arena is inconsistent; a consistent one gets the image
+/// [`program_image`] writes.
+#[test]
+fn a_checked_image_is_refused_for_an_inconsistent_arena() {
+    let mut program = parse_program(ARENA_TEXT.to_vec()).expect("parses");
+    assert_eq!(checked_program_image(&program), Ok(program_image(&program)));
+    let root = say_root(&program.main);
+    program.main.exprs.node_mut(root).parent = Some(ExprId::from_index(0));
+    assert_eq!(
+        checked_program_image(&program),
+        Err(Inconsistent::Link { node: root.index() })
+    );
 }
 
 /// The image built into the interpreter is not validated: a program read

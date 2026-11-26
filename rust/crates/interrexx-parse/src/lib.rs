@@ -45,7 +45,9 @@ pub use exprs::{
     Args, Bounds, Branches, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs,
     Inconsistent, Node, NodeKind, Target,
 };
-pub use image::{program_from_image, program_from_static_image, program_image};
+pub use image::{
+    checked_program_image, program_from_image, program_from_static_image, program_image,
+};
 pub use scanner::{ResourceBody, Scanned, scan};
 pub use selector::Selector;
 pub use source::{ProgramSource, SourceKind};

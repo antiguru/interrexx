@@ -57,10 +57,15 @@ fn main() {
         .unwrap_or_else(|e| panic!("cannot write {}: {e}", built.display()));
     // The program parsed now, so that starting the interpreter does not parse
     // it again. A program that does not parse gets an empty image, which is
-    // refused at startup, where the parse then reports the error.
-    let image = interrexx_parse::parse_known_program(program)
-        .map(|parsed| interrexx_parse::program_image(&parsed))
-        .unwrap_or_default();
+    // refused at startup, where the parse then reports the error. The image is
+    // read without the arena check, so a parse that breaks an arena invariant
+    // fails the build here, in every profile.
+    let image = match interrexx_parse::parse_known_program(program) {
+        Ok(parsed) => interrexx_parse::checked_program_image(&parsed).unwrap_or_else(|refusal| {
+            panic!("the library's parse breaks an arena invariant: {refusal:?}")
+        }),
+        Err(_) => Vec::new(),
+    };
     let imaged = out.join("library.image");
     std::fs::write(&imaged, &image)
         .unwrap_or_else(|e| panic!("cannot write {}: {e}", imaged.display()));

@@ -143,8 +143,9 @@ memory it runs under.
 ### Invariants
 
 The arena of a body satisfies these after the body is parsed, and a validator checks all of them:
-in debug builds after each body is parsed, in every build when a body is read from an image (see
-[The image](#the-image)), and in a test over the whole corpus.
+in debug builds after each body is parsed, in every build when a program image is read and when
+the built-in library's image is built (see [The image](#the-image)), and in a test over the whole
+corpus.
 
 1. **Children before parents.** Every child's id is less than its parent's.
 2. **A subtree is a contiguous range, in evaluation order.** The nodes of the subtree rooted at `n`
@@ -589,13 +590,13 @@ against the vectors it has read, then runs the invariant validator on each body'
 parent or position links disagree is refused like any image that does not fit. The validator
 reads through checked indices only, so such an arena cannot make it panic.
 `program_from_image` decodes every body before it answers, so a library caller gets `None` for
-an inconsistent arena and parses its text. The built-in image leaves each body encoded until it
-is first read (`Body`), and that decode skips the validator, as it already skips the text
-fingerprint for a built-in image: the image is the build's own output, written from a validated
-parse, so a run pays nothing for a check whose failure would be a defect of the build. The test
-that reads the built-in image through `program_from_image`
-(`the_librarys_embedded_image_reads_back_as_it_parses`) decodes, and so validates, every body,
-which is where such a defect fails: in CI, not in a program.
+an inconsistent arena and parses its text. **Built-in bodies are checked when the library image
+is built, program images when read.** The built-in image leaves each body encoded until it is
+first read (`Body`), and that decode skips the validator, as it already skips the text
+fingerprint for a built-in image, so a run pays nothing for it. Instead `interrexx-lib`'s build
+script writes the image through `checked_program_image`, which runs the validator over every body
+and `::CONSTANT` expression in every profile, release included, and fails the build with the
+refusal where one breaks an invariant.
 
 ## What it enables
 
