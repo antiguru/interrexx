@@ -1825,7 +1825,9 @@ enum Primitive {
 /// [`Interp::lookup_behaviour`] answered for the site's name, with no scope
 /// override, against `behaviour` while the class graph stood at `epoch`. The
 /// lookup reads nothing else, so the answer holds while both match. The
-/// receiver's own methods are asked on every send, ahead of the memo.
+/// receiver's own methods are asked on every send, ahead of the memo. Where
+/// the name missed, the memo keeps the lookup of `UNKNOWN` in the same
+/// behaviour instead ([`MemoTarget::Unknown`]), which reads the same graph.
 #[derive(Copy, Clone)]
 pub(crate) struct SendMemo {
     epoch: interrexx_classes::Epoch,
@@ -1849,6 +1851,11 @@ enum MemoTarget {
     /// Anything else, so that a native method's send does not ask the
     /// tables again on every send to learn it is none of the above.
     Other,
+    /// The site's name resolves to nothing in the memo's behaviour, and the
+    /// memo's resolution is the behaviour's `UNKNOWN` (r[class.methods.unknown]).
+    /// The method tables do not decide either answer, so `rows` does not
+    /// cover this target.
+    Unknown,
 }
 
 /// A memo's `::METHOD` body: what [`Interp::invocable`] answered and the
@@ -2466,8 +2473,10 @@ impl Interp {
 
     /// [`Interp::lookup_behaviour`] with no scope override, answered from
     /// `memo` while the class graph's epoch and the behaviour are the ones it
-    /// was filled under, with the memo's body where it still holds. A miss is
-    /// not kept: it goes on to `UNKNOWN`, which is a send of its own.
+    /// was filled under, with the memo's body where it still holds. A miss
+    /// answers the behaviour's `UNKNOWN` as a [`MemoTarget::Unknown`], and is
+    /// kept only where there is one: one that finds no `UNKNOWN` either
+    /// answers `None` and raises.
     #[inline]
     fn lookup_memoized(
         &mut self,
@@ -2481,13 +2490,28 @@ impl Interp {
             .filter(|kept| kept.epoch == epoch && kept.behaviour == behaviour);
         let rows = self.method_rows();
         if let Some(kept) = kept
-            && kept.rows == rows
+            && (kept.rows == rows || matches!(kept.target, MemoTarget::Unknown))
         {
+            debug_assert!(
+                !matches!(kept.target, MemoTarget::Unknown)
+                    || (self.lookup_behaviour(behaviour, name, None).is_none()
+                        && self.lookup_behaviour(behaviour, UNKNOWN, None).is_some_and(
+                            |unknown| {
+                                unknown.scope == kept.resolution.scope
+                                    && unknown.method == kept.resolution.method
+                            }
+                        )),
+                "a send memo kept a miss and its UNKNOWN after the class graph changed \
+                 them without a new epoch"
+            );
             return Some((kept.resolution, kept.target));
         }
         let resolution = match kept {
             Some(kept) => kept.resolution,
-            None => self.lookup_behaviour(behaviour, name, None)?,
+            None => match self.lookup_behaviour(behaviour, name, None) {
+                Some(resolution) => resolution,
+                None => return self.memoize_miss(behaviour, memo, epoch, rows),
+            },
         };
         let target = self.memo_target(behaviour, resolution);
         memo.set(Some(SendMemo {
@@ -2498,6 +2522,28 @@ impl Interp {
             rows,
         }));
         Some((resolution, target))
+    }
+
+    /// [`Interp::lookup_memoized`] for a name `behaviour` does not answer:
+    /// its `UNKNOWN`, kept in `memo`.
+    #[cold]
+    #[inline(never)]
+    fn memoize_miss(
+        &mut self,
+        behaviour: Behaviour,
+        memo: &Cell<Option<SendMemo>>,
+        epoch: interrexx_classes::Epoch,
+        rows: u64,
+    ) -> Option<(Resolution, MemoTarget)> {
+        let resolution = self.lookup_behaviour(behaviour, UNKNOWN, None)?;
+        memo.set(Some(SendMemo {
+            epoch,
+            behaviour,
+            resolution,
+            target: MemoTarget::Unknown,
+            rows,
+        }));
+        Some((resolution, MemoTarget::Unknown))
     }
 
     /// The [`MemoTarget`] for `resolution` in `behaviour`: what it runs, where
@@ -2867,9 +2913,15 @@ impl Interp {
     /// The class an arbitrary value is an
     /// instance of, or `None` for a value this crate builds no class for.
     pub(crate) fn class_of_value(&mut self, value: ObjRef) -> Option<ObjRef> {
-        match self.receiver_behaviour(value).ok()? {
-            Behaviour::Instance { owner, .. } => Some(owner),
-            Behaviour::ClassSide(class) => Some(self.classes().class_of(class)),
+        let behaviour = self.receiver_behaviour(value).ok()?;
+        Some(self.class_of_behaviour(behaviour))
+    }
+
+    /// The class an object whose behaviour is `behaviour` belongs to.
+    fn class_of_behaviour(&mut self, behaviour: Behaviour) -> ObjRef {
+        match behaviour {
+            Behaviour::Instance { owner, .. } => owner,
+            Behaviour::ClassSide(class) => self.classes().class_of(class),
         }
     }
 
@@ -4378,6 +4430,21 @@ impl Interp {
                 Some((resolution, MemoTarget::Accessor(generated))) => {
                     return self.begin_memo_accessor(resolution, generated, receiver, name, args);
                 }
+                Some((unknown, MemoTarget::Unknown)) => {
+                    // The receiver's own methods come ahead of the memo for
+                    // `UNKNOWN` as they did for the name, as in
+                    // [`Interp::lookup`].
+                    let unknown = match self.own_lookup(receiver, UNKNOWN, None) {
+                        Some(own) => own,
+                        None => Some(unknown),
+                    };
+                    let Some(unknown) = unknown else {
+                        return Err(self.nomethod(receiver, name, Miss::NoMethod));
+                    };
+                    return self
+                        .begin_unknown(receiver, Some(behaviour), name, args, unknown, true)
+                        .map(|ran| ran.map_or(Started::Entered, Started::Ran));
+                }
                 found => found.map(|(resolution, _)| resolution),
             },
         };
@@ -4433,7 +4500,23 @@ impl Interp {
         let Some(resolution) = self.lookup(receiver, UNKNOWN, None) else {
             return Err(self.nomethod(receiver, name, miss));
         };
-        let frameless = self.frameless_unknown(resolution, receiver);
+        self.begin_unknown(receiver, None, name, args, resolution, begun)
+    }
+
+    /// [`Interp::begin_unknown_or_nomethod`] once `UNKNOWN` has resolved to
+    /// `resolution` for the receiver, whose behaviour is `behaviour` where
+    /// the caller has it.
+    #[inline(never)]
+    fn begin_unknown(
+        &mut self,
+        receiver: ObjRef,
+        behaviour: Option<Behaviour>,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        resolution: Resolution,
+        begun: bool,
+    ) -> Result<Option<Option<ObjRef>>, Failure> {
+        let frameless = self.frameless_unknown(resolution, receiver, behaviour);
         // A read of an entry a `Directory` or `StringTable` of the base class
         // answers through its primitive `UNKNOWN` uses neither the forwarded
         // arguments nor the message name as an object, so neither is built.
@@ -4513,7 +4596,12 @@ impl Interp {
     /// without a level of its own: `processUnknown` calls it directly for a
     /// `Stem`, a `VariableReference`, and a `Directory` or `StringTable` of
     /// the base class.
-    fn frameless_unknown(&mut self, resolution: Resolution, receiver: ObjRef) -> Option<Frameless> {
+    fn frameless_unknown(
+        &mut self,
+        resolution: Resolution,
+        receiver: ObjRef,
+        behaviour: Option<Behaviour>,
+    ) -> Option<Frameless> {
         self.object_model().natives.get(resolution.method)?;
         let named = self.frameless_classes();
         let scope = Some(resolution.scope);
@@ -4526,7 +4614,11 @@ impl Interp {
         if !(named.directory == scope || named.string_table == scope) {
             return None;
         }
-        (self.class_of_value(receiver) == Some(resolution.scope)).then_some(Frameless::Hash)
+        let class = match behaviour {
+            Some(behaviour) => Some(self.class_of_behaviour(behaviour)),
+            None => self.class_of_value(receiver),
+        };
+        (class == Some(resolution.scope)).then_some(Frameless::Hash)
     }
 
     /// [`FramelessClasses`], resolved again whenever the class registry's

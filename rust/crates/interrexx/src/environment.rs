@@ -488,26 +488,68 @@ impl Interp {
     /// class lookup reads the running package's tables and its parents', the
     /// REXX package's, and the class registry's names, and a write to any of
     /// them moves one or the other (the registry's names change only with a
-    /// class defined or collected, each of which moves the epoch). What
-    /// follows the class lookup is never kept: it searches directories whose
-    /// entries change with no stamp to say so.
+    /// class defined or collected, each of which moves the epoch).
+    ///
+    /// Past a class lookup that found none, the memo also keeps an item the
+    /// package local, `.local` or `.environment` held ([`EnvEntry`]), while no
+    /// hash store has been written. Those directories are this interpreter's
+    /// own, every change to their entries, methods or unknown method writes a
+    /// store or moves its generation, and the package local's miss is
+    /// answered under the same two counters
+    /// ([`Interp::package_local_symbol`]). What a security manager or a
+    /// stored method answered is never kept, and no item is kept while the
+    /// running package has a manager to ask: installing one writes the
+    /// package's data, which moves [`Interp::class_lookup_stamp`].
     pub(crate) fn dot_variable_memoized(
         &mut self,
         dotted: &[u8],
         memo: &Cell<Option<EnvMemo>>,
     ) -> Result<ObjRef, Failure> {
-        let known = memo
-            .get()
-            .filter(|held| {
-                held.stamp == self.class_lookup_stamp
-                    && held.epoch == self.classes().epoch()
-                    && held.program == self.running_program()
-            })
-            .map(|held| held.class);
-        if let Some(Some(class)) = known {
-            return Ok(class);
+        let known = memo.get().filter(|held| {
+            held.stamp == self.class_lookup_stamp
+                && held.epoch == self.classes().epoch()
+                && held.program == self.running_program()
+        });
+        if let Some(held) = known {
+            if let Some(class) = held.class {
+                return Ok(class);
+            }
+            if let Some(entry) = held.entry
+                && entry.generation == self.store_generation
+                && entry.writes == self.store_writes
+            {
+                debug_assert!(
+                    unshared!(self, self.env_entry_recomputed(dotted, entry.value)),
+                    "the environment symbol memo answered {dotted:?}, so a write to a \
+                     directory it reads moved neither store_generation nor store_writes"
+                );
+                return Ok(entry.value);
+            }
         }
-        self.dot_variable_in(dotted, Some(memo), known)
+        self.dot_variable_in(dotted, Some(memo), known.map(|held| held.class))
+    }
+
+    /// Whether [`Interp::dot_variable_in`]'s directory steps still answer
+    /// `value` for `dotted` as a directory's own item.
+    fn env_entry_recomputed(&mut self, dotted: &[u8], value: ObjRef) -> bool {
+        let bare = dotted.strip_prefix(b".").unwrap_or(dotted);
+        if self.package_locals
+            && let Some(program) = self.running_program()
+            && !matches!(
+                self.package_local_probe(program, bare),
+                Ok(hash::DirectoryEntry::Absent)
+            )
+        {
+            return false;
+        }
+        matches!(
+            self.directory_read(
+                &[EnvScope::Local, EnvScope::Environment],
+                bare,
+                &env_seam::Access::Resolve,
+            ),
+            Ok((hash::DirectoryEntry::Found(found), true)) if found == value
+        )
     }
 
     /// The one body behind [`Interp::dot_variable`] and
@@ -536,6 +578,7 @@ impl Interp {
                         stamp: self.class_lookup_stamp,
                         epoch: self.classes().epoch(),
                         class,
+                        entry: None,
                     }));
                 }
                 class
@@ -545,6 +588,8 @@ impl Interp {
             return Ok(class);
         }
 
+        let generation = self.store_generation;
+        let writes = self.store_writes;
         if self.package_locals
             && let Some(program) = self.running_program()
         {
@@ -557,16 +602,35 @@ impl Interp {
             }
         }
 
-        match self.directory_lookup(
+        match self.directory_read(
             &[EnvScope::Local, EnvScope::Environment],
             bare,
             &env_seam::Access::Resolve,
         )? {
-            hash::DirectoryEntry::Found(found) => return Ok(found),
-            hash::DirectoryEntry::Owed => {
+            (hash::DirectoryEntry::Found(found), stored) => {
+                // Kept only where nothing wrote a store during the search,
+                // so the counters it is kept under are the ones it read.
+                if stored
+                    && let Some(memo) = memo
+                    && let Some(mut held) = memo.get()
+                    && held.class.is_none()
+                    && generation == self.store_generation
+                    && writes == self.store_writes
+                    && self.package_security_manager().is_none()
+                {
+                    held.entry = Some(EnvEntry {
+                        generation,
+                        writes,
+                        value: found,
+                    });
+                    memo.set(Some(held));
+                }
+                return Ok(found);
+            }
+            (hash::DirectoryEntry::Owed, _) => {
                 return Err(Loud::environment_symbol(dotted).into());
             }
-            hash::DirectoryEntry::Absent => {}
+            (hash::DirectoryEntry::Absent, _) => {}
         }
 
         if let Some(found) = self.rexx_variable(bare)? {
@@ -711,11 +775,24 @@ impl Interp {
         bare: &[u8],
         access: &env_seam::Access,
     ) -> Result<hash::DirectoryEntry, Failure> {
+        self.directory_read(scopes, bare, access)
+            .map(|(entry, _)| entry)
+    }
+
+    /// [`Interp::directory_lookup`], and whether the answer is a directory's
+    /// own item rather than what a security manager or a stored method
+    /// answered: see [`hash::directory_read`].
+    fn directory_read(
+        &mut self,
+        scopes: &[EnvScope],
+        bare: &[u8],
+        access: &env_seam::Access,
+    ) -> Result<(hash::DirectoryEntry, bool), Failure> {
         let key = hash::Key::new(self.hash_seed, bare);
         for &scope in scopes {
             match env_seam::admit(self, scope, bare, access)? {
                 env_seam::Admission::Replaced(value) => {
-                    return Ok(hash::DirectoryEntry::Found(value));
+                    return Ok((hash::DirectoryEntry::Found(value), false));
                 }
                 env_seam::Admission::Permitted(admitted) => {
                     let at = match scope {
@@ -729,7 +806,8 @@ impl Interp {
                             model.views[at],
                         )
                     };
-                    let (entry, fresh) = hash::directory_get(self, handle, key, view.as_ref())?;
+                    let (entry, stored, fresh) =
+                        hash::directory_read(self, handle, key, view.as_ref())?;
                     if let Some(fresh) = fresh
                         && let Some(model) = self.environment.as_mut()
                     {
@@ -737,12 +815,12 @@ impl Interp {
                     }
                     match entry {
                         hash::DirectoryEntry::Absent => {}
-                        entry => return Ok(entry),
+                        entry => return Ok((entry, stored)),
                     }
                 }
             }
         }
-        Ok(hash::DirectoryEntry::Absent)
+        Ok((hash::DirectoryEntry::Absent, false))
     }
 
     /// A class the running package's own directives installed, or one
@@ -1510,6 +1588,19 @@ pub(crate) struct EnvMemo {
     stamp: u64,
     epoch: interrexx_classes::Epoch,
     class: Option<ObjRef>,
+    /// The directory item the search found past a class lookup that found
+    /// none.
+    entry: Option<EnvEntry>,
+}
+
+/// An environment symbol's directory item, kept while the hash stores'
+/// counters stand where they stood when it was read: see
+/// [`Interp::dot_variable_memoized`].
+#[derive(Copy, Clone)]
+pub(crate) struct EnvEntry {
+    generation: u64,
+    writes: u64,
+    value: ObjRef,
 }
 
 /// The [`interrexx_core::RootSet::add_global`] key one package object is held

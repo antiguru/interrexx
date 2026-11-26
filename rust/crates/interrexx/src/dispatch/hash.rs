@@ -1160,12 +1160,25 @@ impl<'a> Key<'a> {
 /// `view` is a reading of `directory`'s pool from an earlier call, used when
 /// still valid. Returns the answer, and the reading this call made when it
 /// could not use `view`.
+#[cfg(test)]
 pub(crate) fn directory_get(
     interp: &mut Interp,
     directory: ObjRef,
     key: Key<'_>,
     view: Option<&StoreView>,
 ) -> Result<(DirectoryEntry, Option<StoreView>), Failure> {
+    directory_read(interp, directory, key, view).map(|(entry, _, fresh)| (entry, fresh))
+}
+
+/// [`directory_get`], also answering whether the entry is the contents' own
+/// item, which no method ran to produce: an answer that holds while no hash
+/// store is written.
+pub(crate) fn directory_read(
+    interp: &mut Interp,
+    directory: ObjRef,
+    key: Key<'_>,
+    view: Option<&StoreView>,
+) -> Result<(DirectoryEntry, bool, Option<StoreView>), Failure> {
     if let Some(view) = view
         && view.generation == interp.store_generation
     {
@@ -1175,10 +1188,12 @@ pub(crate) fn directory_get(
             "a StoreView was reused after its directory's pool changed without a \
              bump_store_generation"
         );
-        return Ok((view_get(interp, directory, key, view)?, None));
+        let (entry, stored) = view_read(interp, directory, key, view)?;
+        return Ok((entry, stored, None));
     }
     let view = read_view(interp, directory)?;
-    Ok((view_get(interp, directory, key, &view)?, Some(view)))
+    let (entry, stored) = view_read(interp, directory, key, &view)?;
+    Ok((entry, stored, Some(view)))
 }
 
 /// [`directory_get`] for a package local, kept apart from it so that the
@@ -1210,29 +1225,41 @@ fn view_get(
     key: Key<'_>,
     view: &StoreView,
 ) -> Result<DirectoryEntry, Failure> {
+    view_read(interp, directory, key, view).map(|(entry, _)| entry)
+}
+
+/// [`view_get`], and whether the answer is the contents' item rather than
+/// what a stored method answered.
+fn view_read(
+    interp: &mut Interp,
+    directory: ObjRef,
+    key: Key<'_>,
+    view: &StoreView,
+) -> Result<(DirectoryEntry, bool), Failure> {
     let name = key.name;
     let store = view.contents;
     if let Some(slot) = text_slot(interp, &store, key)? {
         let item = slot_at(interp, store.items, slot)?.unwrap_or(ObjRef::NIL);
         return Ok(if interp.is_owed_entry(item) {
-            DirectoryEntry::Owed
+            (DirectoryEntry::Owed, false)
         } else {
-            DirectoryEntry::Found(item)
+            (DirectoryEntry::Found(item), true)
         });
     }
     if let Some(methods) = view.methods
         && let Some(slot) = text_slot(interp, &methods, key)?
         && let Some(stored) = slot_at(interp, methods.items, slot)?
     {
-        return run_stored_method(interp, directory, name, stored, &[]).map(DirectoryEntry::Found);
+        return run_stored_method(interp, directory, name, stored, &[])
+            .map(|found| (DirectoryEntry::Found(found), false));
     }
     let Some(stored) = view.unknown else {
-        return Ok(DirectoryEntry::Absent);
+        return Ok((DirectoryEntry::Absent, false));
     };
     let index = interp.text(name);
     interp.roots.activity_mut().push_temp(index);
     run_stored_method(interp, directory, b"UNKNOWN", stored, &[Some(index)])
-        .map(DirectoryEntry::Found)
+        .map(|found| (DirectoryEntry::Found(found), false))
 }
 
 /// The position holding `name` in a string-keyed store, found without
