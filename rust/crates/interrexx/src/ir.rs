@@ -326,8 +326,8 @@ pub(crate) enum Op {
         src: Option<u16>,
         keyword: QueueKeyword,
     },
-    /// Runs the `CALL name` at `index`, from the resolution this site has kept
-    /// or a fresh one, and settles `RESULT` from what came back.
+    /// Runs the named or qualified `CALL` at `index` and settles `RESULT` from
+    /// what came back. Only a call without a namespace can cache its target.
     Call { index: u32, site: u16 },
     /// [`Op::Call`] with its arguments already on the driver's argument
     /// stack, which is what [`Op::PushArg`] put there.

@@ -1453,7 +1453,7 @@ macro_rules! region_ops {
                         "CallNamed",
                     );
                     if $top {
-                        match $self.begin_call_named($clause, $chunk, *site, *argc) {
+                        match $self.begin_call_named($code, $clause, $chunk, *site, *argc) {
                             Ok((Started::Ran(ended), base_indent)) => {
                                 break $cold $self
                                     .settle_call_result(ended, base_indent)
@@ -1465,7 +1465,7 @@ macro_rules! region_ops {
                             Err(failure) => break $cold Err(failure),
                         }
                     }
-                    match $self.run_call_named($clause, $chunk, *site, *argc) {
+                    match $self.run_call_named($code, $clause, $chunk, *site, *argc) {
                         Ok(flow) => break $cold Ok(RegionEnd::Flowed(flow)),
                         Err(failure) => break $cold Err(failure),
                     }
@@ -2494,12 +2494,13 @@ impl Interp {
     #[inline(never)]
     fn run_call_named(
         &mut self,
+        code: &Code<'_>,
         clause: &Instruction,
         chunk: &Chunk,
         site: u16,
         argc: u16,
     ) -> Result<Flow, Failure> {
-        let (started, base_indent) = self.begin_call_named(clause, chunk, site, argc)?;
+        let (started, base_indent) = self.begin_call_named(code, clause, chunk, site, argc)?;
         self.complete_site_subroutine(chunk, started, base_indent)
     }
 
@@ -2508,6 +2509,7 @@ impl Interp {
     #[inline(never)]
     fn begin_call_named(
         &mut self,
+        code: &Code<'_>,
         clause: &Instruction,
         chunk: &Chunk,
         site: u16,
@@ -2516,11 +2518,22 @@ impl Interp {
         let InstructionKind::Call(call) = &clause.kind else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let Call::Named { name, literal, .. } = &**call else {
-            return Err(Loud::call_op_off_its_node().into());
-        };
         let Some(mark) = self.activity.value_buffer.len().checked_sub(argc as usize) else {
             return Err(Loud::call_op_off_its_node().into());
+        };
+        let (name, literal) = match &**call {
+            Call::Named { name, literal, .. } => (name, literal),
+            Call::Qualified {
+                namespace, name, ..
+            } => {
+                let namespace = code.symbols.name(*namespace).as_bytes();
+                let name = code.symbols.name(*name).as_bytes();
+                let resolved = self.resolve_qualified_call(namespace, name)?;
+                let base_indent = self.activity.clause_state.current_value_indent;
+                let started = self.begin_subroutine_over_pushed_args(resolved, name, mark)?;
+                return Ok((started, base_indent));
+            }
+            _ => return Err(Loud::call_op_off_its_node().into()),
         };
         // The site's own kept answer and the resolution when it has none --
         // `Op::Call`'s arm has the whole argument, and this is the same site
@@ -2599,16 +2612,33 @@ impl Interp {
         let InstructionKind::Call(call) = &clause.kind else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let Call::Named {
-            name,
-            literal,
-            args,
-        } = &**call
-        else {
-            return Err(Loud::call_op_off_its_node().into());
+        let (name, args, resolution) = match &**call {
+            Call::Named {
+                name,
+                literal,
+                args,
+            } => {
+                let resolution =
+                    self.site_resolution_before_arguments(chunk, site, name, !*literal);
+                (
+                    name.as_ref(),
+                    args,
+                    self.resolved_after_arguments(code, resolution, args)?,
+                )
+            }
+            Call::Qualified {
+                namespace,
+                name,
+                args,
+            } => (
+                code.symbols.name(*name).as_bytes(),
+                args,
+                CallResolution::Qualified {
+                    namespace: code.symbols.name(*namespace).as_bytes(),
+                },
+            ),
+            _ => return Err(Loud::call_op_off_its_node().into()),
         };
-        let resolution = self.site_resolution_before_arguments(chunk, site, name, !*literal);
-        let resolution = self.resolved_after_arguments(code, resolution, args)?;
         let base_indent = self.activity.clause_state.current_value_indent;
         let begun = self.begin_invoke_call(code, resolution, name, args, CallType::Subroutine)?;
         Ok((subroutine_started(begun), base_indent))
