@@ -462,15 +462,28 @@ pub fn measure(
         programs.push((*size, path, passes));
     }
 
+    // Each build has its own API service for the entire sitting, including
+    // warmup. Starting a service per launch would put its cost in every sample.
+    let sides: Vec<_> = builds
+        .iter()
+        .map(|build| {
+            Arm::BOTH.map(|arm| {
+                Side::rust_with_private_service(build.binary.clone(), arm).for_axis(workload.name())
+            })
+        })
+        .collect();
     let mut cells = Vec::new();
-    for build in 0..builds.len() {
-        for arm in Arm::BOTH {
+    for (build, arms) in sides.iter().enumerate() {
+        for (arm, side) in Arm::BOTH.into_iter().zip(arms) {
             for (size, _, _) in &programs {
-                cells.push(Cell {
-                    build,
-                    arm,
-                    size: *size,
-                });
+                cells.push((
+                    Cell {
+                        build,
+                        arm,
+                        size: *size,
+                    },
+                    side,
+                ));
             }
         }
     }
@@ -484,14 +497,12 @@ pub fn measure(
         .events()
         .expect("Counted::User counts something");
 
-    let run_cell = |cell: &Cell| -> Result<(Reading, u64), String> {
+    let run_cell = |cell: &Cell, side: &Side| -> Result<(Reading, u64), String> {
         let (_, path, passes) = programs
             .iter()
             .find(|(size, _, _)| *size == cell.size)
             .expect("every cell names a rendered size");
-        let side =
-            Side::rust(builds[cell.build].binary.clone(), cell.arm).for_axis(workload.name());
-        let completed = run(&side, path, workdir, &wrapper)?;
+        let completed = run(side, path, workdir, &wrapper)?;
         if !completed.succeeded() {
             return Err(format!(
                 "{} {} {} exited {:?}: {}",
@@ -526,8 +537,8 @@ pub fn measure(
         workload.name(),
         cells.len()
     ));
-    for cell in &cells {
-        run_cell(cell)?;
+    for (cell, side) in &cells {
+        run_cell(cell, side)?;
     }
 
     let mut samples = Vec::new();
@@ -538,8 +549,8 @@ pub fn measure(
             round + 1
         ));
         for slot in rotation(cells.len(), round) {
-            let cell = cells[slot];
-            let (reading, passes) = run_cell(&cell)?;
+            let (cell, side) = cells[slot];
+            let (reading, passes) = run_cell(&cell, side)?;
             samples.push(Sample {
                 cell,
                 round,
