@@ -196,8 +196,8 @@ pub(crate) enum Step {
     Dropped,
     /// `Op::PushArg` of register `src`.
     PushArg { src: u16 },
-    /// An `Op::ConditionJump` at `pc` on register `reg`: falls through when
-    /// the value holds, and otherwise closes the clause and goes to `target`.
+    /// A conditional jump at `pc` on register `reg`: falls through when the
+    /// value holds, and otherwise closes the clause and goes to `target`.
     Branch {
         pc: u32,
         reg: u16,
