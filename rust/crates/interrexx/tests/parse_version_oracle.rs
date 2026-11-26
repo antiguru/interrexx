@@ -103,6 +103,33 @@ fn only_the_language_level_and_the_build_date_are_masked() {
     }
 }
 
+/// The language level `PARSE VERSION` answers is 6.06, the level interrexx
+/// implements (Deviation 179): the oracle comparison masks it, so it is
+/// checked here, with no oracle and so with no gate.
+#[test]
+fn parse_version_answers_language_level_6_06() {
+    let dir = fresh_run_dir();
+    let file = dir.join("parse_version_level.rex");
+    fs::write(&file, b"parse version . level .\nsay level\n")
+        .unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+    let path = file
+        .to_str()
+        .unwrap_or_else(|| panic!("probe path {} is not valid UTF-8", file.display()));
+    let text = fs::read(&file).unwrap_or_else(|e| panic!("cannot read {}: {e}", file.display()));
+    let rust = interrexx::run_program(
+        path,
+        text,
+        interrexx::Invocation::none().with_deadline(support::oracle::RUN_DEADLINE),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&rust.stdout),
+        "6.06\n",
+        "stderr: {}",
+        String::from_utf8_lossy(&rust.stderr)
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
 /// `PARSE VERSION` answers what the oracle answers, or this crate's recorded
 /// constant has gone stale against the built interpreter.
 #[test]
@@ -156,9 +183,10 @@ fn parse_version_still_answers_what_the_oracle_answers() {
         diffs.is_empty(),
         "PARSE VERSION disagrees with the oracle on [{}]. This crate's \
          version.rs VERSION constant is a recorded measurement of the \
-         oracle's own build identity, its name, and a rebuilt oracle \
-         changes it; the language level is interrexx's own (Deviation 179). Re-measure rather than editing this \
-         test:\n  rust:   {:?}\n  oracle: {:?}\n  exit: rust {} oracle {}",
+         oracle's own build name, which a rebuilt oracle changes; the \
+         language level is interrexx's own (Deviation 179). Re-measure \
+         rather than editing this test:\n  rust:   {:?}\n  oracle: {:?}\n  \
+         exit: rust {} oracle {}",
         diffs.join(", "),
         String::from_utf8_lossy(&rust.stdout),
         String::from_utf8_lossy(&cpp.stdout),
