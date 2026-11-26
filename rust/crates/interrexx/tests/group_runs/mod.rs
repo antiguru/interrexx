@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use super::group_runner::{
     GATE_ENV, Outcome, Run, SwitchMode, TestResult, VERBOSITY, excerpt, first_difference,
-    fresh_copy, gate_mode, group_file, masked, on_a_quiet_machine, reaching_rxapi,
-    rows_in_parallel, run_crate, run_tests, source_test_names, test_names,
+    fresh_copy, gate_mode, group_file, masked, on_a_quiet_machine, passes, reaching_rxapi,
+    read_bytes, rows_in_parallel, run_crate, run_tests, source_test_names, test_names,
 };
 use super::support::oracle;
 
@@ -428,6 +428,8 @@ fn inverted(run: &Run) -> bool {
 const TRACE_INTERLEAVES: &[&str] =
     &["base/keyword/TRACE_TraceObject.testGroup TEST_TRACEOBJECT_COLLECTOR"];
 
+const SLEEP_DURATION_ROW: &str = "base/rexxutil/SysSleep.testGroup TEST_SLEEP_DURATION";
+
 /// The rows whose outcome on this crate depends on a wall-clock boundary or
 /// a sleep's duration, each with the lines that make it so: a failing check
 /// on one is run again once, and only a second failure counts.
@@ -437,7 +439,7 @@ const WALL_CLOCK: &[&str] = &[
     // DateTime.testGroup:593-596
     "base/class/DateTime.testGroup TEST_ELAPSED1",
     // SysSleep.testGroup:83-84, :107-113
-    "base/rexxutil/SysSleep.testGroup TEST_SLEEP_DURATION",
+    SLEEP_DURATION_ROW,
     // SysSleep.testGroup:91-99
     "base/rexxutil/SysSleep.testGroup TEST_SLEEP_CONCURRENT",
     // EventSemaphore.testGroup:151-155, :162
@@ -789,6 +791,29 @@ fn rows_in_both_modes(
     );
 }
 
+/// Remove the sequential sleep's upper bound in the copy used to compare
+/// scheduler modes. The return value and lower bound are still asserted, and
+/// the runner bounds the row's total time. The upper bound measures host
+/// wake-up latency and remains in the unmodified run against the oracle.
+fn drop_upper_sleep_bound(file: &Path) {
+    let mut source = read_bytes(file);
+    let assertion = b"self~assertTrue(min <= elapsed & elapsed <= max,";
+    let mut matches = source
+        .windows(assertion.len())
+        .enumerate()
+        .filter(|&(_, window)| window == assertion);
+    let (start, _) = matches
+        .next()
+        .expect("the sequential sleep duration assertion");
+    assert!(
+        matches.next().is_none(),
+        "one sequential sleep duration assertion"
+    );
+    let comma = start + assertion.len() - 1;
+    source.drain(comma - b" & elapsed <= max".len()..comma);
+    fs::write(file, source).expect("rewrite the copied sleep duration assertion");
+}
+
 /// One row of [`rows_in_both_modes`] in the copy `run`: its cell against
 /// the oracle, how the two modes compare and whether that is allowed, and
 /// the modes that hung or ended in an inverted wait.
@@ -824,12 +849,19 @@ fn row_in_both_modes(
         return (normal, ("not run".to_string(), true), Vec::new());
     }
     let row = format!("{file} {test}");
+    let sleep_duration_row = row == SLEEP_DURATION_ROW;
+    let group_path = group_file(run, dir, group);
+    let prepare_mode = || {
+        fresh_copy(run, dir);
+        if sleep_duration_row {
+            drop_upper_sleep_bound(Path::new(&group_path));
+        }
+    };
     let judge = || {
-        let group_path = group_file(run, dir, group);
         let args = ["-f", group_path.as_str(), "-U", "-V", VERBOSITY, "-t", test];
-        fresh_copy(run, dir);
+        prepare_mode();
         let shipped = run_crate(run, &args, SwitchMode::None);
-        fresh_copy(run, dir);
+        prepare_mode();
         let every = run_crate(run, &args, SwitchMode::EveryOpportunity);
         let mut hung = Vec::new();
         for (name, ours) in [("normal", &shipped), ("every", &every)] {
@@ -837,13 +869,26 @@ fn row_in_both_modes(
                 hung.push(format!("{row}: {name}"));
             }
         }
-        (compare_modes(&row, &shipped, &every), hung)
+        let mut modes = compare_modes(&row, &shipped, &every);
+        if sleep_duration_row && modes.1 && !passes(&shipped) {
+            modes = (
+                format!(
+                    "sleep duration row failed in both modes: status {:?}",
+                    shipped.status
+                ),
+                false,
+            );
+        }
+        (modes, hung)
     };
     let (mut judged, mut hung) = judge();
     if (!judged.1 || !hung.is_empty()) && WALL_CLOCK.contains(&row.as_str()) {
         eprintln!("wall-clock rerun: {row}: {} {hung:?}", judged.0);
         (judged, hung) = judge();
         judged.0.push_str(" (wall-clock rerun)");
+    }
+    if sleep_duration_row {
+        judged.0.push_str(" (upper sleep bound omitted)");
     }
     (normal, judged, hung)
 }
