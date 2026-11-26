@@ -63,12 +63,15 @@ pub(super) fn find(
             let Some(path) = entry_path(&directory, &entry) else {
                 continue;
             };
-            if options.names_only {
-                lines.push(path.to_string_lossy().into_owned().into_bytes());
+            let Some(name) = path.to_str() else {
                 continue;
-            }
+            };
             let attributes = apply_mask(&path, entry.dwFileAttributes, new_mask);
-            lines.push(entry_line(options, &path, &entry, attributes));
+            if options.names_only {
+                lines.push(name.as_bytes().to_vec());
+            } else {
+                lines.push(entry_line(options, name, &entry, attributes));
+            }
         }
         if options.recurse {
             let children = host::find_files(&directory.join("*"));
@@ -144,7 +147,7 @@ fn apply_mask(path: &Path, original: u32, mask: &[u8]) -> u32 {
 
 fn entry_line(
     options: TreeOptions,
-    path: &Path,
+    name: &str,
     entry: &WIN32_FIND_DATAW,
     attributes: u32,
 ) -> Vec<u8> {
@@ -152,7 +155,12 @@ fn entry_line(
     let time = host::local_file_time(
         (u64::from(raw_time.dwHighDateTime) << 32) | u64::from(raw_time.dwLowDateTime),
     )
-    .unwrap_or_default();
+    .unwrap_or(windows_sys::Win32::Foundation::SYSTEMTIME {
+        wYear: 1970,
+        wMonth: 1,
+        wDay: 1,
+        ..Default::default()
+    });
     let (year, month, day) = (time.wYear, time.wMonth, time.wDay);
     let (hour, minute, second) = (time.wHour, time.wMinute, time.wSecond);
     let short_year = year % 100;
@@ -181,5 +189,5 @@ fn entry_line(
             }
         })
         .collect();
-    format!("{date}  {size}  {flags}  {}", path.display()).into_bytes()
+    format!("{date}  {size}  {flags}  {name}").into_bytes()
 }
