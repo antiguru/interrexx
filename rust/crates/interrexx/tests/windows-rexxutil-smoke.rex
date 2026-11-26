@@ -123,7 +123,7 @@ if treeResults~items <> 1 then exit 93
 if left(treeResults[1], 19) \== '2024-02-03 14:05:06' then exit 94
 if word(treeResults[1], 3) \== '4' then exit 95
 if right(treeResults[1], length(treeFile)) \== treeFile then exit 96
-if SysFileTree(treeFile, 'matches.', 'F', , '**+**') <> 0 then exit 97
+if SysFileTree(treeFile, 'matches.', 'FO', , '**+**') <> 0 then exit 97
 if SysFileTree(treeFile, 'matches.', 'FO', '**+**') <> 0 then exit 98
 if matches.0 <> 1 | matches.1 \== treeFile then exit 99
 if SysFileTree(treeFile, 'matches.', 'F', , '**-**') <> 0 then exit 100

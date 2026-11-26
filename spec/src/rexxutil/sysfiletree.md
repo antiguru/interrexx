@@ -12,8 +12,8 @@ SysFileTree looks for files and directories whose names match a pattern and
 stores what it finds in a stem or an array: one text line per match, and in
 the stem a count. It answers 0.
 
-The rules here are those of a Unix-like system. The attribute arguments exist
-for the sake of other systems and have no effect here.
+The examples use a Unix-like system. The [Windows rule](r:util.sysfiletree.windows)
+describes differences in search, results and attribute handling.
 
 > **Note.** Times, the sizes of directories, the permission bits a new file
 > gets and the order in which matches are stored belong to the host or to the
@@ -956,9 +956,8 @@ device 1 c 10
 r[util.sysfiletree.masks]
 `tattrib` and `nattrib` are strings of up to five characters, each `*`, `+` or
 `-`, or the null string. They are checked, and an argument that has any other
-character or is longer than five characters raises `SYNTAX 40.900`. They have
-no other effect: a mask does not select, and does not change a file or what is
-stored for it.
+character or is longer than five characters raises `SYNTAX 40.900`. On a Unix-like
+system a valid mask has no effect. [Windows applies both masks](r:util.sysfiletree.windows).
 
 ```rexx
 d = 'c2zqft13'
@@ -1134,6 +1133,8 @@ The target mask filters on the archive, directory, hidden, read-only, and
 system attributes in that order. A plus requires the attribute, a minus
 requires its absence, and an asterisk leaves it unrestricted. The new mask
 can set or clear the archive, hidden, read-only, and system attributes.
-The result reports the attributes after any change. Full entries use
+The new mask also applies when `O` requests names alone. Names that cannot
+be represented in UTF-8 are omitted. A full result reports attributes after
+any change. Full entries use
 Windows local last-write time, byte size, and a five-character attribute
 field whose letters are `ADHRS`. A dash marks an attribute that is clear.
