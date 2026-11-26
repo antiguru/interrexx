@@ -262,7 +262,7 @@ exit 0
   return 'K' || v
 ::method hashCode
   expose v
-  if v // 2 = 0 then return right(v // 64, 8, '0')
+  if v // 2 = 0 then return right((v % 2) // 64, 8, '0')
   return 'h' || (v // 3)
 ::method '=='
   expose v
@@ -385,11 +385,18 @@ fn build(seed: u64, kind: Kind, ops: usize) -> Sequence {
                 );
             }
             r if r < grow + 21 => {
-                if snapshots.len() < 6 {
+                // Six slots, a random one replaced once all are taken, so
+                // that copies of grown and compacted collections are kept
+                // as well as early ones.
+                let at = if snapshots.len() < 6 {
                     snapshots.push(model.clone());
-                    let at = snapshots.len();
-                    emit(&mut program, format!("snaps[{at}] = c~copy"), vec![]);
-                }
+                    snapshots.len()
+                } else {
+                    let at = rng.below(snapshots.len());
+                    snapshots[at] = model.clone();
+                    at + 1
+                };
+                emit(&mut program, format!("snaps[{at}] = c~copy"), vec![]);
             }
             r if r < grow + 22 && rng.chance(5) => {
                 model = Model::default();

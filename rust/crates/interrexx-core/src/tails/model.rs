@@ -167,7 +167,9 @@ fn run(seed: u64, ops: usize) {
     let pool = [3, INLINE, 2 * INLINE + 1, 40, 300][rng.below(5)];
     let mut tails = Tails::new();
     let mut model = Model::default();
-    let mut snapshots: Vec<(Tails, Model)> = Vec::new();
+    // Each clone with the model it must still read as, and the step and op
+    // it was taken at.
+    let mut snapshots: Vec<(Tails, Model, usize, Op)> = Vec::new();
     let mut counter = 0i64;
     // Most of a phase adds or drops by its bias; a new phase every so often.
     let mut adding = true;
@@ -202,6 +204,25 @@ fn run(seed: u64, ops: usize) {
             .iter()
             .map(|(held, _)| (held.clone(), tails.lookup(held).expect("a held tail").0))
             .collect();
+        // Whether this op compacts, worked out from the slab before it: only
+        // a new hole can, which a removal makes, and a tombstone given a
+        // value makes along with a slot at the end. The slab is compacted
+        // when it then has more than `INLINE` slots and more than half of
+        // them are holes.
+        let slab = tails.slab_len();
+        let holes = slab - tails.map_len();
+        let new_hole = match op {
+            Op::Remove(i) => model.position(&key_of(i)).map(|_| 0),
+            Op::Set(i, Some(_)) => model
+                .position(&key_of(i))
+                .filter(|&at| model.0[at].1.is_none())
+                .map(|_| 1),
+            _ => None,
+        };
+        let compacts = new_hole.is_some_and(|pushed| {
+            let len = slab + pushed;
+            len > INLINE && 2 * (holes + 1) > len
+        });
         let mut written: Option<Vec<u8>> = None;
         match op {
             Op::Set(i, value) => {
@@ -250,10 +271,18 @@ fn run(seed: u64, ops: usize) {
                 if snapshots.len() >= 4 {
                     snapshots.remove(rng.below(snapshots.len()));
                 }
-                snapshots.push((tails.clone(), model.clone()));
+                snapshots.push((tails.clone(), model.clone(), step, op));
             }
         }
         check(&tails, &model, pool, &context);
+        if !matches!(op, Op::Clear) {
+            assert_eq!(
+                tails.epoch() != epoch,
+                compacts,
+                "compaction at {holes} holes in a slab of {slab}, {}",
+                context()
+            );
+        }
         if tails.epoch() == epoch {
             for (held, ordinal) in &before {
                 if written.as_deref() == Some(held.as_slice()) {
@@ -279,7 +308,13 @@ fn run(seed: u64, ops: usize) {
         // A clone shares nothing with its original: each snapshot still
         // reads as it did when taken.
         if step % 64 == 63 || step + 1 == ops {
-            for (snapshot, expected) in &snapshots {
+            for (snapshot, expected, taken, taken_op) in &snapshots {
+                let context = || {
+                    format!(
+                        "seed {seed}, pool {pool}, snapshot taken at step {taken}, \
+                         op {taken_op:?}, checked at step {step}"
+                    )
+                };
                 check(snapshot, expected, pool, &context);
             }
         }
