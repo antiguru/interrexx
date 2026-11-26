@@ -238,6 +238,7 @@ impl<L: Copy> Baton<L> {
             claimed: false,
         });
         self.set_holder(&mut state, Some(to));
+        // Not `notify`: the guard stays held to wait below.
         if state.waiting > 0 {
             self.changed.notify_all();
         }

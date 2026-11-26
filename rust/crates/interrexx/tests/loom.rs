@@ -371,6 +371,113 @@ fn a_waiting_thread_claims_a_vacancy_and_frees_it() {
     });
 }
 
+/// How the vacating thread comes back in [`vacancy_race`].
+#[derive(Clone, Copy)]
+enum Back {
+    /// As a callback does: `take_vacancy`, which waits on a claimer.
+    Callback,
+    /// `reclaim_free`, which does not wait.
+    Reclaim,
+}
+
+/// The holder vacates the baton and comes back by `back` while a pool thread
+/// may claim the vacancy, touch interpreter state and then hand it to a
+/// third thread (`hand`) or free it. Nothing orders the claim against the
+/// holder's return. However they interleave, no two threads touch that state
+/// at once, the holder holds the baton again once it has waited the vacancy
+/// out, and no thread is left waiting. Explored with at most three
+/// preemptions: unbounded, four threads do not finish in a gate's time.
+fn vacancy_race(back: Back, hand: bool) {
+    let mut builder = loom::model::Builder::new();
+    builder.preemption_bound = Some(3);
+    builder.check(move || {
+        let baton = Arc::new(Baton::<u32>::new());
+        let inside = Arc::new(AtomicUsize::new(0));
+        baton.acquire();
+        let server = hand.then(|| {
+            let (baton, inside) = (Arc::clone(&baton), Arc::clone(&inside));
+            thread::spawn(move || {
+                if let baton::Awaited::Lent(lent) = baton.await_lend_or_vacancy(false, true) {
+                    assert_eq!(lent, 3);
+                    assert!(baton.held_here());
+                    touch(&inside);
+                    baton.give_back();
+                }
+            })
+        });
+        let to = server.as_ref().map(|server| server.thread().id());
+        let claimer = {
+            let (baton, inside) = (Arc::clone(&baton), Arc::clone(&inside));
+            thread::spawn(move || match baton.await_lend_or_vacancy(true, true) {
+                baton::Awaited::Vacancy(lent) => {
+                    assert_eq!(lent, 3);
+                    assert!(baton.held_here());
+                    touch(&inside);
+                    match to {
+                        Some(to) => baton.hand_vacancy(to),
+                        None => baton.free_vacancy(),
+                    }
+                    assert!(!baton.held_here());
+                }
+                baton::Awaited::Closed => {}
+                baton::Awaited::Lent(_) => panic!("nothing lent the baton"),
+            })
+        };
+        let depth = baton.vacate(3);
+        let held = match back {
+            Back::Callback => {
+                let took = baton.take_vacancy(depth);
+                if took {
+                    assert!(baton.held_here());
+                    touch(&inside);
+                    baton.give_back_or_free();
+                }
+                false
+            }
+            Back::Reclaim => baton.reclaim_free(depth),
+        };
+        if !held {
+            baton.await_return(depth);
+        }
+        assert!(baton.held_here());
+        touch(&inside);
+        baton.close();
+        baton.release();
+        claimer.join().expect("the claiming thread");
+        if let Some(server) = server {
+            server.join().expect("the served thread");
+        }
+    });
+}
+
+/// The holder's callback takes the vacancy back, waiting out a claim, while a
+/// pool thread claims it and frees it.
+#[test]
+fn a_callback_taking_a_vacancy_races_a_claim_that_frees_it() {
+    vacancy_race(Back::Callback, false);
+}
+
+/// The holder's callback takes the vacancy back, waiting out a claim, while a
+/// pool thread claims it and hands it to a third thread.
+#[test]
+fn a_callback_taking_a_vacancy_races_a_claim_that_hands_it_on() {
+    vacancy_race(Back::Callback, true);
+}
+
+/// The holder reclaims the free vacancy while a pool thread claims it and
+/// frees it.
+#[test]
+fn a_reclaim_of_a_free_vacancy_races_a_claim_that_frees_it() {
+    vacancy_race(Back::Reclaim, false);
+}
+
+/// The holder reclaims the free vacancy while a pool thread claims it and
+/// hands it to a third thread.
+#[test]
+fn a_reclaim_of_a_free_vacancy_races_a_claim_that_hands_it_on() {
+    vacancy_race(Back::Reclaim, true);
+}
+
 /// A pool thread recalls the baton through the inbox while the holder idles
 /// there; the holder lends it, and the pool thread's lend ends before the
 /// holder touches interpreter state again.
