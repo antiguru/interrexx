@@ -912,8 +912,10 @@ pub struct PoolEntry {
 /// What remembers a scope's place once it has no entries is a tail of **order
 /// records**, written the first time a scope drops its last name and absent
 /// until then: one entry per scope that has bound a name, in first-binding
-/// order, with no scope (nil), no name, and the scope it stands for as its
-/// value. They are never read as variables, and sit after every real entry.
+/// order, with `ObjRef::MARKER` as their scope, no name, and the scope they
+/// stand for as their value. They are never read as variables, and sit after
+/// every real entry. The marker is not nil because a real scope can be: a
+/// method run by `~run` exposes in the nil scope.
 /// They are kept in the list, not beside it, because a field here would widen
 /// every object.
 ///
@@ -1189,14 +1191,15 @@ impl ScopePools {
 }
 
 /// Whether `entry` is an order record of a [`ScopePools`] rather than a
-/// variable: no real scope is nil.
+/// variable: no real scope is `ObjRef::MARKER`, which equals no handle a
+/// program can hold.
 fn is_order_record(entry: &PoolEntry) -> bool {
-    entry.scope == ObjRef::NIL
+    entry.scope == ObjRef::MARKER
 }
 
 fn order_record(scope: ObjRef) -> PoolEntry {
     PoolEntry {
-        scope: ObjRef::NIL,
+        scope: ObjRef::MARKER,
         name: Rc::from(&b""[..]),
         value: scope,
     }

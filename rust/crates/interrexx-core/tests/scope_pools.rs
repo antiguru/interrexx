@@ -195,3 +195,59 @@ fn an_emptied_scope_leaves_no_variable_behind() {
     assert_eq!(pools.entries(sub).len(), 1);
     assert_eq!(pools.find(b"W"), Some(again));
 }
+
+/// A method run by `~run` exposes in the nil scope, which is a scope like any
+/// other: the pool created last that binds a name answers for it.
+#[test]
+fn a_name_bound_in_the_nil_scope_is_found() {
+    let y = ObjRef::heap(1, 0);
+    let mut pools = ScopePools::new();
+    pools.set(ObjRef::NIL, b"CSELF", y);
+    assert_eq!(pools.find(b"CSELF"), Some(y));
+}
+
+/// An emptied scope keeps its place when the scope bound last is the nil
+/// scope.
+#[test]
+fn an_emptied_scope_keeps_its_place_after_a_nil_scope_binding() {
+    let (sup, sub) = scopes();
+    let (v, x, y, again) = (
+        ObjRef::heap(1, 0),
+        ObjRef::heap(2, 0),
+        ObjRef::heap(3, 0),
+        ObjRef::heap(4, 0),
+    );
+    let mut pools = ScopePools::new();
+    pools.set(sup, b"CSELF", v);
+    pools.set(sub, b"CSELF", x);
+    pools.set(ObjRef::NIL, b"Y", y);
+    pools.clear(sup, b"CSELF");
+    pools.set(sup, b"CSELF", again);
+    assert_eq!(pools.find(b"CSELF"), Some(x));
+    assert_eq!(pools.get(sup, b"CSELF"), Some(again));
+}
+
+/// The nil scope's entries are only the names bound in it, whatever order
+/// records an emptied scope leaves.
+#[test]
+fn the_nil_scopes_entries_are_its_own_names() {
+    let (sup, sub) = scopes();
+    let (v, x, y, again) = (
+        ObjRef::heap(1, 0),
+        ObjRef::heap(2, 0),
+        ObjRef::heap(3, 0),
+        ObjRef::heap(4, 0),
+    );
+    let mut pools = ScopePools::new();
+    pools.set(sup, b"CSELF", v);
+    pools.set(sub, b"CSELF", x);
+    pools.set(ObjRef::NIL, b"Y", y);
+    pools.clear(sup, b"CSELF");
+    pools.set(sup, b"CSELF", again);
+    let names = pools
+        .entries(ObjRef::NIL)
+        .iter()
+        .map(|entry| (entry.name.to_vec(), entry.value))
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec![(b"Y".to_vec(), y)]);
+}
