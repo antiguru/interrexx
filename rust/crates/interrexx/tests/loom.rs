@@ -335,6 +335,42 @@ fn a_lent_baton_comes_back_before_its_lender_runs() {
     });
 }
 
+/// The holder vacates the baton while a pool thread may already wait to
+/// claim a vacancy; the pool thread claims it, touches interpreter state and
+/// frees it, and the holder takes it back once it is free. The holder holds
+/// nothing while it is vacated, and no two threads touch that state at once.
+#[test]
+fn a_waiting_thread_claims_a_vacancy_and_frees_it() {
+    loom::model(|| {
+        let baton = Arc::new(Baton::<u32>::new());
+        let inside = Arc::new(AtomicUsize::new(0));
+        let (claimed, seen) = loom::sync::mpsc::channel();
+        baton.acquire();
+        let pool = {
+            let (baton, inside) = (Arc::clone(&baton), Arc::clone(&inside));
+            thread::spawn(move || {
+                assert!(matches!(
+                    baton.await_lend_or_vacancy(true, false),
+                    baton::Awaited::Vacancy(3)
+                ));
+                assert!(baton.held_here());
+                touch(&inside);
+                claimed.send(()).expect("the holder waits for the claim");
+                baton.free_vacancy();
+                assert!(!baton.held_here());
+            })
+        };
+        let depth = baton.vacate(3);
+        assert!(!baton.held_here());
+        seen.recv().expect("the pool thread claims");
+        baton.await_return(depth);
+        assert!(baton.held_here());
+        touch(&inside);
+        baton.release();
+        pool.join().expect("the pool thread");
+    });
+}
+
 /// A pool thread recalls the baton through the inbox while the holder idles
 /// there; the holder lends it, and the pool thread's lend ends before the
 /// holder touches interpreter state again.
