@@ -340,6 +340,44 @@ fn a_pointer_comparison_needs_its_argument() {
     assert_eq!((raised.number, raised.sub), (93, 903));
 }
 
+/// A deferred level is pushed only by a comparison its own primitive makes.
+/// `Directory~[]` defers its level and runs a stored method, which runs
+/// `Array~index`; that comparison's Rexx `REQUEST` must not find the
+/// directory's level and push it above the stored method, where it would stay
+/// until `[]` ends.
+#[test]
+fn a_deferred_level_is_not_pushed_by_code_its_primitive_runs_some_other_way() {
+    let (rc, stdout, stderr) = run_source(
+        "d = .directory~new\n\
+         d~setMethod('FOO', \"x = .array~of(.k~new)~index('abc'); call frames; return 1\")\n\
+         say d['FOO']\n\
+         exit\n\
+         ::class k\n\
+         ::method request\n\
+         \x20 call frames\n\
+         \x20 return 'abc'\n\
+         ::routine frames\n\
+         \x20 s = ''\n\
+         \x20 do f over .context~stackFrames\n\
+         \x20   s = s f~name\n\
+         \x20 end\n\
+         \x20 say strip(s)\n",
+    );
+    assert_eq!((rc, stderr.as_str()), (0, ""), "{stdout}");
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines.len(), 3, "{stdout}");
+    assert_eq!(lines[2], "1");
+    for line in &lines[..2] {
+        let names: Vec<&str> = line.split(' ').collect();
+        let foo = names.iter().position(|name| *name == "FOO");
+        assert!(foo.is_some(), "{line}");
+        assert!(
+            !names[..foo.unwrap_or(0)].contains(&"[]"),
+            "the directory's level sits above its stored method: {line}"
+        );
+    }
+}
+
 /// Runs `source` and hands back `(exit code, stdout, stderr)`.
 fn run_source(source: &str) -> (i32, String, String) {
     let outcome = crate::run_program(
