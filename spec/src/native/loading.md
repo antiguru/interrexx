@@ -142,15 +142,38 @@ e: say arg(1) '=>' condition('o')~code
 ```
 
 ```rexx
-signal on syntax name b
+call load
 say .context~package~loadLibrary('specnewer')
-b: say condition('o')~code
 say rxfuncadd('FxNewer', 'specnewer')
+call bind
+call invoke
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+exit
+load:
+  signal on syntax name refused
+  say .context~package~loadLibrary('specnewer')
+  return
+bind:
+  signal on syntax name refused
+  p = .package~new('n1zqrefused', .array~of('::routine r external "LIBRARY specnewer FxNewer"'))
+  say 'bound'
+  return
+invoke:
+  signal on syntax name refused
+  say fxnewer()
+  return
+refused:
+  say condition('o')~code
+  return
 ```
 
 ```output
 98.982
 1
+1
+90.999
+43.1
+loader ran 0
 ```
 
 ```rexx

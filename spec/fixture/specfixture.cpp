@@ -571,6 +571,13 @@ OOREXX_GET_PACKAGE(fixture);
 
 #elif defined(SPEC_FIXTURE_NEWER)
 
+// Records whether the loader of a version-refused package was called.
+// Serves r[native.loading.version].
+static void RexxEntry newerLoader(RexxThreadContext *context)
+{
+    context->DirectoryPut(context->GetLocalEnvironment(), context->True(), "SPECNEWER.LOADED");
+}
+
 // Serves r[native.loading.version].
 RexxRoutine0(CSTRING, FxNewer)
 {
@@ -590,7 +597,7 @@ static RexxPackageEntry newer_package_entry =
     0x7f000000,
     "specnewer",
     "1.0.0",
-    NULL,
+    newerLoader,
     NULL,
     newerRoutines,
     NULL
