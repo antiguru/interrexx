@@ -302,10 +302,7 @@ impl Interp {
         if !self.exit_installed(exit_code::HLT) && !self.exit_installed(exit_code::TRC) {
             return Ok(());
         }
-        let Some(program) = self.running_activation().map(|running| running.program_id) else {
-            return Ok(());
-        };
-        if self.library_programs.contains(&program) || self.is_instance_root(program) {
+        if !self.running_user_program() {
             return Ok(());
         }
         if let Some(reply) = self.exit_call(ExitRequest::HaltTest)?
@@ -323,6 +320,16 @@ impl Interp {
             });
         }
         Ok(())
+    }
+
+    /// Whether the running activation runs a program of the user's: not one
+    /// of the library's and not the instance's root.
+    pub(crate) fn running_user_program(&self) -> bool {
+        self.running_activation()
+            .map(|running| running.program_id)
+            .is_some_and(|program| {
+                !self.library_programs.contains(&program) && !self.is_instance_root(program)
+            })
     }
 
     /// Marks `program` as this instance's root program.

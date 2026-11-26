@@ -219,3 +219,85 @@ say 'trapped' condition('o')~code
 ----
 trapped 5.0
 rc=0
+
+# A string sized by a number the program gives is refused where it is asked
+# for, before the clause assigns it: `S` is never set.
+
+run limit=64M
+call try "substr('x', 1, 100000000)"
+call try "insert('a', 'b', 100000000)"
+call try "overlay('a', 'b', 100000000)"
+call try "space('a b', 100000000)"
+call try "format(1, 100000000)"
+call try "trunc(1, 100000000)"
+call try "'x'~substr(1, 100000000)"
+call try "'b'~insert('a', 100000000)"
+call try "'b'~overlay('a', 100000000)"
+call try "'a b'~space(100000000)"
+call try "'x'~replaceAt('y', 100000000)"
+call try ".MutableBuffer~new('x')~substr(1, 100000000)"
+exit
+try:
+  drop s
+  signal on syntax
+  interpret 's =' arg(1)
+  say 'not refused' arg(1)
+  return
+syntax:
+  say condition('o')~code symbol('S') arg(1)
+  return
+----
+5.0 LIT substr('x', 1, 100000000)
+5.0 LIT insert('a', 'b', 100000000)
+5.0 LIT overlay('a', 'b', 100000000)
+5.0 LIT space('a b', 100000000)
+5.0 LIT format(1, 100000000)
+5.0 LIT trunc(1, 100000000)
+5.0 LIT 'x'~substr(1, 100000000)
+5.0 LIT 'b'~insert('a', 100000000)
+5.0 LIT 'b'~overlay('a', 100000000)
+5.0 LIT 'a b'~space(100000000)
+5.0 LIT 'x'~replaceAt('y', 100000000)
+5.0 LIT .MutableBuffer~new('x')~substr(1, 100000000)
+rc=0
+
+# A clause that passes the limit and then fails with a condition of its own
+# raises only that condition: the handler that traps it runs.
+
+run limit=64M
+signal on syntax
+s = copies('x', 40000000)
+t = s || s || nosuch()
+say 'no error'
+exit
+syntax:
+say 'trapped' condition('o')~code
+s = ''
+say 'continued'
+----
+trapped 43.1
+continued
+rc=0
+
+# A limit below what the interpreter's own library holds raises nothing in
+# the library's clauses.
+
+run limit=1K
+say 'ran'
+----
+ran
+rc=0
+
+# Memory that passes the limit inside a method the interpreter's library
+# writes in Rexx is raised at the end of the program's clause that sent it,
+# not inside the library.
+
+run limit=4M
+b = .Array~new(150000)~fill(1)
+a = .Array~new
+a~appendAll(b)
+say 'no error'
+----
+rc=251
+     3 *-* a~appendAll(b)
+Error 5 running INSTORE line 3:  System resources exhausted.

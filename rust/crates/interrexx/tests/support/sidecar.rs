@@ -242,15 +242,21 @@ pub const CORPUS_HEAP_LIMIT: usize = 1 << 30;
 
 /// The in-process interpreter's invocation for one run from `directory`:
 /// `overrides` laid over the process's own environment, `stdin` as its
-/// standard input, and [`CORPUS_HEAP_LIMIT`] as its heap limit.
+/// standard input, and [`CORPUS_HEAP_LIMIT`] as its heap limit unless
+/// `overrides` names `REXX_HEAP_LIMIT`, which the invocation's own limit would
+/// take the place of.
 pub fn invocation(
     directory: &Path,
     overrides: &[(String, String)],
     stdin: Option<&[u8]>,
 ) -> interrexx::Invocation {
-    let mut invocation = interrexx::Invocation::none()
-        .with_directory(directory.to_path_buf())
-        .with_heap_limit(CORPUS_HEAP_LIMIT);
+    let mut invocation = interrexx::Invocation::none().with_directory(directory.to_path_buf());
+    if !overrides
+        .iter()
+        .any(|(name, _)| name == interrexx::HEAP_LIMIT_ENV)
+    {
+        invocation = invocation.with_heap_limit(CORPUS_HEAP_LIMIT);
+    }
     if let Some(bytes) = stdin {
         invocation = invocation.with_input(interrexx::ProgramInput::Bytes(bytes.to_vec()));
     }

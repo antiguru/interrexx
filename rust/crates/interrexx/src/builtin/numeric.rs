@@ -73,9 +73,11 @@ fn non_negative(name: &[u8], value: Option<i64>, position: usize) -> Result<Opti
 }
 
 /// A width the result is padded out to, as the `u32` `interrexx-num` takes, having
-/// first asked the allocator for it.
-fn padding_width(value: i64) -> Result<u32, Failure> {
+/// first asked the allocator for it. A width past `heap_limit` raises 5.0
+/// (r[env.invocation.heap-limit.raise]).
+fn padding_width(heap_limit: Option<usize>, value: i64) -> Result<u32, Failure> {
     let width = u32::try_from(value).map_err(|_| Failure::from(Raised::system_resources()))?;
+    crate::admit_within(heap_limit, usize::cast_from(width))?;
     fresh_buffer(usize::cast_from(width))?;
     Ok(width)
 }
@@ -190,7 +192,7 @@ pub(crate) fn trunc_of(
 ) -> Result<ObjRef, Failure> {
     let Numeric { digits, .. } = current(interp);
     let value = rounded_target(value.clone(), digits)?;
-    let places = padding_width(places.unwrap_or(0))?;
+    let places = padding_width(interp.heap_limit, places.unwrap_or(0))?;
     Ok(interp.integer_text(value.trunc(digits, places).into_bytes(), digits))
 }
 
@@ -251,8 +253,13 @@ pub(crate) fn format_over(
     // `before` and `after` are always materialised -- the interpreter's
     // leading spaces and trailing decimal zeros are computed on every path
     // -- so both are reserved from the allocator before anything is built.
-    let before = before.map(padding_width).transpose()?;
-    let after = after.map(padding_width).transpose()?;
+    let heap_limit = interp.heap_limit;
+    let before = before
+        .map(|width| padding_width(heap_limit, width))
+        .transpose()?;
+    let after = after
+        .map(|width| padding_width(heap_limit, width))
+        .transpose()?;
 
     // `expt` is a *threshold* and never occupies a byte, so a value past
     // `u32::MAX` saturates there rather than being refused: every exponent it
@@ -281,7 +288,7 @@ pub(crate) fn format_over(
         // Not a width at all: zero is the sentinel that suppresses
         // exponential form, and it has to survive to `interrexx-num`.
         Some(0) => Some(0),
-        Some(width) if displayed => Some(padding_width(width)?),
+        Some(width) if displayed => Some(padding_width(heap_limit, width)?),
         // A width that is never written changes nothing about the result, so
         // it is dropped rather than narrowed. `interrexx-num` reads `expp` only
         // through that zero test and through the exponential branch, and

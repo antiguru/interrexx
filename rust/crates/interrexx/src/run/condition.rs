@@ -765,6 +765,14 @@ impl Interp {
         // the same clause is owed its run. A halt request waits for the label's
         // clause: an untrapped one is reported there, and `SIGL` names it for a
         // trapped one.
+        // The trapped condition takes the place of a heap-limit raise the
+        // clause owes (r[env.invocation.heap-limit.raise]), which would
+        // otherwise fall on the handler's first clause, past this trap. The
+        // collection that found the heap past its limit may have run while
+        // the condition object was being built.
+        if self.heap_over_limit && self.running_user_program() {
+            self.heap_limit_raised();
+        }
         if let Some(exit) = self.deliver_pending(false)? {
             return Ok(Flow::Exit(exit.value()));
         }

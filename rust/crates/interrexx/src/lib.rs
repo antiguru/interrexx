@@ -355,6 +355,27 @@ const COLLECT_FLOOR: usize = 65_536;
 /// (see `Interp::bytes_due`).
 const COLLECT_BYTES_FLOOR: usize = 32 << 20;
 
+/// [`Interp::admit_bytes`] for a heap limit read out ahead, for a caller that
+/// holds a borrow of the interpreter.
+pub(crate) fn admit_within(heap_limit: Option<usize>, bytes: usize) -> Result<(), Raised> {
+    match heap_limit {
+        Some(limit) if bytes > limit => Err(Raised::system_resources()),
+        _ => Ok(()),
+    }
+}
+
+/// The least step of a heap limit (see [`heap_limit_step`]), so that a heap
+/// at a tiny limit does not collect at every allocation.
+const HEAP_LIMIT_STEP_FLOOR: usize = 64 << 10;
+
+/// How far past a heap limit of `limit` the heap may grow before the next
+/// collection, and how much further than the last raise it must grow before
+/// it is raised again: a sixteenth of the limit, and no less than
+/// [`HEAP_LIMIT_STEP_FLOOR`] (r[env.invocation.heap-limit.raise]).
+fn heap_limit_step(limit: usize) -> usize {
+    (limit / 16).max(HEAP_LIMIT_STEP_FLOOR)
+}
+
 /// The bytes a loaded program is charged toward the next collection, with
 /// [`PROGRAM_BYTES_PER_SOURCE_BYTE`] for each byte of its source. Measured on
 /// `Package~new` before any collection: about 30 kB for a one-line program,
@@ -1581,8 +1602,8 @@ struct Interp {
     /// it. It holds `clause_exits` up, so that the boundary is reached.
     pub(crate) heap_over_limit: bool,
     /// The live body bytes a collection must find above for the limit to be
-    /// raised again: zero until it is first raised, then a sixteenth of the
-    /// limit above what the heap could hold when it was, so that a handler has
+    /// raised again: zero until it is first raised, then a [`heap_limit_step`]
+    /// above what the heap could hold when it was, so that a handler has
     /// the room to let go of what it holds. Back to zero once a collection
     /// finds the heap within the limit.
     pub(crate) heap_raise_above: usize,
@@ -2377,7 +2398,6 @@ impl Interp {
         };
         with_session_variable(&mut env);
         let hash_seed = hash_seed_of(&env, None);
-        let heap_limit = named_heap_limit(&env).ok().flatten();
         // The creating thread holds the baton until a driver exit releases it.
         let baton = crate::sync::Arc::new(crate::island::InterpBaton::new());
         baton.acquire();
@@ -2522,7 +2542,7 @@ impl Interp {
             clause_exits: false,
             trace_switchable: false,
             boundary_posts: None,
-            heap_limit,
+            heap_limit: None,
             heap_over_limit: false,
             heap_raise_above: 0,
             call_search: require::Instance::default(),
@@ -3884,15 +3904,15 @@ impl Interp {
 
     /// What a collection that found `live` body bytes owes a heap limit of
     /// `limit`: the next collection falls due before the heap can pass the
-    /// limit by more than a sixteenth of it, and a heap past it raises 5.0 at
-    /// the next clause boundary, unless the last raise was for a heap that
-    /// could hold within a sixteenth of the limit of this one
+    /// limit by more than its [`heap_limit_step`], and a heap past it raises
+    /// 5.0 at the next clause boundary of a user program, unless the last
+    /// raise was for a heap that could hold within a step of this one
     /// (`heap_raise_above`). The figure a
     /// collection finds is recomputed from the survivors, so the bound does
     /// not drift however long the run.
     #[cold]
     fn bound_by_heap_limit(&mut self, limit: usize, live: usize) {
-        let step = limit / 16;
+        let step = heap_limit_step(limit);
         let headroom = limit.saturating_sub(live).max(step);
         self.bytes_due = self.bytes_due.min(headroom);
         if live <= limit {
@@ -3909,7 +3929,7 @@ impl Interp {
     pub(crate) fn heap_limit_raised(&mut self) {
         self.heap_over_limit = false;
         self.restore_clause_exits();
-        let step = self.heap_limit.unwrap_or(0) / 16;
+        let step = self.heap_limit.map_or(0, heap_limit_step);
         self.heap_raise_above = self.heap.body_bytes_bound().saturating_add(step);
     }
 
@@ -3921,10 +3941,7 @@ impl Interp {
     /// ([`Interp::bound_by_heap_limit`]).
     #[inline]
     pub(crate) fn admit_bytes(&self, bytes: usize) -> Result<(), Raised> {
-        match self.heap_limit {
-            Some(limit) if bytes > limit => Err(Raised::system_resources()),
-            _ => Ok(()),
-        }
+        admit_within(self.heap_limit, bytes)
     }
 
     /// Drops every row keyed by one of the `dead` classes.
@@ -4323,7 +4340,7 @@ impl Interp {
         if let Some(limit) = self.heap_limit {
             let headroom = limit
                 .saturating_sub(self.heap.body_bytes_bound())
-                .max(limit / 16);
+                .max(heap_limit_step(limit));
             let due = self.heap.bytes_since().saturating_add(headroom);
             self.bytes_due = self.bytes_due.min(due);
         }
@@ -5192,6 +5209,7 @@ pub(crate) fn run_instance(
         own_descriptors: true,
     });
     interp.warn_of_refused_hash_seed();
+    interp.set_heap_limit(None);
     let result = interp.bootstrap_library().and_then(|()| {
         interp.default_address = options.initial_address.as_deref().map(Rc::from);
         interp.call_search = require::Instance {

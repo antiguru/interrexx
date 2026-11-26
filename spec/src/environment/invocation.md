@@ -87,18 +87,22 @@ the slots of collections; the interpreter's own structures, such as its
 frames and translated programs, are not counted.
 
 r[env.invocation.heap-limit.raise]
-Under a bound, a single request for more than the bound, for an array, a buffer or a string
-sized by a number the program gives, raises `SYNTAX 5.0` where it is made.
-Memory that grows past the bound otherwise raises `SYNTAX 5.0` at the end of
-a clause, once a collection of unreachable objects has found more than the
-bound still in use. By then the run may hold more than the bound: by up to a
-sixteenth of it, and what the clause that crossed it allocated. The condition
-is raised again when a later collection finds the memory in use grown by more
-than a sixteenth of the bound past what the run could hold when it was last
-raised, or, after a collection has found it within the bound, past the bound
-again. Without a bound, a request the host refuses raises `SYNTAX 5.0` where
-it can, and a request the host grants but cannot back may end the process.
-ooRexx has no such bound.
+Under a bound, a single request for more than the bound, for an array, a
+buffer or a string sized by a number the program gives, raises `SYNTAX 5.0`
+where it is made. Memory that grows past the bound otherwise raises
+`SYNTAX 5.0` at the end of a clause of a program the run was given, not of
+the interpreter's own library, once a collection of unreachable objects has
+found more than the bound still in use; a clause whose own condition a
+`SIGNAL ON` trap takes raises only that. The bound is the interpreter's, not a thread's:
+the condition is raised on whichever thread first ends such a clause. By then
+the run may hold more than the bound: by up to a step, and what the clause
+that crossed it allocated, where a step is a sixteenth of the bound or 64
+KiB, whichever is more. The condition is raised again when a later collection
+finds the memory in use grown by more than a step past what the run could
+hold when it was last raised, or, after a collection has found it within the
+bound, past the bound again. Without a bound, a request the host refuses
+raises `SYNTAX 5.0` where it can, and a request the host grants but cannot
+back may end the process. ooRexx has no such bound.
 
 ## Running a string
 
