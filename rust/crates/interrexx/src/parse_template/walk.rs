@@ -220,6 +220,14 @@ impl Interp {
     ) -> Result<bool, Failure> {
         let parse = parse_of(clause)?;
         let evaluated = (src != crate::ir::Op::ARG_OMITTED).then(|| registers.get(src));
+        if opening == ParseOpening::Literal {
+            let traced = self.traced_mode();
+            if traced.results || traced.intermediates {
+                self.exec_parse(code, parse, evaluated)?;
+                return Ok(false);
+            }
+            return Ok(true);
+        }
         let (first, source, origin) =
             match self.walked_source(code, parse, evaluated, opening, strings)? {
                 Opened::Walk(first, source, origin) => (first, source, origin),

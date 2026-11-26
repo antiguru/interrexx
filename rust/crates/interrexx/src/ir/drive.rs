@@ -391,6 +391,7 @@ fn undriven_op_name(op: &Op) -> &'static str {
         Op::Signal { .. } => "Signal",
         Op::UseArg(..) => "UseArg",
         Op::ParseBegin { .. } => "ParseBegin",
+        Op::ParseStore { .. } => "ParseStore",
         Op::ParseRun { .. } => "ParseRun",
         Op::Return { .. } => "Return",
         Op::Queue { .. } => "Queue",
@@ -1271,6 +1272,10 @@ macro_rules! region_ops {
                         Ok(false) => break $cold Ok(RegionEnd::Flowed(Flow::Next)),
                         Err(failure) => break $cold Err(failure),
                     }
+                }
+                Op::ParseStore { slot, value, .. } => {
+                    let frame = $self.activation().frame;
+                    $self.set_variable(frame, usize::cast_from(*slot), *value);
                 }
                 Op::ParseRun { $index, base, from, to, operand } => {
                     debug_assert_names_the_clause(

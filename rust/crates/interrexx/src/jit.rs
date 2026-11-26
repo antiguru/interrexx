@@ -173,6 +173,9 @@ pub(crate) enum Step {
     /// shows intermediates (`Native::intermediates`), skipped otherwise, as
     /// the op's own gate would.
     Trace { pc: u32 },
+    /// The opening of a prepared literal template, which the host runs
+    /// whole if trace has changed since the clause was compiled.
+    ParseGuard { pc: u32 },
     /// `Op::CallArgs` at `pc`, compiled where its site resolved to a quiet
     /// builtin: [`Host::quiet_builtin`] over the argument registers `args`
     /// carries ([`carry_arg`]), whose pushes the pass dropped, else those
@@ -800,6 +803,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Close { .. }
             | Step::Op { .. }
             | Step::Trace { .. }
+            | Step::ParseGuard { .. }
             | Step::Jump { .. }
             | Step::Compound { .. }
             | Step::BlockStart { .. }
@@ -1050,6 +1054,20 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     dst,
                 } => compare(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
+                Step::ParseGuard { pc } => {
+                    let quick = e.load_native(types::I64, layout::QUICK_VALUES);
+                    let quick = e.b.ins().icmp_imm_u(IntCC::NotEqual, quick, 0);
+                    let intermediates = e.load_native(types::I64, layout::INTERMEDIATES);
+                    let quiet = e.b.ins().icmp_imm_u(IntCC::Equal, intermediates, 0);
+                    let ready = e.b.ins().band(quick, quiet);
+                    let slow = e.b.create_block();
+                    let join = e.b.create_block();
+                    e.b.ins().brif(ready, join, &[], slow, &[]);
+                    e.b.switch_to_block(slow);
+                    e.slow_op(clause_pc, pc);
+                    e.b.ins().jump(join, &[]);
+                    e.b.switch_to_block(join);
+                }
                 Step::Trace { pc } => {
                     let tracing = e.load_native(types::I64, layout::INTERMEDIATES);
                     let echo = e.b.create_block();

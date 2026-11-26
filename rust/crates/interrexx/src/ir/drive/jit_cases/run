@@ -117,6 +117,19 @@ mustNotRun: say 'unexpected case operand'; exit 1
 10000
 compiled: line 2
 
+# prepared literal PARSE clauses write their fields inside the compiled pass
+run
+total = 0
+do i = 1 to 10000
+  parse value 'Foo Bar' with p +5 q .
+  parse value 'alpha beta gamma delta' with a b c d
+  total = total + i
+end
+say total p'|'q a b c d
+----
+50005000 Foo B|ar alpha beta gamma delta
+compiled: line 2
+
 # DO n, and DO FOREVER left by LEAVE
 run
 k = 0

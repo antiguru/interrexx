@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use interrexx_parse::{ExprKind, InstructionKind, parse_program};
 
+use super::Op;
 use super::golden::render;
 use super::{Chunk, ChunkTooLarge, NodePath};
 use crate::Interp;
@@ -653,6 +654,67 @@ fn a_template_of_literals_is_one_parse_begin() {
          1: Load read=Simple at=0 dst=0\n\
          2: ParseBegin index=0 src=0 base=omitted to=5 opening=Value strings=0\n"
     );
+}
+
+#[test]
+fn precomputed_parse_requires_fixed_inline_pieces() {
+    let literal = b"parse value 'Foo Bar' with p +5 q .\n";
+    let chunk = compile_for_test(literal).expect("the chunk fits");
+    let writes: Vec<_> = chunk
+        .ops
+        .iter()
+        .filter_map(|op| match *op {
+            Op::ParseStore { value, .. } => Some(value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        writes,
+        [
+            crate::ObjRef::inline_text(b"Foo B").unwrap(),
+            crate::ObjRef::inline_text(b"ar").unwrap(),
+        ]
+    );
+    let unsettled = compile_for_test(b"trace value arg(1)\nparse value 'Foo Bar' with p +5 q .\n")
+        .expect("the chunk fits");
+    assert!(
+        unsettled
+            .ops
+            .iter()
+            .any(|op| matches!(op, Op::ParseStore { .. }))
+    );
+
+    for (source, trace) in [
+        (&literal[..], intermediates()),
+        (
+            b"parse value 'longword' with p\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value 'Foo Bar' with p +10 q\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value '123' with p\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value 'Foo Bar' with p (sep) q\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value 'Foo Bar' with p. q\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+    ] {
+        let chunk = compile_for_test_under(source, trace).expect("the chunk fits");
+        assert!(
+            !chunk
+                .ops
+                .iter()
+                .any(|op| matches!(op, Op::ParseStore { .. }))
+        );
+    }
 }
 
 #[test]
