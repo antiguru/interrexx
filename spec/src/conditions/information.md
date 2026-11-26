@@ -127,7 +127,8 @@ clause that raised the condition starts, in that code, and a NOTREADY that the
 interpreter raised has none. `PROPAGATED` is `1` when the condition left the
 level that raised it and `0` otherwise, as
 [the propagated rule](r:cond.information.propagated) specifies, which leaves
-it unspecified for a condition that a built-in or library method raised.
+it unspecified for a condition that a built-in function or method, or a method
+of the class library, raised itself.
 `STACKFRAMES` and `TRACEBACK` are lists with one item for each active level of Rexx code at
 that time, the main program's included. Whether a built-in method has a level
 is not specified ([the built-in rule](r:class.stackframe.builtin)), and the text
