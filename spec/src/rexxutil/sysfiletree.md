@@ -1130,7 +1130,6 @@ directory. The final component is matched using Windows wildcard rules,
 which include extensionless names in `*.*`. The `I` option has no effect
 on this search. Under `S`, recurse into subdirectories and do not descend
 through directory reparse points. The name in each result is absolute.
-
 The target mask filters on the archive, directory, hidden, read-only, and
 system attributes in that order. A plus requires the attribute, a minus
 requires its absence, and an asterisk leaves it unrestricted. The new mask
