@@ -171,6 +171,9 @@ fn run(seed: u64, ops: usize) {
     let mut counter = 0i64;
     // Most of a phase adds or drops by its bias; a new phase every so often.
     let mut adding = true;
+    // Whether a write has allocated the store: `clear` on a stem that never
+    // held a tail has no store, and so no epoch, to move.
+    let mut allocated = false;
     for step in 0..ops {
         if rng.chance(2) {
             adding = !adding;
@@ -202,6 +205,7 @@ fn run(seed: u64, ops: usize) {
         let mut written: Option<Vec<u8>> = None;
         match op {
             Op::Set(i, value) => {
+                allocated = true;
                 let key = key_of(i);
                 let ordinal = tails.set(SEED, &key, value);
                 model.set(&key, value);
@@ -214,6 +218,7 @@ fn run(seed: u64, ops: usize) {
                 written = Some(key);
             }
             Op::InsertIfAbsent(i, value) => {
+                allocated = true;
                 let key = key_of(i);
                 tails.insert_if_absent(SEED, &key, value);
                 model.insert_if_absent(&key, value);
@@ -237,7 +242,9 @@ fn run(seed: u64, ops: usize) {
             Op::Clear => {
                 tails.clear();
                 model = Model::default();
-                assert_ne!(tails.epoch(), epoch, "clear moves the epoch, {}", context());
+                if allocated {
+                    assert_ne!(tails.epoch(), epoch, "clear moves the epoch, {}", context());
+                }
             }
             Op::Snapshot => {
                 if snapshots.len() >= 4 {
