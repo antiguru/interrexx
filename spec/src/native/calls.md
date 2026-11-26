@@ -210,7 +210,9 @@ that `RAISE SYNTAX` with that number and those substitutions would give in
 result of the call is not delivered. The fixture's routine raises `40.900` and
 then sets a variable of the caller, which shows that it ran on; its method
 raises `93.900`. An error that nothing traps ends the program as any `SYNTAX`
-error does, and the traceback names the routine.
+error does, and the traceback names the routine. A number that no error has
+raises `SYNTAX 98.941`, as [RAISE SYNTAX](r:instr.raise.number) with it would,
+naming the number as the major number, a point and the subcode.
 
 ```rexx
 after = 'unset'
@@ -237,6 +239,28 @@ say fxraise('final')
 ```
 
 ```output rc=216
+```
+
+```rexx
+do number over .array~of(40999, 93009, 2001, 41001)
+  say number '=>' raised(number)
+end
+exit
+raised: procedure
+  signal on syntax
+  call fxraisenumber arg(1)
+  return 'nothing'
+syntax: o = condition('o')
+  if o~code == 98.941 then return o~code o~additional[1]
+  return o~code
+::requires 'specfixture' LIBRARY
+```
+
+```output
+40999 => 98.941 40.999
+93009 => 98.941 93.9
+2001 => 98.941 2.1
+41001 => 41.1
 ```
 
 r[native.calls.condition]
