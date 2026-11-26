@@ -420,6 +420,10 @@ impl Interp {
         name: &[u8],
         args: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, Failure> {
+        // A level held aside goes on below this one ([`Interp::deferred_level`]).
+        if self.activity.deferred_level.is_some() {
+            self.raise_deferred_level();
+        }
         let caller = self.running_activation().map(|activation| activation.id);
         self.activity
             .method_levels
@@ -454,6 +458,10 @@ impl Interp {
         args: &[Option<ObjRef>],
         body: impl FnOnce(&mut Interp) -> Result<T, Failure>,
     ) -> Result<T, Failure> {
+        // A level held aside goes on below this one ([`Interp::deferred_level`]).
+        if self.activity.deferred_level.is_some() {
+            self.raise_deferred_level();
+        }
         let caller = self.running_activation().map(|activation| activation.id);
         self.activity
             .method_levels
@@ -473,7 +481,9 @@ impl Interp {
     /// The level is held aside and pushed only when Rexx code starts while
     /// `body` runs ([`Interp::raise_deferred_level`], from
     /// [`Interp::push_boxed_activation`], which every activation passes), and
-    /// it stays until `body` ends. Only Rexx code reads the levels
+    /// it stays until `body` ends. A level pushed while it is held aside,
+    /// eager or deferred, pushes it first, so the stack keeps the order the
+    /// primitives were sent in. Only Rexx code reads the levels
     /// (`.context~stackFrames`), so until then nothing can see that it is
     /// missing. A string's `==` sends `REQUEST` to the other operand, so an
     /// argument of a base class does not make this level needless.
