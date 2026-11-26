@@ -181,8 +181,8 @@
 <p>SysFileTree looks for files and directories whose names match a pattern and
 stores what it finds in a stem or an array: one text line per match, and in
 the stem a count. It answers 0.</p>
-<p>The rules here are those of a Unix-like system. The attribute arguments exist
-for the sake of other systems and have no effect here.</p>
+<p>The examples use a Unix-like system. The <a href="#r-util.sysfiletree.windows">Windows rule</a>
+describes differences in search, results and attribute handling.</p>
 <blockquote>
 <p><strong>Note.</strong> Times, the sizes of directories, the permission bits a new file
 gets and the order in which matches are stored belong to the host or to the
@@ -1044,9 +1044,8 @@ device 1 c 10
 <div class="rule" id="r-util.sysfiletree.masks"><a href="#r-util.sysfiletree.masks">[util.sysfiletree.masks]</a></div>
 <p><code>tattrib</code> and <code>nattrib</code> are strings of up to five characters, each <code>*</code>, <code>+</code> or
 <code>-</code>, or the null string. They are checked, and an argument that has any other
-character or is longer than five characters raises <code>SYNTAX 40.900</code>. They have
-no other effect: a mask does not select, and does not change a file or what is
-stored for it.</p>
+character or is longer than five characters raises <code>SYNTAX 40.900</code>. On a Unix-like
+system a valid mask has no effect. <a href="#r-util.sysfiletree.windows">Windows applies both masks</a>.</p>
 <pre><code class="language-rexx">d = 'c2zqft13'
 call sysmkdir d
 call lineout d'/f.txt', 'x'; call lineout d'/f.txt'
@@ -1194,6 +1193,22 @@ dangling, D:    0 0
 dangling, F:    0 1
 dangling data:  7 lrwxrwxrwx
 </code></pre>
+<h2 id="windows"><a class="header" href="#windows">Windows</a></h2>
+<div class="rule" id="r-util.sysfiletree.windows"><a href="#r-util.sysfiletree.windows">[util.sysfiletree.windows]</a></div>
+<p>On Windows the directory is resolved against the interpreter's current
+directory. The final component is matched using Windows wildcard rules,
+which include extensionless names in <code>*.*</code>. The <code>I</code> option has no effect
+on this search. Under <code>S</code>, recurse into subdirectories and do not descend
+through directory reparse points. The name in each result is absolute.
+The target mask filters on the archive, directory, hidden, read-only, and
+system attributes in that order. A plus requires the attribute, a minus
+requires its absence, and an asterisk leaves it unrestricted. The new mask
+can set or clear the archive, hidden, read-only, and system attributes.
+The new mask also applies when <code>O</code> requests names alone. Names that cannot
+be represented in UTF-8 are omitted. A full result reports attributes after
+any change. Full entries use
+Windows local last-write time, byte size, and a five-character attribute
+field whose letters are <code>ADHRS</code>. A dash marks an attribute that is clear.</p>
 
                     </main>
 
