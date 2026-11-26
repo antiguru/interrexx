@@ -239,10 +239,10 @@ fn every_unbounded_shape_this_crate_can_take_is_bounded() {
         // 11.1 once the control stack is full. Measured with no deadline in
         // the optimized `test` profile, that is about 3.3 s in on i686 and
         // about 4.6 s in on x86_64, where the run peaks at about 3.4 GB
-        // resident. Both are inside the 30 s
-        // watchdog and an 8 GB cap, so a regression here fails the row with
-        // rc 245 rather than `DEADLINE_EXIT`; on a host slower or tighter on
-        // memory it could instead end at the watchdog or run out of memory.
+        // resident. Both are inside the 30 s watchdog and an 8 GB cap, so a
+        // regression here fails the row with rc 245 rather than
+        // `DEADLINE_EXIT`; on a host slower or tighter on memory it could
+        // instead end at the watchdog or run out of memory.
         //
         // **Each level runs fifty `NOP`s** so that the deadline arrives far
         // short of that depth. With a bare `interpret zs` per level, an
