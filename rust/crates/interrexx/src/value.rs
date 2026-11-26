@@ -531,7 +531,7 @@ impl Interp {
                     Some(text) => Ok(text),
                     None => self.string_value_text(value),
                 },
-                None => Ok(self.default_string_value_text(value)),
+                None => self.string_value_text(value),
             };
         }
         let store = match (object, stem) {

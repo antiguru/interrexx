@@ -14,3 +14,24 @@ rc 0
 The K class
 11
 [stderr]
+
+# A STRING method that answers nothing leaves the object's OBJECTNAME as its
+# string value, whether it is read directly or as a stem's default value
+# (r[conv.string.answer]); the oracle's answers.
+program
+s. = .k~new
+say s.
+say s.~string
+say .k~new
+::class k
+::method string
+  return
+::method objectname
+  return 'NAMED'
+----
+rc 0
+[stdout]
+NAMED
+NAMED
+NAMED
+[stderr]
