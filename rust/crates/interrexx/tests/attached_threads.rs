@@ -779,10 +779,12 @@ fn a_callback_during_a_wait_holds_its_wake() {
     );
 }
 
-/// A second attached thread's message arrives while the first's sleeps, and sleeps as long: it runs
-/// on top of the sleeping one, and the first, whose sleep ends first, finishes only after the
-/// second (Deviation 178). The oracle finishes them in the order
-/// their sleeps end (`a b`), so it is asked for the exit status only.
+/// A second attached thread's message is sent once the first's has started, which waits for it to
+/// start and then sleeps a second while the second sleeps two: it runs on top of the waiting one,
+/// and the first, whose sleep ends first, finishes only after the second (Deviation 178). Both
+/// waits are on the other message's start, not on a time, so the overlap holds on a loaded
+/// machine (#1100). The oracle finishes them in the order their sleeps end (`a b`), so it is asked
+/// for the exit status only.
 // spec: native.threads.attach.deviation.178
 #[test]
 fn callbacks_are_served_one_on_top_of_another() {

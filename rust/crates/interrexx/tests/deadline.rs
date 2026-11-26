@@ -235,17 +235,20 @@ fn every_unbounded_shape_this_crate_can_take_is_bounded() {
         // **The row that says where the check has to be.** This recursion
         // iterates no loop, transfers by no `SIGNAL` and resumes no reply, so
         // a deadline honoured at those cycles instead of at the clause
-        // boundary never sees it. Measured: with the
-        // check at the clause boundary it is `DEADLINE_EXIT` in under 0.5 s;
-        // with the check moved to `loop_advance`, `Flow::Signal` and the
-        // reply drain it overflows the interpreter thread's stack and the
-        // process dies with SIGABRT. **So a regression here aborts this test
-        // binary rather than failing it** -- that is what the shape does with
-        // no bound, and `on_interpreter_thread`'s own doc says a stack
-        // overflow is the one failure it cannot report.
+        // boundary never sees it. Unbounded only in time: the nesting ends in
+        // 11.1 once the control stack is full, so a regression here fails the
+        // row with rc 245 rather than `DEADLINE_EXIT`.
+        //
+        // **Each level runs fifty `NOP`s** so that the deadline arrives far
+        // short of that depth. With a bare `interpret zs` per level, an
+        // optimized i686 build fills its stack about 0.55 s in, near enough
+        // to `SHORT` that the stack won the race on CI and, before nesting
+        // was bounded, aborted this binary (#1102). Measured there, the
+        // fifty `NOP`s put the limit about 3.3 s in. More `NOP`s per level
+        // run out of a 32-bit heap first: each level keeps its fragment.
         (
             "INTERPRET recursion",
-            b"zs = 'interpret zs'\ninterpret zs\n",
+            b"zs = copies('nop; ', 50) 'interpret zs'\ninterpret zs\n",
         ),
     ];
     for (name, text) in shapes {
