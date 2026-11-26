@@ -492,7 +492,6 @@ impl Interp {
         arguments[..args.len()].copy_from_slice(args);
         let deferred = DeferredLevel {
             caller: self.running_activation().map(|activation| activation.id),
-            depth: self.activity.method_levels.len(),
             name,
             receiver,
             arguments,
@@ -510,29 +509,33 @@ impl Interp {
 
     /// Pushes the [`Interp::deferred_level`] of the primitive whose own code
     /// is running, if it has one not yet pushed, before it compares `left`
-    /// with `right` and either may run Rexx code. Rexx code that the primitive
-    /// runs some other way, such as a `Directory`'s stored method, runs under
-    /// an activation of its own, so a comparison that code makes leaves the
-    /// level where it is.
+    /// with `right` and either may run Rexx code.
+    ///
+    /// The level is still pending only until the first comparison that may
+    /// run Rexx, and a deferring primitive runs no Rexx before then: its
+    /// arguments are of base classes, whose methods cannot be replaced,
+    /// and an `UNINIT` runs when a method returns, after the body. So the code making the comparison is the primitive's own, at
+    /// the activation the level was registered at. A nested primitive that
+    /// defers registers its own level, and the outer one is put back when it
+    /// ends.
     #[cold]
     #[inline(never)]
     pub(crate) fn raise_deferred_level(&mut self, left: ObjRef, right: ObjRef) {
         if !self.may_run_rexx(left) && !self.may_run_rexx(right) {
             return;
         }
-        let caller = self.running_activation().map(|activation| activation.id);
-        let depth = self.activity.method_levels.len();
-        let Some(level) = self
-            .activity
-            .deferred_level
-            .take_if(|level| level.caller == caller && level.depth == depth)
-        else {
+        let Some(level) = self.activity.deferred_level.take() else {
             return;
         };
+        debug_assert_eq!(
+            level.caller,
+            self.running_activation().map(|activation| activation.id),
+            "a pending deferred level reached a comparison made by other code"
+        );
         self.activity
             .method_levels
             .push(crate::activity::MethodLevel {
-                caller,
+                caller: level.caller,
                 name: level.name.into(),
                 resolution: None,
                 receiver: level.receiver,

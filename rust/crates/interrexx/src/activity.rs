@@ -452,9 +452,6 @@ pub(crate) struct DeferredLevel {
     /// The activation the method was sent from, which is running while the
     /// level may be pushed.
     pub(crate) caller: Option<crate::activation::ActivationId>,
-    /// The length of [`Activity::method_levels`] when the method began, which
-    /// it is again whenever the method's own code is running.
-    pub(crate) depth: usize,
     pub(crate) name: &'static [u8],
     pub(crate) receiver: ObjRef,
     pub(crate) arguments: [Option<ObjRef>; DeferredLevel::MAX_ARGUMENTS],
