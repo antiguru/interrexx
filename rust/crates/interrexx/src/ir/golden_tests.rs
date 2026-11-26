@@ -515,7 +515,9 @@ fn one_body_under_two_trace_settings_is_two_cached_chunks() {
 /// the cache is forgotten too.
 #[test]
 fn making_the_trace_switchable_recompiles_each_body_unsettled() {
+    #[cfg(debug_assertions)]
     use super::trace_flow::Setting;
+
     let program = parse_program(b"x = 1\nsay x\n".to_vec()).expect("test program parses");
     let key = BodyKey {
         program: ProgramId::nth(0),
@@ -534,6 +536,8 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
     let settled = interp
         .chunk_for(key, untraced, &program.main, &plan)
         .expect("compiles");
+    assert!(settled.settled());
+    #[cfg(debug_assertions)]
     assert_eq!(settled.setting_at(0), Some(Setting::Known(untraced)));
 
     interp.make_trace_switchable();
@@ -544,6 +548,8 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
         !Rc::ptr_eq(&settled, &unsettled),
         "the lookup after the switch answered the chunk compiled before it"
     );
+    assert!(!unsettled.settled());
+    #[cfg(debug_assertions)]
     assert_eq!(unsettled.setting_at(0), Some(Setting::Unknown));
     assert!(
         Rc::ptr_eq(
