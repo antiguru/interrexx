@@ -605,6 +605,35 @@ impl ActivityRoots {
         self.frames = Rc::new(FrameArena::new(size));
     }
 
+    /// The register frame arena, for another activity to adopt, where it has
+    /// a block, no frame reserved ([`FrameArena::is_idle`]) and no other
+    /// handle; this activity is left an empty arena of the same size. A
+    /// frame borrows a handle, so with none elsewhere no frame is in use.
+    pub fn take_idle_frames(&mut self) -> Option<FrameArena> {
+        let frames = &self.frames;
+        if frames.blocks() == 0 || !frames.is_idle() || Rc::strong_count(frames) != 1 {
+            return None;
+        }
+        let empty = Rc::new(FrameArena::new(frames.size()));
+        Rc::into_inner(std::mem::replace(&mut self.frames, empty))
+    }
+
+    /// Replaces the register frame arena with `arena`, which
+    /// [`ActivityRoots::take_idle_frames`] answered.
+    ///
+    /// # Panics
+    ///
+    /// If the current arena has ever reserved a frame or is held elsewhere,
+    /// or `arena` has a frame reserved.
+    pub fn adopt_frames(&mut self, arena: FrameArena) {
+        assert!(
+            self.frames.blocks() == 0 && Rc::strong_count(&self.frames) == 1,
+            "an arena is adopted before the first frame"
+        );
+        assert!(arena.is_idle(), "an adopted arena has no frame reserved");
+        self.frames = Rc::new(arena);
+    }
+
     /// How many temporaries are currently rooted.
     pub fn temps_len(&self) -> usize {
         self.temps.len()

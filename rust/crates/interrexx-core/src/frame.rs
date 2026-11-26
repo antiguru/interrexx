@@ -336,6 +336,20 @@ impl FrameArena {
         self.blocks.borrow().len()
     }
 
+    /// Whether no frame of positive length is reserved: the state a new
+    /// arena is in, apart from the blocks it keeps. A frame of length 0 holds
+    /// no cell, so one at the start of the first block cannot be told apart.
+    ///
+    /// Such an arena can serve another activity as a new one would. Every
+    /// cell still holds an `ObjRef` bit pattern (property 1, and a cell is
+    /// only ever written an `ObjRef`), and `reserve` writes
+    /// [`ObjRef::NIL`] to every register it hands out, so a value left in a
+    /// cell is neither a root (`iter` walks only reserved frames) nor any
+    /// register's starting value.
+    pub fn is_idle(&self) -> bool {
+        self.current.get() == 0 && (self.top.get() == 0 || self.blocks.borrow().is_empty())
+    }
+
     /// Every register of every live frame.
     pub fn iter(&self) -> impl Iterator<Item = ObjRef> + '_ {
         let live = if self.blocks.borrow().is_empty() {
@@ -471,6 +485,29 @@ mod tests {
         assert_eq!(offset(&arena, back), 0);
         arena.release(back);
         assert_eq!(arena.iter().count(), 0);
+    }
+
+    #[test]
+    fn an_arena_is_idle_only_with_no_frame_reserved_in_any_block() {
+        let arena = FrameArena::new(FrameBlock::new(2).expect("in range"));
+        assert!(arena.is_idle());
+        let outer = arena.reserve(2);
+        assert!(!arena.is_idle());
+        let spilled = arena.reserve(1);
+        let inner = arena.reserve(1);
+        assert_eq!(arena.blocks(), 2);
+        arena.release(inner);
+        arena.release(spilled);
+        assert!(!arena.is_idle());
+        arena.release(outer);
+        assert!(arena.is_idle());
+        let held = arena.reserve(3);
+        let empty = arena.reserve(0);
+        assert_eq!(arena.top.get(), 0);
+        assert!(!arena.is_idle());
+        arena.release(empty);
+        arena.release(held);
+        assert!(arena.is_idle());
     }
 
     #[test]

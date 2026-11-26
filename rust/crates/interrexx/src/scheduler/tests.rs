@@ -2140,3 +2140,38 @@ fn a_refused_recall_of_a_send_again_passes_its_lock_on() {
         "the lock was not passed on after the recall was refused"
     );
 }
+
+/// Runs `source` on an interpreter thread of its own, answering its outcome
+/// and how many new activities adopted a pooled frame arena.
+fn run_counting_adoptions(source: &str) -> (Outcome, u64) {
+    let text = source.as_bytes().to_vec();
+    std::thread::Builder::new()
+        .stack_size(crate::INTERPRETER_STACK_BYTES)
+        .spawn(move || {
+            let outcome = crate::execute_on(
+                b"/tmp/arenas.rex",
+                text,
+                false,
+                Invocation::none().with_deadline(RUN_DEADLINE),
+                Some(crate::INTERPRETER_STACK_BYTES),
+            );
+            (outcome, crate::scheduler::adopted_arenas())
+        })
+        .expect("the interpreter thread")
+        .join()
+        .expect("the run did not panic")
+}
+
+/// An activity started after another has ended runs on the ended one's frame
+/// arena, and its variables start unassigned as a fresh one's do.
+#[test]
+fn a_started_activity_adopts_the_frame_arena_of_one_that_ended() {
+    let (outcome, adopted) = run_counting_adoptions(
+        "o = .k~new\ndo i = 1 to 3\n  say o~start('m', i)~result\nend\n\
+         ::class k\n::method m\n  use arg n\n  if n = 1 then x = 'set'\n  \
+         say n symbol('X')\n  return n * 10\n",
+    );
+    assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
+    assert_eq!(stdout(&outcome), "1 VAR\n10\n2 LIT\n20\n3 LIT\n30\n");
+    assert_eq!(adopted, 2);
+}

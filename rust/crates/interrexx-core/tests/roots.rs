@@ -122,6 +122,67 @@ fn the_frame_block_size_cannot_change_under_a_reserved_frame() {
         .set_frame_block(interrexx_core::FrameBlock::DEFAULT);
 }
 
+/// An idle arena moves to another activity with its block, and the frames it
+/// serves there start all `.nil` and root nothing of the first activity's.
+#[test]
+fn an_idle_arena_serves_another_activity_with_nil_registers() {
+    let mut first = interrexx_core::ActivityRoots::new();
+    let value = ObjRef::heap(21, 0);
+    let arena = first.frames();
+    let frame = arena.reserve(3);
+    frame.set(2, value);
+    arena.release(frame);
+    drop(arena);
+    let taken = first.take_idle_frames().expect("idle");
+    assert_eq!(first.frames().blocks(), 0);
+    let mut second = interrexx_core::ActivityRoots::new();
+    second.adopt_frames(taken);
+    let arena = second.frames();
+    assert_eq!(arena.blocks(), 1);
+    assert!(!second.iter().any(|r| r == value));
+    let frame = arena.reserve(3);
+    assert_eq!(frame.get(2), ObjRef::NIL);
+    assert_eq!(arena.blocks(), 1);
+    arena.release(frame);
+}
+
+/// An arena with a frame reserved, a handle held elsewhere, or no block yet
+/// stays with its activity.
+#[test]
+fn an_arena_in_use_or_without_a_block_is_not_taken() {
+    let mut roots = interrexx_core::ActivityRoots::new();
+    assert!(roots.take_idle_frames().is_none());
+    let arena = roots.frames();
+    let frame = arena.reserve(1);
+    assert!(roots.take_idle_frames().is_none());
+    arena.release(frame);
+    assert!(roots.take_idle_frames().is_none());
+    assert_eq!(roots.frames().blocks(), 1);
+    let parked = arena.park(arena.reserve(2));
+    drop(arena);
+    assert!(roots.take_idle_frames().is_none());
+    let arena = roots.frames();
+    arena.release(arena.unpark(parked));
+    drop(arena);
+    assert!(roots.take_idle_frames().is_some());
+}
+
+/// An arena is adopted only in place of one that never reserved a frame.
+#[test]
+#[should_panic(expected = "an arena is adopted before the first frame")]
+fn an_arena_is_not_adopted_over_a_used_one() {
+    let mut first = interrexx_core::ActivityRoots::new();
+    let arena = first.frames();
+    arena.release(arena.reserve(1));
+    drop(arena);
+    let taken = first.take_idle_frames().expect("idle");
+    let mut second = interrexx_core::ActivityRoots::new();
+    let arena = second.frames();
+    arena.release(arena.reserve(1));
+    drop(arena);
+    second.adopt_frames(taken);
+}
+
 /// A promoted variable keeps answering by name, through the redirect the
 /// promotion leaves behind.
 #[test]
@@ -357,4 +418,13 @@ fn taken_parked_values_stop_being_roots() {
     assert_eq!(roots.activity_mut().take_parked(parked), vec![value]);
     assert!(!roots.iter().any(|r| r == value));
     assert_eq!(roots.activity().live_parked(), 0);
+}
+
+/// An arena with a frame reserved is not adopted.
+#[test]
+#[should_panic(expected = "an adopted arena has no frame reserved")]
+fn an_arena_with_a_frame_reserved_is_not_adopted() {
+    let arena = interrexx_core::FrameArena::new(interrexx_core::FrameBlock::DEFAULT);
+    let _parked = arena.park(arena.reserve(1));
+    interrexx_core::ActivityRoots::new().adopt_frames(arena);
 }
