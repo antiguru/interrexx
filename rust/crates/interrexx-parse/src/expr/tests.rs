@@ -495,6 +495,21 @@ fn an_omitted_position_spans_the_end_of_the_token_before_it() {
     assert!(wrong.is_empty(), "{wrong:#?}");
 }
 
+/// A list that starts with an omitted item starts at that item's position, so
+/// the span of every node, omitted ones included, lies inside its parent's
+/// when the list sits in a clause.
+#[test]
+fn a_leading_omitted_item_lies_inside_its_list() {
+    for text in ["x = , 1\n", "say   ,1\n", "x = ( ,1)\n", "say f( ,1)\n"] {
+        let program = crate::parse_program(text.as_bytes().to_vec())
+            .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
+        let exprs = &program.main.exprs;
+        for index in 0..exprs.len() {
+            check_spans(exprs, ExprId::from_index(index), text);
+        }
+    }
+}
+
 #[test]
 fn a_single_parenthesised_expression_is_not_a_list() {
     // build/bin/rexx: `r = (1)~class` reports `The String class`, while
@@ -776,6 +791,9 @@ fn every_node_in_a_dense_expression_contains_its_operands() {
         ".array~of(1, 2)~~append(3)[1]",
         "(1, 2, 3)",
         "f(g(h(x)), , y)",
+        "( ,1)",
+        "f( ,1)",
+        "a~m( ,1)",
         "\\a = b & c | d",
         ">stem.",
         "a.b.c d.e",

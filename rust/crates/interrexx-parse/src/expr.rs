@@ -513,7 +513,10 @@ impl<'a, 'c> Parser<'a, 'c> {
         // measured, `(1,)~size` is 2 and `(1,,)~size` is 3, where `f(1,)`
         // passes one argument. The full-subexpression parse returns the total
         // where the argument-list parse returns the real count.
-        let extent = self.extent(from);
+        let mut extent = self.extent(from);
+        // A leading omitted item sits at the end of the token before the
+        // first comma, so the list starts there for the item to lie inside it.
+        extent.start = extent.start.min(self.ctx.exprs.borrow().node(parts[0]).span().start);
         let items = self.ctx.exprs.borrow_mut().push_edges(&parts);
         Ok(Some(self.ctx.push(NodeKind::List(items), extent)))
     }
