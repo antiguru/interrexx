@@ -6,6 +6,8 @@
 #[path = "support/ruled_corpus.rs"]
 mod ruled_corpus;
 mod support;
+#[path = "support/unfiled.rs"]
+mod unfiled;
 mod watchdog;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -25,6 +27,7 @@ use support::sidecar::{
     self, Half, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment,
     sidecar_for,
 };
+use unfiled::{RULED_RUNNER, UNFILED_FILE, read_unfiled};
 
 /// Env var that flips this test from a progress report into the gate.
 /// See the module doc's "REPORT vs STRICT" section.
@@ -634,36 +637,6 @@ fn every_concurrency_program_is_run_by_the_differential_or_a_ruled_fixture() {
 /// The directory whose programs [`every_lang_program_is_run_or_named_unfiled`]
 /// accounts for.
 const LANG_SUBDIR: &str = "lang";
-
-/// The companion file naming the ones it does not run, and why.
-const UNFILED_FILE: &str = "unfiled.txt";
-
-/// Every `path<TAB>reason` in `corpus/unfiled.txt`.
-fn read_unfiled(corpus_dir: &Path) -> Vec<(String, String)> {
-    let path = corpus_dir.join(UNFILED_FILE);
-    let text =
-        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-    text.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| {
-            let (entry, reason) = line.split_once('\t').unwrap_or_else(|| {
-                panic!("{}: {line:?} is not a `path<TAB>reason`", path.display())
-            });
-            assert!(
-                !reason.trim().is_empty(),
-                "{}: {entry} is named with no reason",
-                path.display()
-            );
-            (entry.to_string(), reason.to_string())
-        })
-        .collect()
-}
-
-/// The reason an [`UNFILED_FILE`] entry gives when the ruled runner pins the
-/// program's answer. That runner hands the program its `.stdin` and nothing
-/// else of a sidecar.
-const RULED_RUNNER: &str = "input_oracle::the_unfiled_ruled_programs_answer_as_this_crate_rules";
 
 /// Every `<name>.env`, `<name>.d/` and `<name>.stdin` beside a corpus program
 /// names a program the corpus list runs, or, for a `.stdin` alone, one the

@@ -9,6 +9,8 @@
 #[path = "support/ruled_corpus.rs"]
 mod ruled_corpus;
 mod support;
+#[path = "support/unfiled.rs"]
+mod unfiled;
 
 use interrexx_inventory::errors::expand;
 use std::collections::BTreeSet;
@@ -905,29 +907,22 @@ fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
         assert!(programs.contains(program), "{program} has no ruled outcome");
     }
     // Every program corpus/unfiled.txt says this test pins has a case here.
-    let unfiled = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/unfiled.txt");
-    let text = fs::read_to_string(&unfiled)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", unfiled.display()));
-    let pinned: Vec<&str> = text
-        .lines()
-        .filter(|line| !line.starts_with('#'))
-        .filter_map(|line| line.split_once('\t'))
-        .filter(|(_, reason)| reason.contains(RULED_NAME))
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let pinned: Vec<String> = unfiled::read_unfiled(&corpus_dir)
+        .into_iter()
+        .filter(|(_, reason)| reason.contains(unfiled::RULED_RUNNER))
         .map(|(entry, _)| entry)
         .collect();
     assert!(
         !pinned.is_empty(),
         "{} names no ruled program",
-        unfiled.display()
+        unfiled::UNFILED_FILE
     );
     for program in pinned {
         assert!(
-            programs.contains(program),
+            programs.contains(&program),
             "{} says this test pins {program}, which has no case",
-            unfiled.display()
+            unfiled::UNFILED_FILE
         );
     }
 }
-
-/// How corpus/unfiled.txt names [`the_unfiled_ruled_programs_answer_as_this_crate_rules`].
-const RULED_NAME: &str = "input_oracle::the_unfiled_ruled_programs_answer_as_this_crate_rules";
