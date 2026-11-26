@@ -71,7 +71,7 @@ fn code_page(option: Option<&[u8]>) -> Result<u32, u32> {
         .map(<[u8]>::to_ascii_uppercase)
         .as_deref()
     {
-        None | Some(b"OEMCP") => Ok(CP_OEMCP),
+        None | Some(b"" | b"OEMCP") => Ok(CP_OEMCP),
         Some(b"ACP") => Ok(CP_ACP),
         Some(b"SYMBOL") => Ok(CP_SYMBOL),
         Some(b"THREAD_ACP") => Ok(CP_THREAD_ACP),
@@ -79,6 +79,7 @@ fn code_page(option: Option<&[u8]>) -> Result<u32, u32> {
         Some(b"UTF8") => Ok(CP_UTF8),
         Some(number) => std::str::from_utf8(number)
             .ok()
+            .filter(|digits| digits.bytes().all(|byte| byte.is_ascii_digit()))
             .and_then(|digits| digits.parse().ok())
             .ok_or(ERROR_INVALID_PARAMETER),
     }

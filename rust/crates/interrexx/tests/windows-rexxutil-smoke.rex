@@ -184,11 +184,23 @@ if SysToUnicode('FF'x, 'UTF8', 'ERR_INVALID_CHARS', converted) <> 1113 then exit
 if converted['!TEXT'] \== '4100E9000000'x then exit 115
 if SysFromUnicode('0026'x, 1252, , '!', 'back.') <> 0 then exit 116
 if back.!TEXT \== '!' | back.!USEDDEFAULTCHAR <> 1 then exit 117
+if SysToUnicode('', 'UTF8', , converted) <> 0 | converted['!TEXT'] \== '' then exit 118
+if SysFromUnicode('', 'UTF8', , , 'back.') <> 0 then exit 119
+if back.!TEXT \== '' | back.!USEDDEFAULTCHAR <> 0 then exit 162
+if SysFromUnicode('4100'x, 'UTF8', , '?', 'back.') <> 0 then exit 163
+if back.!TEXT \== 'A' | back.!USEDDEFAULTCHAR <> 0 then exit 164
 
 /* spec: util.windows.ini */
 iniFile = SysTempFileName(root || '\rexxutil-ini-????.ini')
 if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 120
 if SysIni(iniFile, 'interrexx', 'test', 'value') \== '' then exit 121
+signal on syntax name missingIniKey
+call SysIni iniFile, 'interrexx'
+exit 165
+missingIniKey:
+if condition('O')~code <> 88.901 then exit 166
+signal off syntax
+if SysIni(iniFile, 'interrexx', '') \== 'ERROR:' then exit 167
 if SysIni(iniFile, 'INTERREXX', 'TEST') \== 'value' then exit 122
 if SysIni(iniFile, 'ALL:', 'sections.') \== '' then exit 123
 if sections.0 <> 1 | sections.1 \== 'interrexx' then exit 124
