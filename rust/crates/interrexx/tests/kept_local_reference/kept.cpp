@@ -137,6 +137,29 @@ RexxMethod1(RexxObjectPtr, KeepUse, CSTRING, which)
     return length != NULLOBJECT ? length : context->String("refused");
 }
 
+// A 5-byte string, kept from the call that made it: on a 32-bit target its
+// handle is a number, not carried in the address.
+static RexxObjectPtr wordKept;
+
+// Makes the 5-byte string `short`, keeps its handle, and answers its length
+// through that handle within this same call.
+RexxMethod0(RexxObjectPtr, KeepWordNow)
+{
+    wordKept = context->String("short");
+    RexxObjectPtr length = context->SendMessage0(wordKept, "LENGTH");
+    context->ClearCondition();
+    return length != NULLOBJECT ? length : context->String("refused");
+}
+
+// Answers the kept string's length through its handle, in a later call, or
+// `refused` where the handle names nothing.
+RexxMethod0(RexxObjectPtr, KeepWordLater)
+{
+    RexxObjectPtr length = context->SendMessage0(wordKept, "LENGTH");
+    context->ClearCondition();
+    return length != NULLOBJECT ? length : context->String("refused");
+}
+
 RexxMethodEntry methods[] = {
     REXX_METHOD(KeepMake, KeepMake),
     REXX_METHOD(KeepAnchored, KeepAnchored),
@@ -145,6 +168,8 @@ RexxMethodEntry methods[] = {
     REXX_METHOD(KeepLoose, KeepLoose),
     REXX_METHOD(KeepCommands, KeepCommands),
     REXX_METHOD(KeepAddress, KeepAddress),
+    REXX_METHOD(KeepWordNow, KeepWordNow),
+    REXX_METHOD(KeepWordLater, KeepWordLater),
     REXX_METHOD(KeepLendMine, KeepLendMine),
     REXX_METHOD(KeepRole, KeepRole),
     REXX_METHOD(KeepPublish, KeepPublish),

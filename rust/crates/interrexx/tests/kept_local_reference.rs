@@ -79,6 +79,8 @@ fn run_with_argument(
          ::method loose external 'LIBRARY kept KeepLoose'\n\
          ::method commands external 'LIBRARY kept KeepCommands'\n\
          ::method address external 'LIBRARY kept KeepAddress'\n\
+         ::method wordnow external 'LIBRARY kept KeepWordNow'\n\
+         ::method wordlater external 'LIBRARY kept KeepWordLater'\n\
          ::method lendmine external 'LIBRARY kept KeepLendMine'\n\
          ::method role external 'LIBRARY kept KeepRole'\n\
          ::method publish external 'LIBRARY kept KeepPublish'\n\
@@ -437,5 +439,30 @@ fn a_replay_whose_key_is_held_is_refused_until_it_is_free() {
         mode(format!("sim:replay={}", trace.display())),
     );
     assert_eq!(replayed, recorded);
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}
+
+/// **A kept handle to a value whose bits the address cannot carry: usable in
+/// its call, and on a 32-bit target refused after it.** The 5-byte string
+/// `short` is the same live value throughout. Within the call that made its
+/// handle the handle names it on every target. In a later call it names it
+/// on a 64-bit target, where every value is carried in the address, and is
+/// refused on a 32-bit one, where the handle is a number its call gave back
+/// (native-api.md, Handles and lifetimes).
+#[test]
+fn a_kept_numbered_value_handle_is_usable_in_its_call_and_refused_after_it_on_32_bit() {
+    let dir = fresh_dir("kept-numbered-value");
+    build_library(&dir);
+    let ours = run_in(
+        &dir,
+        "say k~wordnow\nsay k~wordlater\nsay length('short')\n",
+        true,
+    );
+    let later = if cfg!(target_pointer_width = "64") {
+        "5"
+    } else {
+        "refused"
+    };
+    assert_eq!(ours, (format!("5\n{later}\n5\n"), String::new(), 0));
     fs::remove_dir_all(&dir).expect("the run's directory is removable");
 }
