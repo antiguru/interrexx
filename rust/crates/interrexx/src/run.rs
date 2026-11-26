@@ -2663,6 +2663,16 @@ impl Interp {
         source: Option<&ProgramSource>,
         value: ObjRef,
     ) -> Result<Flow, Failure> {
+        // **Nested fragments are bounded by the stack, as calls are.** A
+        // fragment runs on this activation, so no activation count grows, and
+        // `Op::ExecWith` hands over a value read from a register, so no
+        // expression level checked the stack on the way here either. Without
+        // this, `zs = 'interpret zs'; interpret zs` overflows the interpreter
+        // thread's stack and aborts the process instead of raising 11.1.
+        let probe = 0u8;
+        if self.stack_exhausted(&raw const probe) {
+            return Err(Raised::insufficient_stack().into());
+        }
         self.roots.activity_mut().push_temp(value);
         // The string request every instruction that evaluates a
         // single string expression shares -- so the `>>>` below traces the

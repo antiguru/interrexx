@@ -93,3 +93,29 @@ fn a_join_rendering_itself_through_defaultname_runs_out_of_stack() {
         String::from_utf8_lossy(&outcome.stderr)
     );
 }
+
+/// An `INTERPRET` that interprets itself nests fragments until the control
+/// stack is full, and raises 11.1 a SYNTAX trap catches, as on the oracle,
+/// rather than overflowing the interpreter thread's stack (#1102). No
+/// expression level guards the stack on this path: `Op::ExecWith` hands the
+/// instruction its value from a register.
+#[test]
+fn an_interpret_that_interprets_itself_runs_out_of_stack() {
+    // 1 MiB above the 32 MiB control-stack reserve, so the limit is reached
+    // in a few levels.
+    let outcome = crate::run_program_on_stack(
+        "/w/r.rex",
+        b"signal on syntax\nzs = 'interpret zs'\ninterpret zs\n\
+          syntax: say condition('o')~code\n"
+            .to_vec(),
+        crate::Invocation::none(),
+        33 * 1024 * 1024,
+    );
+    assert_eq!(
+        outcome.stdout,
+        b"11.1\n",
+        "{}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert_eq!(outcome.exit_code, 0);
+}
