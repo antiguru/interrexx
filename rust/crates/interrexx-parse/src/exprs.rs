@@ -394,8 +394,8 @@ impl Exprs {
         let mut inline = [ExprId(NonZeroU32::MIN); 2];
         let at = |id: ExprId| self.nodes.get(id.index());
         for (node, parent) in self.nodes.iter().enumerate() {
-            // A span is read as a slice of the source text, by a message
-            // insert or a trace line.
+            // A span is published as a byte range of the retained source
+            // (`Node::span`), so a decoded one must be one.
             if parent.start > parent.end || usize::cast_from(parent.end) > bounds.text {
                 return Err(Inconsistent::Span { node });
             }

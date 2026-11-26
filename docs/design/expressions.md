@@ -159,7 +159,7 @@ corpus.
    and it is never the root of an expression slot.
 6. **What a node indexes outside the arena is in range.** Its span runs forwards and ends within
    the source text, and each symbol id it holds is below the symbol table's length, since a
-   message insert reads the span as a slice of the text and a name lookup reads the id as an
+   span is published as a byte range of the retained source and a name lookup reads the id as an
    index into the table.
 
 Invariant 2 is what every walk below leans on. It makes "the subtree of `n`" a slice, so a
