@@ -469,6 +469,73 @@ impl Interp {
         ran
     }
 
+    /// [`Interp::primitive_level`] for a `body` whose only Rexx code is what
+    /// a comparison it makes runs ([`collection::same_item`]). The level is
+    /// pushed when the first comparison that may run Rexx code begins, and
+    /// stays until `body` ends; until then no Rexx code runs, so nothing can
+    /// see that it is missing. A string's `==` sends `REQUEST` to the other
+    /// operand, so an argument of a base class does not make this level
+    /// needless.
+    #[inline]
+    pub(crate) fn deferred_level<T>(
+        &mut self,
+        receiver: ObjRef,
+        name: &'static [u8],
+        args: &[Option<ObjRef>],
+        body: impl FnOnce(&mut Interp) -> Result<T, Failure>,
+    ) -> Result<T, Failure> {
+        use crate::activity::DeferredLevel;
+        if args.len() > DeferredLevel::MAX_ARGUMENTS {
+            return self.primitive_level(receiver, name, args, body);
+        }
+        let mut arguments = [None; DeferredLevel::MAX_ARGUMENTS];
+        arguments[..args.len()].copy_from_slice(args);
+        let deferred = DeferredLevel {
+            caller: self.running_activation().map(|activation| activation.id),
+            depth: self.activity.method_levels.len(),
+            name,
+            receiver,
+            arguments,
+            count: args.len(),
+        };
+        let outer = self.activity.deferred_level.replace(deferred);
+        let ran = body(self);
+        // `raise_deferred_level` took this level when it pushed it, and any
+        // level a comparison's own code deferred was put back as it ended.
+        if std::mem::replace(&mut self.activity.deferred_level, outer).is_none() {
+            self.activity.method_levels.pop();
+        }
+        ran
+    }
+
+    /// Pushes the [`Interp::deferred_level`] of the primitive whose own code
+    /// is running, if it has one not yet pushed. Rexx code that the primitive
+    /// runs some other way, such as a `Directory`'s stored method, runs under
+    /// an activation of its own, so a comparison that code makes leaves the
+    /// level where it is.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn raise_deferred_level(&mut self) {
+        let caller = self.running_activation().map(|activation| activation.id);
+        let depth = self.activity.method_levels.len();
+        let Some(level) = self
+            .activity
+            .deferred_level
+            .take_if(|level| level.caller == caller && level.depth == depth)
+        else {
+            return;
+        };
+        self.activity
+            .method_levels
+            .push(crate::activity::MethodLevel {
+                caller,
+                name: level.name.into(),
+                resolution: None,
+                receiver: level.receiver,
+                arguments: level.arguments().into(),
+            });
+    }
+
     /// The primitive method `name` that runs for `receiver`: the first method
     /// of that name in `receiver`'s search order that is a primitive, past
     /// any Rexx override that forwarded to it, or `None` where none is.

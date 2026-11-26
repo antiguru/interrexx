@@ -1306,7 +1306,7 @@ fn hash_at(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
-    name: &[u8],
+    name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // **One body, two stores.** `IdentityTable`'s `At`, `Put` and `[]` rows are
     // donated to `StringTable` and that whole set on to `Directory`, so
@@ -1319,7 +1319,9 @@ fn hash_at(
     ) && owns(interp, receiver)
     {
         // An index not of a base class may hash and compare through Rexx
-        // methods of its own.
+        // methods of its own. Any other index may still be compared with a
+        // held index whose methods are Rexx code, which a string's `==` sends
+        // `REQUEST` to.
         if args
             .first()
             .copied()
@@ -1328,7 +1330,9 @@ fn hash_at(
         {
             return leveled_store_at(interp, receiver, args, name);
         }
-        return store_at(interp, receiver, args);
+        return interp.deferred_level(receiver, name, args, |interp| {
+            store_at(interp, receiver, args)
+        });
     }
     let index = hash_index(interp, args, 1)?;
     Ok(Some(interp.hash_entry_read(receiver, &index)))
@@ -1375,7 +1379,7 @@ fn hash_put(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
-    name: &[u8],
+    name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // [`native_hash_at`]'s split, for the same reason.
     if !matches!(
@@ -1384,7 +1388,8 @@ fn hash_put(
     ) && owns(interp, receiver)
     {
         // An index not of a base class may hash and compare through Rexx
-        // methods of its own, and so may a `Set`'s or `Bag`'s item.
+        // methods of its own, and so may a `Set`'s or `Bag`'s item. Any other
+        // is still compared with the held indexes, as in `hash_at`.
         let item = args.first().copied().flatten();
         let plain = match args.get(1).copied().flatten() {
             None => item.is_none_or(|item| interp.is_base_class(item)),
@@ -1395,7 +1400,9 @@ fn hash_put(
             }
         };
         if plain {
-            return store_put(interp, receiver, args);
+            return interp.deferred_level(receiver, name, args, |interp| {
+                store_put(interp, receiver, args)
+            });
         }
         return interp.primitive_level(receiver, name, args, |interp| {
             store_put(interp, receiver, args)

@@ -249,6 +249,11 @@ pub(super) fn same_item(
     if wanted == element {
         return Ok(true);
     }
+    if interp.activity.deferred_level.is_some()
+        && (interp.may_run_rexx(wanted) || interp.may_run_rexx(element))
+    {
+        interp.raise_deferred_level();
+    }
     let (left, right) = (wanted, element);
     let answer = interp.apply_binary(Operator::StrictEqual, left, right)?;
     interp.truth(answer, Raised::not_logical)
