@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use crate::ast::{CodeBody, Instruction, InstructionKind};
 use crate::block::translate_block;
 use crate::clause::{ClauseCursor, split_clauses};
-use crate::exprs::{ExprId, ExprView, Exprs};
+use crate::exprs::{Bounds, ExprId, ExprView, Exprs};
 use crate::selector::SelectorTable;
 use crate::token::{Keywords, ParseCtx, ParseError, SymbolTable};
 use crate::{ProgramSource, SourceKind, scan};
@@ -70,7 +70,14 @@ fn parse_body(text: &str, kind: SourceKind) -> Result<(CodeBody, SymbolTable), P
         translate_block(&ctx, &mut cursor)
     };
     let body = result?;
-    assert_eq!(body.check(), Ok(()), "{text:?} leaves a consistent arena");
+    assert_eq!(
+        body.check(Bounds {
+            text: source.parts().0.len(),
+            symbols: scanned.symbols.len(),
+        }),
+        Ok(()),
+        "{text:?} leaves a consistent arena"
+    );
     Ok((body, scanned.symbols))
 }
 

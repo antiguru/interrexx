@@ -87,36 +87,10 @@ fn read_program(image: &[u8], whole: Option<&'static [u8]>, text: &[u8]) -> Opti
         main: Image::get(&mut input)?,
         directives: Image::get(&mut input)?,
     };
-    if !input.bytes.is_empty() || (whole.is_none() && !arenas_hold(&program)) {
+    if !input.bytes.is_empty() || (whole.is_none() && program.check().is_err()) {
         return None;
     }
     Some(program)
-}
-
-/// Whether the arena of every body and every `::CONSTANT` expression of
-/// `program` is consistent with the roots its instructions name.
-fn arenas_hold(program: &Program) -> bool {
-    program.main.check().is_ok()
-        && program
-            .directives
-            .iter()
-            .all(|directive| match &directive.kind {
-                DirectiveKind::Method(method) => {
-                    method.body.as_ref().is_none_or(|b| b.check().is_ok())
-                }
-                DirectiveKind::Attribute(attribute) => {
-                    attribute.body.as_ref().is_none_or(|b| b.check().is_ok())
-                }
-                DirectiveKind::Routine(routine) => {
-                    routine.body.as_ref().is_none_or(|b| b.check().is_ok())
-                }
-                DirectiveKind::Constant(constant) => constant.value.check().is_ok(),
-                DirectiveKind::Annotate(_)
-                | DirectiveKind::Class(_)
-                | DirectiveKind::Options(_)
-                | DirectiveKind::Requires(_)
-                | DirectiveKind::Resource(_) => true,
-            })
 }
 
 /// The code body a [`Body`] left encoded holds.

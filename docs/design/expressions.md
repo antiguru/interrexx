@@ -156,6 +156,10 @@ in debug builds after each body is parsed, in every build when a body is read fr
 5. **An `Omitted` node sits only at an argument or list-item position.** Its parent is a `Call`, a
    `QualifiedCall`, a `List`, or a `Message` at a child position after the receiver and the scope,
    and it is never the root of an expression slot.
+6. **What a node indexes outside the arena is in range.** Its span runs forwards and ends within
+   the source text, and each symbol id it holds is below the symbol table's length, since a
+   message insert reads the span as a slice of the text and a name lookup reads the id as an
+   index into the table.
 
 Invariant 2 is what every walk below leans on. It makes "the subtree of `n`" a slice, so a
 question about a subtree is a scan of that slice, and running a subtree is a loop over it. It also

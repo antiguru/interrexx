@@ -22,7 +22,7 @@ use crate::ast::{
 use crate::clause::{Clause, ClauseCursor};
 use crate::convert::{ARGUMENT_DIGITS, check_trace_setting, is_number, whole_number};
 use crate::expr::{Terminators, display_value, parse_expr};
-use crate::exprs::ExprId;
+use crate::exprs::{Bounds, ExprId};
 use crate::scanner::{MAX_SYMBOL_LENGTH, is_symbol_char};
 use crate::token::{
     Operator, ParseCtx, ParseError, SymbolClass, SymbolId, Tag, Token, TokenCursor, TokenKind,
@@ -958,7 +958,14 @@ impl<'a, 'd> Dir<'a, 'd> {
                     exprs: self.ctx.take_exprs(),
                     root,
                 };
-                debug_assert_eq!(value.check(), Ok(()), "a ::CONSTANT arena is consistent");
+                debug_assert_eq!(
+                    value.check(Bounds {
+                        text: self.ctx.source.parts().0.len(),
+                        symbols: self.ctx.symbols.len(),
+                    }),
+                    Ok(()),
+                    "a ::CONSTANT arena is consistent"
+                );
                 value
             }
             Some(token) if matches!(token.kind.tag(), Tag::Symbol | Tag::Literal) => {

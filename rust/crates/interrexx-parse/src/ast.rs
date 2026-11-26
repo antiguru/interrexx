@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use crate::exprs::{Args, ExprId, ExprRef, Exprs, Inconsistent};
+use crate::exprs::{Args, Bounds, ExprId, ExprRef, Exprs, Inconsistent};
 use crate::token::SymbolId;
 
 /// The prefix operators.
@@ -102,17 +102,18 @@ impl CodeBody {
     }
 
     /// Checks the arena's invariants against the roots of every
-    /// instruction's expression slots.
+    /// instruction's expression slots, with `bounds` what the nodes index
+    /// outside the arena.
     ///
     /// # Errors
     ///
     /// The first invariant found broken, as [`Exprs::check`] reports it.
-    pub fn check(&self) -> Result<(), Inconsistent> {
+    pub fn check(&self, bounds: Bounds) -> Result<(), Inconsistent> {
         let mut roots = Vec::new();
         for instruction in &self.instructions {
             instruction.kind.for_each_root(&mut |root| roots.push(root));
         }
-        self.exprs.check(roots)
+        self.exprs.check(bounds, roots)
     }
 }
 
@@ -1183,15 +1184,16 @@ impl ConstantValue {
         }
     }
 
-    /// Checks the arena of an `(expr)` value's invariants; `Ok` for the
-    /// other forms, which hold none.
+    /// Checks the arena of an `(expr)` value's invariants, with `bounds`
+    /// what the nodes index outside the arena; `Ok` for the other forms,
+    /// which hold none.
     ///
     /// # Errors
     ///
     /// The first invariant found broken, as [`Exprs::check`] reports it.
-    pub fn check(&self) -> Result<(), Inconsistent> {
+    pub fn check(&self, bounds: Bounds) -> Result<(), Inconsistent> {
         match self {
-            ConstantValue::Expression { exprs, root } => exprs.check([*root]),
+            ConstantValue::Expression { exprs, root } => exprs.check(bounds, [*root]),
             ConstantValue::Name | ConstantValue::Text(_) => Ok(()),
         }
     }

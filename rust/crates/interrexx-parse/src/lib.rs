@@ -42,7 +42,7 @@ pub use convert::syntax_code;
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
 pub use exprs::{
-    Args, Branches, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs,
+    Args, Bounds, Branches, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs,
     Inconsistent, Node, NodeKind, Target,
 };
 pub use image::{program_from_image, program_from_static_image, program_image};
@@ -114,6 +114,43 @@ pub struct Program {
     /// Retained because a `SymbolId` is meaningless without it: the executor
     /// resolves names back to text to report them.
     pub symbols: SymbolTable,
+}
+
+impl Program {
+    /// Checks the arena of every body and every `::CONSTANT` expression
+    /// against the roots its instructions name and against the source text
+    /// and symbol table its nodes index.
+    ///
+    /// # Errors
+    ///
+    /// The first invariant found broken, as [`Exprs::check`] reports it.
+    pub fn check(&self) -> Result<(), Inconsistent> {
+        let bounds = Bounds {
+            text: self.source.parts().0.len(),
+            symbols: self.symbols.len(),
+        };
+        self.main.check(bounds)?;
+        for directive in &self.directives {
+            let body = match &directive.kind {
+                DirectiveKind::Method(method) => method.body.as_ref(),
+                DirectiveKind::Attribute(attribute) => attribute.body.as_ref(),
+                DirectiveKind::Routine(routine) => routine.body.as_ref(),
+                DirectiveKind::Constant(constant) => {
+                    constant.value.check(bounds)?;
+                    None
+                }
+                DirectiveKind::Annotate(_)
+                | DirectiveKind::Class(_)
+                | DirectiveKind::Options(_)
+                | DirectiveKind::Requires(_)
+                | DirectiveKind::Resource(_) => None,
+            };
+            if let Some(body) = body {
+                body.check(bounds)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// What `INTERPRET` produces: one code body, parsed at *run time* rather than

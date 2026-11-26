@@ -11,7 +11,7 @@ use crate::ProgramSource;
 use crate::ast::{CodeBody, EndStyle, EndTarget, Instruction, InstructionKind, LoopKind};
 use crate::clause::{ClauseCursor, PendingThen};
 use crate::expr::display_value;
-use crate::exprs::Exprs;
+use crate::exprs::{Bounds, Exprs};
 use crate::instruction::{missing_then, parse_instruction};
 use crate::token::{ParseCtx, ParseError, SymbolId, SymbolTable, Tag};
 
@@ -662,7 +662,14 @@ impl<'a> Block<'a> {
             labels: self.labels,
             exprs,
         };
-        debug_assert_eq!(body.check(), Ok(()), "a body's arena is consistent");
+        debug_assert_eq!(
+            body.check(Bounds {
+                text: self.source.parts().0.len(),
+                symbols: self.symbols.len(),
+            }),
+            Ok(()),
+            "a body's arena is consistent"
+        );
         body
     }
 }

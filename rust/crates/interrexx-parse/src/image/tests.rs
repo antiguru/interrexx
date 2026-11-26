@@ -298,6 +298,47 @@ fn an_image_whose_arena_is_inconsistent_is_refused() {
             }),
         ),
         (
+            "a span that runs backwards",
+            edited_image(|program| {
+                let root = say_root(&program.main);
+                let node = program.main.exprs.node_mut(root);
+                (node.start, node.end) = (node.end, node.start);
+            }),
+        ),
+        (
+            "a span past the end of the text",
+            edited_image(|program| {
+                let root = say_root(&program.main);
+                program.main.exprs.node_mut(root).end =
+                    u32::try_from(ARENA_TEXT.len() + 1).expect("a short text");
+            }),
+        ),
+        (
+            "a constant's span past the end of the text",
+            edited_image(|program| {
+                for directive in &mut program.directives {
+                    if let DirectiveKind::Constant(constant) = &mut directive.kind
+                        && let ConstantValue::Expression { exprs, root } = &mut constant.value
+                    {
+                        exprs.node_mut(*root).end =
+                            u32::try_from(ARENA_TEXT.len() + 1).expect("a short text");
+                    }
+                }
+            }),
+        ),
+        (
+            "a symbol id past the symbol table",
+            edited_image(|program| {
+                let beyond = SymbolId::from_index(program.symbols.len()).expect("a small table");
+                let exprs = &mut program.main.exprs;
+                let id = (0..exprs.len())
+                    .map(ExprId::from_index)
+                    .find(|&id| matches!(exprs.node(id).kind(), NodeKind::Variable(_)))
+                    .expect("a variable");
+                exprs.node_mut(id).kind = NodeKind::Variable(beyond);
+            }),
+        ),
+        (
             "a constant's expression with a parent",
             edited_image(|program| {
                 for directive in &mut program.directives {
@@ -343,5 +384,5 @@ fn a_built_in_image_is_not_validated() {
     assert!(program_from_image(&image, ARENA_TEXT).is_none());
     let image: &'static [u8] = Box::leak(image.into_boxed_slice());
     let read = program_from_static_image(image, ARENA_TEXT).expect("a built-in image is read");
-    assert!(read.main.check().is_err());
+    assert!(read.check().is_err());
 }

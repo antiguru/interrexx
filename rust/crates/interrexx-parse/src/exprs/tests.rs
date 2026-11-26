@@ -5,7 +5,14 @@ use crate::ast::PrefixOp;
 use crate::selector::SelectorTable;
 use crate::token::{Operator, SymbolId};
 
-use super::{CallTarget, ExprId, Exprs, Inconsistent, NodeKind};
+use super::{Bounds, CallTarget, ExprId, Exprs, Inconsistent, NodeKind};
+
+/// Bounds no node of a hand-built arena reaches, for the tests that are not
+/// about them.
+const ANY: Bounds = Bounds {
+    text: usize::MAX,
+    symbols: usize::MAX,
+};
 
 fn literal(exprs: &mut Exprs, text: &[u8], at: usize) -> ExprId {
     let bytes = exprs.push_bytes(text);
@@ -47,7 +54,97 @@ fn a_binary_node_follows_its_operands_and_links_them() {
         (exprs.node(two).parent(), exprs.node(two).position()),
         (Some(sum), 1)
     );
-    assert_eq!(exprs.check([sum]), Ok(()));
+    assert_eq!(exprs.check(ANY, [sum]), Ok(()));
+}
+
+/// A span is read as a slice of the source text, so one that runs backwards
+/// or past the end of the text is refused, and one that ends at the end of the
+/// text is not.
+#[test]
+fn a_span_backwards_or_past_the_text_is_refused() {
+    // `1 + 2`
+    let mut exprs = Exprs::default();
+    let (one, two, sum) = sum(&mut exprs);
+    let text = |text| Bounds { text, ..ANY };
+    assert_eq!(exprs.check(text(5), [sum]), Ok(()));
+    assert_eq!(
+        exprs.check(text(4), [sum]),
+        Err(Inconsistent::Span { node: two.index() })
+    );
+    let mut reversed = exprs.clone();
+    let node = reversed.node_mut(one);
+    (node.start, node.end) = (1, 0);
+    assert_eq!(
+        reversed.check(text(5), [sum]),
+        Err(Inconsistent::Span { node: one.index() })
+    );
+}
+
+/// A symbol id is read as an index into the symbol table, so a node naming
+/// one past its end is refused, in each place a node holds one.
+#[test]
+fn a_symbol_id_past_the_table_is_refused() {
+    let symbols = |symbols| Bounds { symbols, ..ANY };
+    let kinds = [
+        NodeKind::Variable(symbol(3)),
+        NodeKind::Constant(symbol(3)),
+        NodeKind::Stem(symbol(3)),
+        NodeKind::Compound(symbol(3)),
+        NodeKind::DotVariable(symbol(3)),
+        NodeKind::VariableReference {
+            symbol: symbol(3),
+            stem: false,
+        },
+        NodeKind::ClassResolver {
+            namespace: symbol(3),
+            name: symbol(0),
+        },
+        NodeKind::ClassResolver {
+            namespace: symbol(0),
+            name: symbol(3),
+        },
+    ];
+    for kind in kinds {
+        let mut exprs = Exprs::default();
+        let leaf = exprs.push(kind.clone(), 0..1);
+        assert_eq!(exprs.check(symbols(4), [leaf]), Ok(()), "{kind:?}");
+        assert_eq!(
+            exprs.check(symbols(3), [leaf]),
+            Err(Inconsistent::Symbol { node: leaf.index() }),
+            "{kind:?}"
+        );
+    }
+    for (namespace, name) in [(3, 0), (0, 3)] {
+        let mut exprs = Exprs::default();
+        let args = exprs.push_edges(&[]);
+        let call = exprs.push(
+            NodeKind::QualifiedCall {
+                namespace: symbol(namespace),
+                name: symbol(name),
+                args,
+            },
+            0..1,
+        );
+        assert_eq!(exprs.check(symbols(4), [call]), Ok(()));
+        assert_eq!(
+            exprs.check(symbols(3), [call]),
+            Err(Inconsistent::Symbol { node: call.index() })
+        );
+    }
+    let mut exprs = Exprs::default();
+    let args = exprs.push_edges(&[]);
+    let call = exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Symbol(symbol(3)),
+            args,
+        },
+        0..1,
+    );
+    assert_eq!(exprs.check(symbols(4), [call]), Ok(()));
+    assert_eq!(
+        exprs.check(symbols(3), [call]),
+        Err(Inconsistent::Symbol { node: call.index() })
+    );
 }
 
 #[test]
@@ -65,7 +162,7 @@ fn a_prefix_node_is_widened_to_its_operand() {
     assert_eq!(exprs.node(negated).span(), 0..4);
     assert_eq!(exprs.node(negated).first(), twelve);
     assert_eq!(exprs.node(twelve).parent(), Some(negated));
-    assert_eq!(exprs.check([negated]), Ok(()));
+    assert_eq!(exprs.check(ANY, [negated]), Ok(()));
 }
 
 #[test]
@@ -89,7 +186,7 @@ fn an_omitted_argument_is_a_node_that_widens_nothing() {
         (exprs.node(omitted).parent(), exprs.node(omitted).position()),
         (Some(call), 0)
     );
-    assert_eq!(exprs.check([call]), Ok(()));
+    assert_eq!(exprs.check(ANY, [call]), Ok(()));
 
     // An omitted node far outside the extent leaves it alone: only a present
     // child widens its parent.
@@ -149,13 +246,13 @@ fn a_message_lists_its_receiver_then_its_scope_then_its_arguments() {
         [(Some(message), 0), (Some(message), 1), (Some(message), 2)]
     );
     assert_eq!(exprs.node(message).span(), 0..7);
-    assert_eq!(exprs.check([message]), Ok(()));
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
 
     // Scoped, but with the receiver alone.
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, true, 1);
     assert_eq!(
-        exprs.check([message]),
+        exprs.check(ANY, [message]),
         Err(Inconsistent::Arity {
             node: message.index()
         })
@@ -164,18 +261,18 @@ fn a_message_lists_its_receiver_then_its_scope_then_its_arguments() {
     // Scoped with a receiver and a scope and no arguments is whole.
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, true, 2);
-    assert_eq!(exprs.check([message]), Ok(()));
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
 
     // Unscoped, the receiver alone is a whole message.
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, false, 1);
-    assert_eq!(exprs.check([message]), Ok(()));
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
 
     // Any message needs its receiver.
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, false, 0);
     assert_eq!(
-        exprs.check([message]),
+        exprs.check(ANY, [message]),
         Err(Inconsistent::Arity {
             node: message.index()
         })
@@ -204,7 +301,7 @@ fn rewinding_drops_what_was_pushed_after_the_mark() {
         (exprs.len(), exprs.edges.len(), exprs.bytes.len()),
         (nodes, edges, bytes)
     );
-    assert_eq!(exprs.check([sum]), Ok(()));
+    assert_eq!(exprs.check(ANY, [sum]), Ok(()));
 }
 
 #[test]
@@ -258,7 +355,7 @@ fn a_copy_is_the_subtree_pushed_again_with_its_ids_rebased() {
         ),
         (Some(copy), 1)
     );
-    assert_eq!(exprs.check([original, copy]), Ok(()));
+    assert_eq!(exprs.check(ANY, [original, copy]), Ok(()));
 
     // A binary copy rebases its operands, which live in the node itself.
     let mut exprs = Exprs::default();
@@ -272,7 +369,7 @@ fn a_copy_is_the_subtree_pushed_again_with_its_ids_rebased() {
             right: ExprId::from_index(4),
         }
     );
-    assert_eq!(exprs.check([sum, copy]), Ok(()));
+    assert_eq!(exprs.check(ANY, [sum, copy]), Ok(()));
 }
 
 #[test]
@@ -285,7 +382,7 @@ fn a_child_past_the_end_is_out_of_range() {
         right: ExprId::from_index(7),
     };
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::OutOfRange { node: sum.index() })
     );
 }
@@ -306,14 +403,14 @@ fn an_edge_or_byte_range_past_the_end_is_out_of_range() {
 
     exprs.edges.clear();
     assert_eq!(
-        exprs.check([call]),
+        exprs.check(ANY, [call]),
         Err(Inconsistent::OutOfRange { node: call.index() })
     );
 
     let mut exprs = valid.clone();
     exprs.bytes.clear();
     assert_eq!(
-        exprs.check([call]),
+        exprs.check(ANY, [call]),
         Err(Inconsistent::OutOfRange { node: one.index() })
     );
 
@@ -323,7 +420,7 @@ fn an_edge_or_byte_range_past_the_end_is_out_of_range() {
         args,
     };
     assert_eq!(
-        exprs.check([call]),
+        exprs.check(ANY, [call]),
         Err(Inconsistent::OutOfRange { node: call.index() })
     );
 }
@@ -333,7 +430,7 @@ fn a_root_past_the_end_is_out_of_range() {
     let mut exprs = Exprs::default();
     let (_, _, sum) = sum(&mut exprs);
     assert_eq!(
-        exprs.check([sum, ExprId::from_index(5)]),
+        exprs.check(ANY, [sum, ExprId::from_index(5)]),
         Err(Inconsistent::OutOfRange { node: 5 })
     );
 }
@@ -348,7 +445,7 @@ fn a_child_at_its_parent_is_after_its_parent() {
         right: two,
     };
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::ChildAfterParent { node: sum.index() })
     );
 }
@@ -359,7 +456,7 @@ fn a_moved_first_is_not_contiguous() {
     let (_, two, sum) = sum(&mut exprs);
     exprs.node_mut(sum).first = two;
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::NotContiguous { node: sum.index() })
     );
 }
@@ -370,7 +467,7 @@ fn a_leaf_whose_first_is_not_itself_is_not_contiguous() {
     let (one, two, sum) = sum(&mut exprs);
     exprs.node_mut(two).first = one;
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::NotContiguous { node: two.index() })
     );
 }
@@ -399,7 +496,7 @@ fn a_gap_between_children_is_not_contiguous() {
     exprs.node_mut(one).parent = Some(sum);
     exprs.node_mut(three).parent = None;
     assert_eq!(
-        exprs.check([sum, three]),
+        exprs.check(ANY, [sum, three]),
         Err(Inconsistent::NotContiguous { node: sum.index() })
     );
 }
@@ -423,7 +520,7 @@ fn a_last_child_short_of_its_parent_is_not_contiguous() {
     exprs.node_mut(two).position = 1;
     exprs.node_mut(three).parent = None;
     assert_eq!(
-        exprs.check([list, three]),
+        exprs.check(ANY, [list, three]),
         Err(Inconsistent::NotContiguous { node: list.index() })
     );
 }
@@ -433,7 +530,7 @@ fn a_root_left_out_is_reached_no_times() {
     let mut exprs = Exprs::default();
     let (_, _, sum) = sum(&mut exprs);
     assert_eq!(
-        exprs.check([]),
+        exprs.check(ANY, []),
         Err(Inconsistent::Reached {
             node: sum.index(),
             times: 0
@@ -446,7 +543,7 @@ fn a_root_passed_twice_is_reached_twice() {
     let mut exprs = Exprs::default();
     let (_, _, sum) = sum(&mut exprs);
     assert_eq!(
-        exprs.check([sum, sum]),
+        exprs.check(ANY, [sum, sum]),
         Err(Inconsistent::Reached {
             node: sum.index(),
             times: 2
@@ -460,7 +557,7 @@ fn a_child_whose_parent_points_elsewhere_breaks_the_link() {
     let (one, two, sum) = sum(&mut exprs);
     exprs.node_mut(one).parent = Some(two);
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::Link { node: one.index() })
     );
 }
@@ -471,7 +568,7 @@ fn a_child_whose_position_is_wrong_breaks_the_link() {
     let (_, two, sum) = sum(&mut exprs);
     exprs.node_mut(two).position = 0;
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::Link { node: two.index() })
     );
 }
@@ -482,7 +579,7 @@ fn a_root_with_a_parent_breaks_the_link() {
     let (one, _, sum) = sum(&mut exprs);
     exprs.node_mut(sum).parent = Some(one);
     assert_eq!(
-        exprs.check([sum]),
+        exprs.check(ANY, [sum]),
         Err(Inconsistent::Link { node: sum.index() })
     );
 }
@@ -497,7 +594,7 @@ fn an_omitted_node_outside_an_argument_position_is_misplaced() {
     let mut exprs = Exprs::default();
     let (one, _, sum) = sum(&mut exprs);
     exprs.node_mut(one).kind = NodeKind::Omitted;
-    assert_eq!(exprs.check([sum]), misplaced(one));
+    assert_eq!(exprs.check(ANY, [sum]), misplaced(one));
 
     // An operand of a prefix operator.
     let mut exprs = Exprs::default();
@@ -510,37 +607,43 @@ fn an_omitted_node_outside_an_argument_position_is_misplaced() {
         0..1,
     );
     exprs.node_mut(twelve).kind = NodeKind::Omitted;
-    assert_eq!(exprs.check([negated]), misplaced(twelve));
+    assert_eq!(exprs.check(ANY, [negated]), misplaced(twelve));
 
     // A message's receiver, and the scope of a scoped one.
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, false, 1);
     exprs.node_mut(ExprId::from_index(0)).kind = NodeKind::Omitted;
-    assert_eq!(exprs.check([message]), misplaced(ExprId::from_index(0)));
+    assert_eq!(
+        exprs.check(ANY, [message]),
+        misplaced(ExprId::from_index(0))
+    );
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, true, 2);
     exprs.node_mut(ExprId::from_index(1)).kind = NodeKind::Omitted;
-    assert_eq!(exprs.check([message]), misplaced(ExprId::from_index(1)));
+    assert_eq!(
+        exprs.check(ANY, [message]),
+        misplaced(ExprId::from_index(1))
+    );
 
     // An item of a logical list.
     let mut exprs = Exprs::default();
     let item = exprs.push(NodeKind::Variable(symbol(0)), 0..1);
     let items = exprs.push_edges(&[item]);
     let logical = exprs.push(NodeKind::Logical(items), 0..1);
-    assert_eq!(exprs.check([logical]), Ok(()));
+    assert_eq!(exprs.check(ANY, [logical]), Ok(()));
     exprs.node_mut(item).kind = NodeKind::Omitted;
-    assert_eq!(exprs.check([logical]), misplaced(item));
+    assert_eq!(exprs.check(ANY, [logical]), misplaced(item));
 
     // A root.
     let mut exprs = Exprs::default();
     let root = exprs.push(NodeKind::Omitted, 0..0);
-    assert_eq!(exprs.check([root]), misplaced(root));
+    assert_eq!(exprs.check(ANY, [root]), misplaced(root));
 
     // An argument of a message is a place for one.
     let mut exprs = Exprs::default();
     let message = scoped_message(&mut exprs, true, 3);
     exprs.node_mut(ExprId::from_index(2)).kind = NodeKind::Omitted;
-    assert_eq!(exprs.check([message]), Ok(()));
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
 }
 
 /// A `CATCH` variable is a root of its instruction.
@@ -600,7 +703,7 @@ fn leaves_of_every_kind_pass() {
     );
     assert_eq!(exprs.node(logical).first(), roots[0]);
     assert_eq!(exprs.node(qualified).first(), qualified);
-    assert_eq!(exprs.check([logical, qualified]), Ok(()));
+    assert_eq!(exprs.check(ANY, [logical, qualified]), Ok(()));
 }
 
 #[test]
@@ -623,7 +726,7 @@ fn a_long_chain_clones_compares_formats_and_drops_on_a_small_thread() {
                     at - 2..at - 1,
                 );
             }
-            assert_eq!(exprs.check([chain]), Ok(()));
+            assert_eq!(exprs.check(ANY, [chain]), Ok(()));
             let copy = exprs.clone();
             assert!(copy == exprs);
             assert!(!format!("{copy:?}").is_empty());
@@ -706,7 +809,7 @@ fn a_copy_of_an_operand_is_a_root() {
         }
     );
     assert_eq!(exprs.node(copy).span(), 4..7);
-    assert_eq!(exprs.check([sum, copy]), Ok(()));
+    assert_eq!(exprs.check(ANY, [sum, copy]), Ok(()));
 }
 
 #[cfg(debug_assertions)]
@@ -852,8 +955,12 @@ fn rex_files_under(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
 fn check_program(program: &crate::Program) -> usize {
     use crate::ast::{CodeBody, DirectiveKind};
 
+    let bounds = Bounds {
+        text: program.source.parts().0.len(),
+        symbols: program.symbols.len(),
+    };
     let body = |body: &CodeBody| {
-        assert_eq!(body.check(), Ok(()));
+        assert_eq!(body.check(bounds), Ok(()));
         body.exprs.len()
     };
     let mut nodes = body(&program.main);
@@ -863,7 +970,7 @@ fn check_program(program: &crate::Program) -> usize {
             DirectiveKind::Attribute(attribute) => attribute.body.as_deref().map_or(0, body),
             DirectiveKind::Routine(routine) => routine.body.as_deref().map_or(0, body),
             DirectiveKind::Constant(constant) => {
-                assert_eq!(constant.value.check(), Ok(()));
+                assert_eq!(constant.value.check(bounds), Ok(()));
                 match &constant.value {
                     crate::ast::ConstantValue::Expression { exprs, .. } => exprs.len(),
                     crate::ast::ConstantValue::Name | crate::ast::ConstantValue::Text(_) => 0,
@@ -973,7 +1080,7 @@ fn a_message_operator_assignment_copies_its_term_before_its_value() {
         exprs.shape(*value, &program.symbols),
         "(+ (msg~ Q \"[]\" 1) 2)"
     );
-    assert_eq!(program.main.check(), Ok(()));
+    assert_eq!(program.check(), Ok(()));
 }
 
 #[test]

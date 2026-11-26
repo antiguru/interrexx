@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use interrexx_inventory::errors::{E35_912, E35_918, E35_929};
 
 use crate::clause::split_clauses;
-use crate::exprs::{ExprId, ExprView, Exprs};
+use crate::exprs::{Bounds, ExprId, ExprView, Exprs};
 use crate::selector::SelectorTable;
 use crate::token::{ParseCtx, ParseError, SymbolTable, TokenCursor};
 use crate::{ProgramSource, SourceKind, scan};
@@ -67,7 +67,13 @@ pub(super) fn parse(text: &str, entry: Entry) -> Result<(Exprs, ExprId, SymbolTa
     let root = result?;
     let exprs = exprs.into_inner();
     assert_eq!(
-        exprs.check([root]),
+        exprs.check(
+            Bounds {
+                text: source.parts().0.len(),
+                symbols: scanned.symbols.len(),
+            },
+            [root]
+        ),
         Ok(()),
         "{text:?} leaves a consistent arena"
     );

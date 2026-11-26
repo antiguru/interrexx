@@ -250,6 +250,51 @@ pub enum Inconsistent {
     /// An `Omitted` node outside an argument or list-item position, or a
     /// root. `node` is the omitted node's index.
     Misplaced { node: usize },
+    /// A node's span runs backwards or past the end of the source text.
+    Span { node: usize },
+    /// A node names a symbol id past the end of the symbol table.
+    Symbol { node: usize },
+}
+
+/// What an arena's nodes index outside the arena: the source text, by their
+/// spans, and the symbol table, by their symbol ids.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Bounds {
+    /// The length of the source text.
+    pub text: usize,
+    /// How many symbols the table holds.
+    pub symbols: usize,
+}
+
+/// The symbol ids `kind` holds.
+fn symbols_of(kind: &NodeKind) -> [Option<SymbolId>; 2] {
+    match *kind {
+        NodeKind::Constant(id)
+        | NodeKind::Variable(id)
+        | NodeKind::Stem(id)
+        | NodeKind::Compound(id)
+        | NodeKind::DotVariable(id)
+        | NodeKind::VariableReference { symbol: id, .. }
+        | NodeKind::Call {
+            target: CallTarget::Symbol(id),
+            ..
+        } => [Some(id), None],
+        NodeKind::ClassResolver { namespace, name }
+        | NodeKind::QualifiedCall {
+            namespace, name, ..
+        } => [Some(namespace), Some(name)],
+        NodeKind::Literal(_)
+        | NodeKind::Omitted
+        | NodeKind::Prefix { .. }
+        | NodeKind::Binary { .. }
+        | NodeKind::Call {
+            target: CallTarget::Literal(_),
+            ..
+        }
+        | NodeKind::Message { .. }
+        | NodeKind::List(_)
+        | NodeKind::Logical(_) => [None, None],
+    }
 }
 
 /// The child ids of `kind`, written to `inline` for the kinds that hold them
@@ -331,19 +376,38 @@ impl Exprs {
         &self.bytes[usize::cast_from(range.start)..usize::cast_from(range.end)]
     }
 
-    /// Checks the invariants, with `roots` the roots of the body's
-    /// expression slots. Reads every node, edge and byte range through
-    /// bounds-checked lookups, so any arena answers rather than panicking,
-    /// and takes time linear in the nodes plus the edges.
+    /// Checks the invariants, with `bounds` what the nodes index outside the
+    /// arena and `roots` the roots of the body's expression slots.
+    /// Reads every node, edge and byte range through bounds-checked lookups,
+    /// so any arena answers rather than panicking, and takes time linear in
+    /// the nodes plus the edges.
     ///
     /// # Errors
     ///
     /// The first invariant found broken, at the node that breaks it.
-    pub fn check(&self, roots: impl IntoIterator<Item = ExprId>) -> Result<(), Inconsistent> {
+    pub fn check(
+        &self,
+        bounds: Bounds,
+        roots: impl IntoIterator<Item = ExprId>,
+    ) -> Result<(), Inconsistent> {
         let mut reached = vec![0u32; self.nodes.len()];
         let mut inline = [ExprId(NonZeroU32::MIN); 2];
         let at = |id: ExprId| self.nodes.get(id.index());
         for (node, parent) in self.nodes.iter().enumerate() {
+            // A span is read as a slice of the source text, by a message
+            // insert or a trace line.
+            if parent.start > parent.end || usize::cast_from(parent.end) > bounds.text {
+                return Err(Inconsistent::Span { node });
+            }
+            // A symbol id is read as an index into the symbol table, by every
+            // name lookup.
+            if symbols_of(&parent.kind)
+                .into_iter()
+                .flatten()
+                .any(|id| id.index() >= bounds.symbols)
+            {
+                return Err(Inconsistent::Symbol { node });
+            }
             if let Some(bytes) = bytes_of(&parent.kind)
                 && self
                     .bytes
