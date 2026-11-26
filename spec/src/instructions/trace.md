@@ -1371,9 +1371,11 @@ ROUTINE OUTER
 
 r[instr.trace.delivery.thread]
 Delivering a line takes no thread number (#1049). `.CONTEXT~THREAD` in the
-destination answers the thread of the activity that wrote the line, and the
+destination answers the thread of the activity that wrote the line, and so
+does the destination's context when another activity reads its `THREAD`. The
 activities of the program are numbered as they would be if no line had been
-delivered.
+delivered. In the second example the destination keeps its `.CONTEXT` and
+waits, and a started activity reads that context's `THREAD` meanwhile.
 
 ```rexx
 .local~seen = .array~new
@@ -1416,6 +1418,44 @@ line 1 destination 1
 line 1 destination 1
 line 2 destination 2
 line 2 destination 2
+```
+
+```rexx
+.environment~go = 0
+.traceoutput~destination(.sink~new)
+r = .reader~new~start('read')
+trace r
+x = 1
+trace off
+.traceoutput~destination(.output)
+say 'reader' r~result
+say 'next' .w~new~start('t')~result
+::class reader
+::method read
+  do while .environment~go = 0
+    call SysSleep 0.01
+  end
+  t = .local~ctx~thread
+  .environment~go = 2
+  return t
+::class w
+::method t
+  return .context~thread
+::class sink
+::method lineout
+  if .environment~go = 0 then do
+    .local~ctx = .context
+    .environment~go = 1
+    do while .environment~go = 1
+      call SysSleep 0.01
+    end
+  end
+  return 0
+```
+
+```output
+reader 1
+next 2
 ```
 
 r[instr.trace.delivery.wait]

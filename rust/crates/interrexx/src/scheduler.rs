@@ -1256,7 +1256,7 @@ impl Interp {
     /// its line, and has none of its own (`r[instr.trace.delivery.thread]`).
     pub(crate) fn activity_number(&mut self) -> u32 {
         if self.activity.delivering
-            && let Some(owner) = self.delivery_owner()
+            && let Some(owner) = self.activity.delivers_for
             && let Some(idle) = self.activities.idle[owner.index()].as_mut()
         {
             if let Some(number) = idle.activity.number {

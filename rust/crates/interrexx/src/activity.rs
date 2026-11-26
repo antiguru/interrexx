@@ -299,6 +299,10 @@ pub(crate) struct Activity {
     /// Whether this activity delivers a trace line another activity wrote, to
     /// the end of that line's `LINEOUT`.
     pub(crate) delivering: bool,
+    /// The activity whose line a delivering activity delivers, while that
+    /// activity waits for it: the one whose number `.CONTEXT~THREAD`
+    /// answers, whichever activity asks (`r[instr.trace.delivery.thread]`).
+    pub(crate) delivers_for: Option<crate::scheduler::ActivityId>,
     /// The clauses a delivering activity has run since a slice fell due.
     pub(crate) delivery_clauses: u32,
     /// The nesting depth of the code whose trace line this activity
@@ -640,6 +644,7 @@ impl Activity {
             fragment_clause: 0,
             routing_trace: false,
             delivering: false,
+            delivers_for: None,
             delivery_clauses: 0,
             depth_base: 0,
             guarded_slices: 0,
@@ -838,6 +843,7 @@ impl Activity {
             fragment_clause: _,
             routing_trace: _,
             delivering: _,
+            delivers_for: _,
             delivery_clauses: _,
             depth_base: _,
             guarded_slices: _,

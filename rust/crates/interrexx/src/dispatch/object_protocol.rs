@@ -1366,6 +1366,7 @@ pub(crate) fn start_trace_delivery(
     let mut idle = interp.unnumbered_activity();
     idle.activity.spawner = Some(spawner);
     idle.activity.delivering = true;
+    idle.activity.delivers_for = Some(interp.running_activity());
     idle.activity.depth_base = interp.nesting_depth();
     idle.activity.first = Some(First::Send(Box::new(send)));
     idle.activity.root_then = Some(Then::Started(message));
