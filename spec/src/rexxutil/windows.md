@@ -153,7 +153,9 @@ r[util.windows.code-pages]
 UTF-16 little-endian bytes. `SysFromUnicode(wide, [codepage], [flags],
 [replacement], stem)` converts such bytes to the chosen code page. The
 code page can be an integer or one of `ACP`, `OEMCP`, `SYMBOL`,
-`THREAD_ACP`, `UTF7` or `UTF8`. The default is `OEMCP`.
+`THREAD_ACP`, `UTF7` or `UTF8`. An omitted or empty code page means
+`OEMCP`. Empty input produces an empty result. UTF-7 and UTF-8 ignore
+the replacement character.
 On success both calls write the converted bytes to `!TEXT` and answer
 zero. `SysFromUnicode` also writes `!USEDDEFAULTCHAR`, which is one
 when Windows used the replacement character and zero otherwise. On
@@ -168,19 +170,23 @@ section. With `ALL:` in place of a section or key, the next argument is
 a stem or array that receives the names at that level. A successful
 write, deletion or enumeration answers the null string. A missing key
 or failed profile operation answers `ERROR:`. Omitting the filename
-uses `WIN.INI`; Windows resolves a relative profile file against its
-Windows directory.
+or passing an empty name uses `WIN.INI`. Windows resolves a relative
+profile file against its Windows directory. File names, section and key
+names, and values are UTF-8. The key is required for a section-specific
+call. An empty key answers `ERROR:`.
 
 ## Windows console cursor and text
 
 r[util.windows.console-cursor]
 `SysCurPos()` answers the current cursor position as row and column,
 starting at zero. With both coordinates given, it returns the previous
-position and moves the cursor. `SysCurState('ON')` and
+position and moves the cursor when the new position is in the buffer. `SysCurState('ON')` and
 `SysCurState('OFF')` show or hide the cursor.
 `SysTextScreenRead(row, column[, length])` reads screen characters
 starting at the specified cell. With no length, it reads to the end of
-the screen buffer. A read outside the buffer answers the null string.
+the screen buffer. A read outside the buffer or with a nonpositive length
+answers the null string. The result is UTF-8, so its byte length can
+differ from the number of cells read.
 
 ## Windows printers
 
@@ -189,6 +195,9 @@ r[util.windows.printers]
 printer descriptions. Each description includes the printer, driver and
 port names, separated by commas. The call answers zero on success and
 one on failure. `SysWinGetDefaultPrinter()` answers the description of
-the default printer, or the null string when none is available.
-`SysWinSetDefaultPrinter(name)` accepts a printer name or a description.
+the default printer, or the null string when none is available. A known
+default without driver or port information is returned as its name
+followed by two commas.
+`SysWinSetDefaultPrinter(name)` accepts a printer name or a description. Text is UTF-8, with input
+bytes that are not UTF-8 read using the active Windows ANSI code page.
 It answers zero on success or a Windows system error code on failure.

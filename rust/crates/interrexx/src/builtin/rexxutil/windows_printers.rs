@@ -12,14 +12,19 @@ pub(crate) fn get_default(
     args: &[Option<ObjRef>],
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 0)?;
-    let description = host::default_printer()
-        .and_then(|name| {
-            host::printers()
-                .ok()?
-                .into_iter()
-                .find(|entry| entry[0] == name)
-        })
-        .map_or_else(Vec::new, |entry| entry.join(",").into_bytes());
+    let description = host::default_printer().map_or_else(Vec::new, |name| {
+        host::printers()
+            .ok()
+            .and_then(|entries| {
+                entries
+                    .into_iter()
+                    .find(|entry| host::printer_name_eq(&entry[0], &name))
+            })
+            .map_or_else(
+                || format!("{name},,").into_bytes(),
+                |entry| entry.join(",").into_bytes(),
+            )
+    });
     Ok(interp.text_built(description))
 }
 
@@ -50,24 +55,17 @@ pub(crate) fn set_default(
 ) -> Result<ObjRef, Failure> {
     check_arity(args, 1)?;
     let description = required_c_string(interp, args, 1)?;
-    let status = std::str::from_utf8(&description)
-        .ok()
-        .filter(|description| !description.is_empty())
-        .map_or(ERROR_INVALID_PRINTER_NAME, |description| {
-            // A description may come back from this package with driver and
-            // port fields. Try the complete name first, since it may contain commas.
-            let status = host::set_default_printer(description);
-            if status == ERROR_INVALID_PRINTER_NAME {
-                if let Some((name, _)) = description
-                    .rsplit_once(',')
-                    .and_then(|(left, _)| left.rsplit_once(','))
-                {
-                    if !name.is_empty() {
-                        return host::set_default_printer(name);
-                    }
-                }
+    let status = host::legacy_windows_text(&description)
+        .filter(|text| !text.is_empty())
+        .map_or(ERROR_INVALID_PRINTER_NAME, |text| {
+            // The first comma delimits the printer name. The port field
+            // can itself contain several comma-separated ports.
+            let name = text.split_once(',').map_or(text.as_str(), |(name, _)| name);
+            if name.is_empty() {
+                ERROR_INVALID_PRINTER_NAME
+            } else {
+                host::set_default_printer(name)
             }
-            status
         });
     Ok(answer(interp, i64::from(status)))
 }

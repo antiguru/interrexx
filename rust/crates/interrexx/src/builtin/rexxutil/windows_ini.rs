@@ -15,7 +15,12 @@ pub(crate) fn ini(
     check_arity(args, 4)?;
     let file = optional_text(interp, args, 1)?;
     let section = required_c_string(interp, args, 2)?;
-    let Some(file) = wide(file.as_deref().map(c_string).unwrap_or(b"WIN.INI")) else {
+    let Some(file) = wide(
+        file.as_deref()
+            .map(c_string)
+            .filter(|name| !name.is_empty())
+            .unwrap_or(b"WIN.INI"),
+    ) else {
         return Ok(interp.text_built(PROFILE_ERROR.to_vec()));
     };
 
@@ -27,16 +32,15 @@ pub(crate) fn ini(
     let Some(section) = wide(&section) else {
         return Ok(interp.text_built(PROFILE_ERROR.to_vec()));
     };
-    let key = optional_text(interp, args, 3)?;
-    let key = key.as_deref().map(c_string);
-    if key.is_some_and(|key| key.eq_ignore_ascii_case(b"ALL:")) {
+    let key = required_c_string(interp, args, 3)?;
+    if key.eq_ignore_ascii_case(b"ALL:") {
         return list(interp, &file, Some(&section), required(args, 4)?, 4);
     }
 
-    let result = match key {
-        None | Some(b"") => remove_section(&file, &section),
-        Some(key) if key.eq_ignore_ascii_case(b"DELETE:") => remove_section(&file, &section),
-        Some(key) => {
+    let result = match key.as_slice() {
+        b"" => None,
+        key if key.eq_ignore_ascii_case(b"DELETE:") => remove_section(&file, &section),
+        key => {
             let Some(key) = wide(key) else {
                 return Ok(interp.text_built(PROFILE_ERROR.to_vec()));
             };
@@ -65,7 +69,10 @@ fn list(
     position: usize,
 ) -> Result<ObjRef, Failure> {
     let found = Found::resolve(interp, target, position)?;
-    let names = host::read_profile(file, section, None, None);
+    let Some(names) = host::read_profile(file, section, None, None) else {
+        found.complete(interp, 0);
+        return Ok(interp.text_built(PROFILE_ERROR.to_vec()));
+    };
     let mut count = 0;
     for name in names
         .split(|&unit| unit == 0)
@@ -80,7 +87,7 @@ fn list(
 }
 
 fn remove_section(file: &[u16], section: &[u16]) -> Option<Vec<u8>> {
-    if host::read_profile(file, Some(section), None, None).is_empty() {
+    if host::read_profile(file, Some(section), None, None)?.is_empty() {
         return None;
     }
     write_value(file, section, None, None)
@@ -88,12 +95,12 @@ fn remove_section(file: &[u16], section: &[u16]) -> Option<Vec<u8>> {
 
 fn get_value(file: &[u16], section: &[u16], key: &[u16]) -> Option<Vec<u8>> {
     let missing = [1, 0];
-    let value = host::read_profile(file, Some(section), Some(key), Some(&missing));
+    let value = host::read_profile(file, Some(section), Some(key), Some(&missing))?;
     if value != [1] {
         return Some(String::from_utf16_lossy(&value).into_bytes());
     }
     // Disambiguate a missing key from an actual value equal to the fallback.
-    let value = host::read_profile(file, Some(section), Some(key), Some(&[2, 0]));
+    let value = host::read_profile(file, Some(section), Some(key), Some(&[2, 0]))?;
     (value == [1]).then_some(vec![1])
 }
 
