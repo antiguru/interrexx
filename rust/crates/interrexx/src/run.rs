@@ -2663,16 +2663,6 @@ impl Interp {
         source: Option<&ProgramSource>,
         value: ObjRef,
     ) -> Result<Flow, Failure> {
-        // **Nested fragments are bounded by the stack, as calls are.** A
-        // fragment runs on this activation, so no activation count grows, and
-        // `Op::ExecWith` hands over a value read from a register, so no
-        // expression level checked the stack on the way here either. Without
-        // this, `zs = 'interpret zs'; interpret zs` overflows the interpreter
-        // thread's stack and aborts the process instead of raising 11.1.
-        let probe = 0u8;
-        if self.stack_exhausted(&raw const probe) {
-            return Err(Raised::insufficient_stack().into());
-        }
         self.roots.activity_mut().push_temp(value);
         // The string request every instruction that evaluates a
         // single string expression shares -- so the `>>>` below traces the
@@ -2698,6 +2688,19 @@ impl Interp {
             interpret::Pause::Go => {}
             interpret::Pause::Again => return Ok(Flow::Goto(index)),
             interpret::Pause::Transfer(flow) => return Ok(flow),
+        }
+        // **Nested fragments are bounded by the stack, as calls are.** A
+        // fragment runs on this activation, so no activation count grows, and
+        // `Op::ExecWith` hands over a value read from a register, so no
+        // expression level checked the stack on the way here either. Without
+        // this, `zs = 'interpret zs'; interpret zs` overflows the interpreter
+        // thread's stack and aborts the process instead of raising 11.1.
+        // After the `>>>` line and the pause, as on the oracle: under `trace
+        // r` the deepest `INTERPRET` still traces its value before the 11.1.
+        // Before anything below is saved, so the raise leaves nothing to undo.
+        let probe = 0u8;
+        if self.stack_exhausted(&raw const probe) {
+            return Err(Raised::insufficient_stack().into());
         }
         // **The fragment's level, with delta 0.** Measured: a
         // fragment's clauses print at the enclosing `INTERPRET`
