@@ -862,9 +862,6 @@ impl BufferState {
     }
 }
 
-/// Every variable pool one object holds: one per scope that has bound a name in
-/// it, found by walking the list (a list of variable dictionaries searched in
-/// order).
 /// Where one exposed name last sat in a [`ScopePools`]: the index of its
 /// entry. Only ever a guess, which the pools check against the scope and the
 /// name before trusting it, so an entry dropped or moved since costs a search
@@ -906,10 +903,19 @@ pub struct PoolEntry {
 /// object with a single scope costs one allocation.
 ///
 /// **Each scope's entries are contiguous**, in binding order, and scopes
-/// follow one another in the order they first bound a name. A new name for a
-/// scope that already has entries is inserted after that scope's last entry,
-/// which keeps [`ScopePools::entries`] a slice and [`ScopePools::find`]'s
-/// "created last" order.
+/// follow one another in the order they first bound a name, **including a
+/// scope that has dropped every name and binds again**, which goes back where
+/// it was. A new name for a scope that already has entries is inserted after
+/// that scope's last entry, which keeps [`ScopePools::entries`] a slice and
+/// [`ScopePools::find`]'s "created last" order.
+///
+/// What remembers a scope's place once it has no entries is a tail of **order
+/// records**, written the first time a scope drops its last name and absent
+/// until then: one entry per scope that has bound a name, in first-binding
+/// order, with no scope (nil), no name, and the scope it stands for as its
+/// value. They are never read as variables, and sit after every real entry.
+/// They are kept in the list, not beside it, because a field here would widen
+/// every object.
 ///
 /// A name with no value is **absent** rather than present-and-empty: `DROP`
 /// removes the entry, and a reader cannot tell the two apart -- measured, a
@@ -993,21 +999,67 @@ impl ScopePools {
     }
 
     /// Adds an entry the pool does not hold, after the last entry of `scope`'s
-    /// run or at the end where `scope` has none, and answers where it went.
+    /// run, and answers where it went. A scope with no entries goes ahead of
+    /// the first scope that follows it in first-binding order, or at the end.
     fn insert(&mut self, scope: ObjRef, name: Rc<[u8]>, value: ObjRef) -> usize {
-        let at = self
-            .entries
-            .iter()
-            .rposition(|entry| entry.scope == scope)
-            .map_or(self.entries.len(), |last| last + 1);
+        let at = match self.entries.iter().rposition(|entry| entry.scope == scope) {
+            Some(last) => last + 1,
+            None if self
+                .entries
+                .last()
+                .is_none_or(|last| !is_order_record(last)) =>
+            {
+                self.entries.len()
+            }
+            None => self.place_new_run(scope),
+        };
         self.entries.insert(at, PoolEntry { scope, name, value });
         at
     }
 
+    /// Where the first entry of `scope`, which has none, goes when order
+    /// records exist: ahead of the run of the first scope after it in
+    /// first-binding order that still has entries, or after the last real
+    /// entry. Records `scope` as bound if it is new.
+    #[cold]
+    #[inline(never)]
+    fn place_new_run(&mut self, scope: ObjRef) -> usize {
+        let real = self
+            .entries
+            .iter()
+            .rposition(|entry| !is_order_record(entry))
+            .map_or(0, |last| last + 1);
+        let Some(rank) = self.entries[real..]
+            .iter()
+            .position(|record| record.value == scope)
+        else {
+            self.entries.push(order_record(scope));
+            return real;
+        };
+        self.entries[real + rank + 1..]
+            .iter()
+            .find_map(|later| {
+                self.entries[..real]
+                    .iter()
+                    .position(|entry| entry.scope == later.value)
+            })
+            .unwrap_or(real)
+    }
+
     /// [`Self::set`] for each of `entries` in turn, with each name a copy of
-    /// the caller's own, and room made for all of them at once.
+    /// the caller's own, and room made for the names it does not yet hold at
+    /// once.
     pub fn set_all(&mut self, scope: ObjRef, entries: &[(&Rc<[u8]>, ObjRef)]) {
-        self.entries.reserve_exact(entries.len());
+        let absent = entries
+            .iter()
+            .filter(|(name, _)| {
+                !self
+                    .entries
+                    .iter()
+                    .any(|entry| entry.scope == scope && *entry.name == ***name)
+            })
+            .count();
+        self.entries.reserve_exact(absent);
         for &(name, value) in entries {
             match self
                 .entries
@@ -1045,8 +1097,41 @@ impl ScopePools {
     /// what `DROP` on an exposed variable does. A name the pool never held is
     /// a no-op, exactly as `DROP` on a never-assigned local is.
     pub fn clear(&mut self, scope: ObjRef, name: &[u8]) {
-        self.entries
-            .retain(|entry| entry.scope != scope || *entry.name != *name);
+        let Some(at) = self
+            .entries
+            .iter()
+            .position(|entry| entry.scope == scope && *entry.name == *name)
+        else {
+            return;
+        };
+        let shares_run = (at > 0 && self.entries[at - 1].scope == scope)
+            || self
+                .entries
+                .get(at + 1)
+                .is_some_and(|next| next.scope == scope);
+        if !shares_run
+            && self
+                .entries
+                .last()
+                .is_none_or(|last| !is_order_record(last))
+        {
+            self.write_order_records();
+        }
+        self.entries.remove(at);
+    }
+
+    /// Appends the order records, from the list as it stands, which still
+    /// holds the scope about to leave it.
+    #[cold]
+    #[inline(never)]
+    fn write_order_records(&mut self) {
+        let mut seen: Vec<ObjRef> = Vec::new();
+        for entry in &self.entries {
+            if seen.last() != Some(&entry.scope) {
+                seen.push(entry.scope);
+            }
+        }
+        self.entries.extend(seen.into_iter().map(order_record));
     }
 
     /// The value `name` holds in the pool created last that binds it, each new
@@ -1055,7 +1140,7 @@ impl ScopePools {
         self.entries
             .iter()
             .rev()
-            .find(|entry| *entry.name == *name)
+            .find(|entry| *entry.name == *name && !is_order_record(entry))
             .map(|entry| entry.value)
     }
 
@@ -1088,12 +1173,32 @@ impl ScopePools {
     fn trace(&self, out: &mut Vec<ObjRef>) {
         let mut previous = None;
         for entry in &self.entries {
+            if is_order_record(entry) {
+                // The scope it stands for is reached through its own entries
+                // while it has any, and through this record while it has none.
+                out.push(entry.value);
+                continue;
+            }
             if previous != Some(entry.scope) {
                 out.push(entry.scope);
                 previous = Some(entry.scope);
             }
             out.push(entry.value);
         }
+    }
+}
+
+/// Whether `entry` is an order record of a [`ScopePools`] rather than a
+/// variable: no real scope is nil.
+fn is_order_record(entry: &PoolEntry) -> bool {
+    entry.scope == ObjRef::NIL
+}
+
+fn order_record(scope: ObjRef) -> PoolEntry {
+    PoolEntry {
+        scope: ObjRef::NIL,
+        name: Rc::from(&b""[..]),
+        value: scope,
     }
 }
 
