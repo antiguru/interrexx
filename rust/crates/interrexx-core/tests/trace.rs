@@ -73,8 +73,8 @@ fn an_instance_stops_reaching_a_dropped_variable() {
         native: None,
     }
     .trace(&mut out);
-    // The scope's pool survives the drop and is still traced; the value it no
-    // longer holds is not, which is what makes `DROP` release an object rather
-    // than merely hide it.
-    assert_eq!(out, vec![class, scope]);
+    // A scope with no name left binds nothing, so neither it nor the value it
+    // held is reached through the pools: that is what makes `DROP` release an
+    // object rather than merely hide it.
+    assert_eq!(out, vec![class]);
 }

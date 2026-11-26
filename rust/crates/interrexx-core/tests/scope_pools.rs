@@ -80,3 +80,53 @@ fn clearing_a_name_the_pool_never_held_is_a_no_op() {
     pools.clear(sub, b"V");
     assert_eq!(pools.get(sup, b"V"), Some(s));
 }
+
+/// A scope that binds a second name after another scope has bound one keeps
+/// its entries together, in binding order, which is what a store's five
+/// names read back as a run rely on.
+#[test]
+fn a_scopes_entries_stay_together_when_scopes_interleave() {
+    let (sup, sub) = scopes();
+    let (v, w, x) = (ObjRef::heap(1, 0), ObjRef::heap(2, 0), ObjRef::heap(3, 0));
+    let mut pools = ScopePools::new();
+    pools.set(sup, b"V", v);
+    pools.set(sub, b"V", x);
+    pools.set(sup, b"W", w);
+    let names = |scope| {
+        pools
+            .entries(scope)
+            .iter()
+            .map(|entry| (entry.name.to_vec(), entry.value))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(names(sup), vec![(b"V".to_vec(), v), (b"W".to_vec(), w)]);
+    assert_eq!(names(sub), vec![(b"V".to_vec(), x)]);
+    assert_eq!(pools.get(sup, b"W"), Some(w));
+    // The pool created last that binds a name answers for it.
+    assert_eq!(pools.find(b"V"), Some(x));
+    assert_eq!(pools.find(b"W"), Some(w));
+}
+
+/// A scope is traced once, ahead of the values bound in it, whatever order
+/// its names were bound in.
+#[test]
+fn tracing_names_each_scope_once() {
+    let (sup, sub) = scopes();
+    let (v, w, x) = (ObjRef::heap(1, 0), ObjRef::heap(2, 0), ObjRef::heap(3, 0));
+    let mut pools = ScopePools::new();
+    pools.set(sup, b"V", v);
+    pools.set(sub, b"V", x);
+    pools.set(sup, b"W", w);
+    let class = ObjRef::heap(1_000_000 + 2, 0);
+    let mut out = Vec::new();
+    Body::Instance {
+        class,
+        behaviour: BehaviourHandle::new(0),
+        name: None,
+        pools,
+        own: None,
+        native: None,
+    }
+    .trace(&mut out);
+    assert_eq!(out, vec![class, sup, v, w, sub, x]);
+}

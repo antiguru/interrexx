@@ -27,7 +27,7 @@
 //! therefore trust it while the arrays are the same and the position is live.
 
 use interrexx_cast::CastTruncate;
-use interrexx_core::SMALL_INT_MAX;
+use interrexx_core::{PoolEntry, SMALL_INT_MAX};
 
 use super::*;
 
@@ -680,9 +680,15 @@ pub(super) fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
             rest = &rest[5..];
             continue;
         }
-        let (name, value) = &rest[0];
+        let PoolEntry { name, value, .. } = &rest[0];
         rest = &rest[1..];
         let value = *value;
+        // [`keep_capacity`] binds the contents' slot name alone, as a copy of
+        // [`PoolNames`]' own, so it is recognised by identity too.
+        if Rc::ptr_eq(name, &names.contents[3]) {
+            parts.contents.slots = Some(value);
+            continue;
+        }
         match name.as_ref() {
             HASH_INDEXES => parts.contents.indexes = Some(value),
             HASH_ITEMS => parts.contents.items = Some(value),
@@ -711,37 +717,29 @@ pub(super) fn leading_contents(interp: &mut Interp, receiver: ObjRef) -> Option<
     else {
         return None;
     };
-    shared_run(pools.entries(scope), &interp.hash_names.contents)
+    shared_run(pools.leading::<5>(scope)?, &interp.hash_names.contents)
 }
 
 /// One half's entries, when `entries` starts with that half's shared
 /// names in [`install_store`]'s order. A pool binds a name once, so what this
 /// finds is what the byte-by-byte reading would.
 #[inline]
-pub(super) fn shared_run(entries: &[(Rc<[u8]>, ObjRef)], names: &[Rc<[u8]>; 5]) -> Option<Found> {
-    let [
-        (indexes_name, indexes),
-        (items_name, items),
-        (codes_name, codes),
-        (slots_name, slots),
-        (used_name, used),
-        ..,
-    ] = entries
-    else {
+pub(super) fn shared_run(entries: &[PoolEntry], names: &[Rc<[u8]>; 5]) -> Option<Found> {
+    let [indexes, items, codes, slots, used, ..] = entries else {
         return None;
     };
     let [indexes_at, items_at, codes_at, slots_at, used_at] = names;
-    (Rc::ptr_eq(indexes_name, indexes_at)
-        && Rc::ptr_eq(items_name, items_at)
-        && Rc::ptr_eq(codes_name, codes_at)
-        && Rc::ptr_eq(slots_name, slots_at)
-        && Rc::ptr_eq(used_name, used_at))
+    (Rc::ptr_eq(&indexes.name, indexes_at)
+        && Rc::ptr_eq(&items.name, items_at)
+        && Rc::ptr_eq(&codes.name, codes_at)
+        && Rc::ptr_eq(&slots.name, slots_at)
+        && Rc::ptr_eq(&used.name, used_at))
     .then(|| Found {
-        indexes: Some(*indexes),
-        items: Some(*items),
-        codes: Some(*codes),
-        slots: Some(*slots),
-        counts: Counts::decode(*used),
+        indexes: Some(indexes.value),
+        items: Some(items.value),
+        codes: Some(codes.value),
+        slots: Some(slots.value),
+        counts: Counts::decode(used.value),
     })
 }
 
