@@ -259,8 +259,8 @@ fn leading_entries_are_found_behind_another_scopes_run() {
     let (sup, sub) = scopes();
     let mut pools = ScopePools::new();
     pools.set(sub, b"X", ObjRef::heap(9, 0));
-    for (i, name) in [b"A", b"B", b"C", b"D", b"E"].into_iter().enumerate() {
-        pools.set(sup, name, ObjRef::heap(i as u32 + 1, 0));
+    for (slot, name) in (1u32..).zip([b"A", b"B", b"C", b"D", b"E"]) {
+        pools.set(sup, name, ObjRef::heap(slot, 0));
     }
     let found = pools.leading::<5>(sup).expect("five entries of sup's run");
     let names: Vec<&[u8]> = found.iter().map(|entry| &*entry.name).collect();
