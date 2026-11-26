@@ -19,6 +19,8 @@
 //! the store across its growth and compaction thresholds in both directions,
 //! and copies taken along the way must read later as they did when taken.
 
+use interrexx_cast::{CastFrom, CastTruncate};
+
 /// splitmix64: a small generator whose sequences are fixed by their seed, so
 /// a failing seed replays.
 struct Rng(u64);
@@ -33,7 +35,8 @@ impl Rng {
     }
 
     fn below(&mut self, n: usize) -> usize {
-        (self.next() % n as u64) as usize
+        // The remainder is below `n`, so truncating it to a `usize` keeps it whole.
+        usize::cast_truncate(self.next() % u64::cast_from(n))
     }
 
     fn chance(&mut self, percent: usize) -> bool {
