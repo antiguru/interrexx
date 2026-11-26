@@ -153,4 +153,11 @@ fn the_deepest_interpret_traces_its_value_before_running_out_of_stack() {
         ["     4 *-* interpret zs", "       >>>   \"interpret zs\""],
         "{stderr}"
     );
+    // The trap ends the run cleanly: no error report after it, and rc 0.
+    assert_eq!(
+        lines[trap..],
+        ["     5 *-* syntax:", "     5 *-* trace o;"],
+        "{stderr}"
+    );
+    assert_eq!(outcome.exit_code, 0, "{stderr}");
 }
