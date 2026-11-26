@@ -1296,9 +1296,7 @@ fn save(core: &mut Core, names: Option<&[&str]>) -> Reply {
 
 /// A macro is added, replaced, found, reordered and dropped. A position other
 /// than before (1) or after (2) is refused with `RXMACRO_INVALID_POSITION`
-/// and changes nothing (Deviation 185): measured, the oracle stores any
-/// position with return code 0 and answers it through an `unsigned short`, so
-/// 65537 reads back as 1 (#1054).
+/// and changes nothing (Deviation 185).
 #[test]
 fn macros_add_replace_query_reorder_drop() {
     let mut core = Core::new();
@@ -1571,4 +1569,44 @@ fn is_empty_counts_named_queues_registrations_and_macros() {
         },
     );
     assert!(core.is_empty());
+}
+
+/// A load whose macros include one of no search position, from a client that
+/// sends them without reading a file, stops at it as a cut file does: the
+/// macros before it are loaded, it and those after are not, and the load
+/// answers `RXMACRO_FILE_ERROR` (Deviation 185).
+#[test]
+fn a_load_stops_at_a_macro_of_no_search_position() {
+    let entry = |name: &str, position| Macro {
+        name: macro_named(name),
+        image: b"say 1".to_vec(),
+        position,
+    };
+    let mut core = Core::new();
+    let loaded = status(
+        &mut core,
+        client(1),
+        Request::LoadMacros {
+            names: None,
+            macros: vec![entry("first", 1), entry("bad", 0), entry("last", 2)],
+        },
+    );
+    assert_eq!(loaded, MACRO_FILE_ERROR);
+    assert_eq!(
+        position(&mut core, "first"),
+        Reply::MacroPosition {
+            status: OK,
+            position: 1
+        }
+    );
+    for name in ["bad", "last"] {
+        assert_eq!(
+            position(&mut core, name),
+            Reply::MacroPosition {
+                status: MACRO_NOT_FOUND,
+                position: 0
+            },
+            "{name}"
+        );
+    }
 }

@@ -8,7 +8,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
 use interrexx_api::load::ClassicEntry;
-use interrexx_rxapi::message::code::{DUPLICATE, MACRO_FILE_ERROR, NO_SERVICE, OK};
+use interrexx_rxapi::message::code::{
+    DUPLICATE, MACRO_FILE_ERROR, MACRO_INVALID_POSITION, NO_SERVICE, OK,
+};
 use interrexx_rxapi::message::{Item, Reply, Request};
 
 pub use interrexx_rxapi::message::{Registry, Timestamp};
@@ -376,6 +378,11 @@ pub fn query_function(name: &[u8]) -> u64 {
 
 /// `RexxAddMacro`: `file` translated in this process, relative to its current directory.
 pub fn add_macro(name: &[u8], file: &[u8], position: u64) -> u64 {
+    // Before the file is read: a position neither before nor after is refused
+    // whatever the file holds (Deviation 185).
+    if !interrexx_rxapi::message::macro_position::is_valid(position) {
+        return MACRO_INVALID_POSITION;
+    }
     let Some(image) = macros::translate(file, name) else {
         return macros::SOURCE_NOT_FOUND;
     };
@@ -443,4 +450,19 @@ pub fn load_macros(names: Option<Vec<Vec<u8>>>, file: &[u8]) -> u64 {
         macros: read,
     }));
     changed(if status == OK { loaded } else { status })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A position neither before nor after is refused before the file is
+    /// looked for, so a missing file does not hide it.
+    #[test]
+    fn a_macro_of_no_search_position_is_refused_before_its_file_is_read() {
+        let missing = b"/nonexistent/interrexx-no-such-macro.rex";
+        for position in [0, 3, 65537] {
+            assert_eq!(add_macro(b"m", missing, position), MACRO_INVALID_POSITION);
+        }
+    }
 }

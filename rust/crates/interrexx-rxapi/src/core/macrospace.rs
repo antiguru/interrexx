@@ -10,7 +10,8 @@ use crate::message::{Macro, Reply, macro_position};
 /// large image many times, and the service would hold a copy for each.
 const MAX_SAVE_REPEAT: usize = 256 << 20;
 
-/// Macros by folded name. Positions are stored unchecked, as the API does.
+/// Macros by folded name. `add` and `reorder` take only a position before or
+/// after (Deviation 185).
 #[derive(Default)]
 pub(super) struct MacroSpace {
     macros: BTreeMap<Vec<u8>, Macro>,
@@ -130,8 +131,11 @@ impl MacroSpace {
             let selected = wanted
                 .as_ref()
                 .is_none_or(|wanted| wanted.contains(&key(&loaded.name)));
-            if selected {
-                self.add(loaded.name, loaded.image, loaded.position);
+            // A macro whose position is refused ends the load as a cut file
+            // does: the macros before it stay loaded.
+            if selected && self.add(loaded.name, loaded.image, loaded.position) != Reply::Status(OK)
+            {
+                return Reply::Status(MACRO_FILE_ERROR);
             }
         }
         Reply::Status(OK)
