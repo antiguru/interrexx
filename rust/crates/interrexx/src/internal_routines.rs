@@ -111,6 +111,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysCreateMutexSem",
         crate::builtin::rexxutil::create_mutex_sem,
     ),
+    #[cfg(unix)]
+    util_run(
+        "SysCreatePipe",
+        crate::builtin::rexxutil::process::create_pipe,
+    ),
     #[cfg(windows)]
     util_run(
         "SysCurPos",
@@ -120,11 +125,6 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysCurState",
         crate::builtin::rexxutil::windows_console::cursor_state,
-    ),
-    #[cfg(unix)]
-    util_run(
-        "SysCreatePipe",
-        crate::builtin::rexxutil::process::create_pipe,
     ),
     #[cfg(windows)]
     util_run(

@@ -13,5 +13,6 @@ if SysWinSetDefaultPrinter(first) <> 0 then exit 4
 answer = SysWinGetDefaultPrinter()
 parse var answer name ',' driver ',' port
 if name \== first | driver == '' | port \== 'FILE:' then exit 5
-if SysWinSetDefaultPrinter(description) <> 0 then exit 6
+/* The description parser must treat a comma inside the port list as data. */
+if SysWinSetDefaultPrinter(description || ',NUL:') <> 0 then exit 6
 if SysWinGetDefaultPrinter() \== description then exit 7

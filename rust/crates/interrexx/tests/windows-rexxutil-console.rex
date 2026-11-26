@@ -2,6 +2,7 @@
 /* spec: util.windows.console-cursor */
 if SysCurPos() \== '0 0' then exit 10
 if SysTextScreenRead(0, 0, 1) \== 'W' then exit 11
+if SysTextScreenRead(0, 0, -1) \== '' then exit 22
 if SysCurPos(1, 1) \== '0 0' then exit 12
 if SysCurPos() \== '1 1' then exit 13
 if SysCurState('OFF') <> 0 then exit 14

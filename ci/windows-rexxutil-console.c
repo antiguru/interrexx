@@ -71,7 +71,7 @@ int wmain(int argc, wchar_t **argv)
         key.Event.KeyEvent.wVirtualKeyCode = 'H';
         key.Event.KeyEvent.uChar.UnicodeChar = L'H';
         if (!WriteConsoleInputW(input, &key, 1, &written) || written != 1) {
-            TerminateProcess(child.hProcess, 18);
+            TerminateProcess(child.hProcess, 21);
         }
     }
     BOOL closed_early = FALSE;

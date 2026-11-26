@@ -174,17 +174,34 @@ fn executable_name(command: &str) -> Option<&str> {
 }
 
 fn find_executable(interp: &Interp, name: &str) -> Option<PathBuf> {
-    let name = Path::new(name);
-    let name = if name.extension().is_none() {
-        name.with_extension("exe")
-    } else {
-        name.to_path_buf()
-    };
+    let supplied = Path::new(name);
+    let explicit_extension = supplied.extension().is_some();
+    let with_exe = PathBuf::from(format!("{name}.exe"));
+    let known_extension = supplied
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| {
+            ext.is_empty() || ext.eq_ignore_ascii_case("exe") || ext.eq_ignore_ascii_case("com")
+        });
+    let alternatives = [
+        explicit_extension.then_some(supplied),
+        (!known_extension).then_some(with_exe.as_path()),
+    ];
     let qualify = |path: &Path| qualify_name(interp, path.as_os_str().as_encoded_bytes());
-    if name.components().count() != 1 || name.has_root() {
-        let qualified = qualify(&name);
-        let qualified = crate::paths::os_path(&qualified);
-        return qualified.is_absolute().then(|| qualified.to_path_buf());
+    if supplied.components().count() != 1 || supplied.has_root() {
+        let mut candidates = alternatives.into_iter().flatten().filter_map(|candidate| {
+            let qualified = qualify(candidate);
+            let qualified = crate::paths::os_path(&qualified);
+            qualified.is_absolute().then(|| qualified.to_path_buf())
+        });
+        let first = candidates.next()?;
+        return if first.is_file() {
+            Some(first)
+        } else {
+            candidates
+                .find(|candidate| candidate.is_file())
+                .or(Some(first))
+        };
     }
     let paths = [
         std::env::current_exe()
@@ -205,9 +222,11 @@ fn find_executable(interp: &Interp, name: &str) -> Option<PathBuf> {
                 .flat_map(std::env::split_paths),
         )
         .find_map(|dir| {
-            let candidate = qualify(&dir.join(&name));
-            let candidate = crate::paths::os_path(&candidate);
-            candidate.is_file().then(|| candidate.to_path_buf())
+            alternatives.into_iter().flatten().find_map(|name| {
+                let candidate = qualify(&dir.join(name));
+                let candidate = crate::paths::os_path(&candidate);
+                candidate.is_file().then(|| candidate.to_path_buf())
+            })
         })
 }
 

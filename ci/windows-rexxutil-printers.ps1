@@ -32,15 +32,22 @@ try {
     Write-Host 'RexxUtil printer enumeration and both default setter forms passed.'
 } finally {
     try {
-        foreach ($name in $second, $first) {
-            if (Get-Printer -Name $name -ErrorAction SilentlyContinue) {
-                Remove-Printer -Name $name
+        try {
+            if ($previous) {
+                $restored = Invoke-CimMethod -InputObject $previous -MethodName SetDefaultPrinter
+                if ($restored.ReturnValue -ne 0) {
+                    throw "Restoring the previous default printer failed ($($restored.ReturnValue))"
+                }
             }
-        }
-        if ($previous) {
-            $restored = Invoke-CimMethod -InputObject $previous -MethodName SetDefaultPrinter
-            if ($restored.ReturnValue -ne 0) {
-                throw "Restoring the previous default printer failed ($($restored.ReturnValue))"
+        } finally {
+            try {
+                if (Get-Printer -Name $second -ErrorAction SilentlyContinue) {
+                    Remove-Printer -Name $second
+                }
+            } finally {
+                if (Get-Printer -Name $first -ErrorAction SilentlyContinue) {
+                    Remove-Printer -Name $first
+                }
             }
         }
     } finally {

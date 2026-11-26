@@ -442,6 +442,9 @@ pub(crate) fn decode_code_page(page: u32, flags: u32, bytes: &[u8]) -> Result<Ve
         Globalization::MultiByteToWideChar,
     };
 
+    if bytes.is_empty() {
+        return Ok(Vec::new());
+    }
     let length = i32::try_from(bytes.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
     // SAFETY: bytes contains length readable bytes. A null destination and
     // zero capacity ask the API to compute the required number of code units.
@@ -482,13 +485,19 @@ pub(crate) fn encode_code_page(
         Globalization::{CP_UTF7, CP_UTF8, WideCharToMultiByte},
     };
 
+    if wide.is_empty() {
+        return Ok((Vec::new(), false));
+    }
     let length = i32::try_from(wide.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
-    let replacement = default.as_ref().map_or(null(), |bytes| bytes.as_ptr());
     let mut used = 0;
-    let used_pointer = if matches!(page, CP_UTF7 | CP_UTF8) {
-        null_mut()
+    // The UTF code pages require both substitution pointers to be null.
+    let (replacement, used_pointer) = if matches!(page, CP_UTF7 | CP_UTF8) {
+        (null(), null_mut())
     } else {
-        &mut used
+        (
+            default.as_ref().map_or(null(), |bytes| bytes.as_ptr()),
+            &raw mut used,
+        )
     };
     // SAFETY: the input has length readable units, the optional replacement
     // has room for the longest replacement character, and a null output with
@@ -537,7 +546,7 @@ pub(crate) fn read_profile(
     section: Option<&[u16]>,
     key: Option<&[u16]>,
     fallback: Option<&[u16]>,
-) -> Vec<u16> {
+) -> Option<Vec<u16>> {
     use windows_sys::Win32::System::WindowsProgramming::GetPrivateProfileStringW;
 
     let string = |value: Option<&[u16]>| value.map_or(std::ptr::null(), <[u16]>::as_ptr);
@@ -556,9 +565,12 @@ pub(crate) fn read_profile(
             )
         } as usize;
         let terminator = if key.is_some() { 1 } else { 2 };
-        if count < buffer.len() - terminator || buffer.len() >= 32_768 {
+        if count < buffer.len() - terminator {
             buffer.truncate(count);
-            return buffer;
+            return Some(buffer);
+        }
+        if buffer.len() >= 32_768 {
+            return None;
         }
         buffer.resize(buffer.len() * 2, 0);
     }
@@ -731,23 +743,46 @@ pub(crate) fn printers() -> std::io::Result<Vec<[String; 3]>> {
     }
 }
 
+/// Windows-facing RexxUtil arguments use UTF-8, with the active ANSI code
+/// page for legacy bytes that are not UTF-8.
+pub(crate) fn legacy_windows_text(bytes: &[u8]) -> Option<String> {
+    use windows_sys::Win32::Globalization::CP_ACP;
+    match std::str::from_utf8(bytes) {
+        Ok(text) => Some(text.to_owned()),
+        Err(_) => String::from_utf16(&decode_code_page(CP_ACP, 0, bytes).ok()?).ok(),
+    }
+}
+
+pub(crate) fn printer_name_eq(left: &str, right: &str) -> bool {
+    use windows_sys::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
+    let left: Vec<_> = left.encode_utf16().chain([0]).collect();
+    let right: Vec<_> = right.encode_utf16().chain([0]).collect();
+    // SAFETY: both pointers address live NUL-terminated UTF-16 strings.
+    unsafe { CompareStringOrdinal(left.as_ptr(), -1, right.as_ptr(), -1, 1) == CSTR_EQUAL }
+}
+
 pub(crate) fn default_printer() -> Option<String> {
-    use std::ptr::null_mut;
     use windows_sys::Win32::Graphics::Printing::GetDefaultPrinterW;
 
-    let mut needed = 0;
-    // SAFETY: null queries the length and needed is writable.
-    unsafe { GetDefaultPrinterW(null_mut(), &mut needed) };
-    if needed == 0 {
-        return None;
+    let mut name = Vec::<u16>::new();
+    loop {
+        let mut needed = name.len() as u32;
+        let output = if name.is_empty() {
+            std::ptr::null_mut()
+        } else {
+            name.as_mut_ptr()
+        };
+        // SAFETY: a null buffer queries the size; otherwise output covers
+        // needed writable UTF-16 units.
+        if unsafe { GetDefaultPrinterW(output, &mut needed) } != 0 {
+            let end = name.iter().position(|&unit| unit == 0)?;
+            return Some(String::from_utf16_lossy(&name[..end]));
+        }
+        if needed as usize <= name.len() {
+            return None;
+        }
+        name.resize(needed as usize, 0);
     }
-    let mut name = vec![0; needed as usize];
-    // SAFETY: name covers the requested number of writable UTF-16 units.
-    if unsafe { GetDefaultPrinterW(name.as_mut_ptr(), &mut needed) } == 0 {
-        return None;
-    }
-    let end = name.iter().position(|&unit| unit == 0)?;
-    Some(String::from_utf16_lossy(&name[..end]))
 }
 
 pub(crate) fn set_default_printer(name: &str) -> u32 {
@@ -789,6 +824,10 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> Vec<u8> {
             WAIT_TIMEOUT => continue,
             WAIT_OBJECT_0 => {}
             _ => break,
+        }
+        // Cancellation can arrive while the console handle is being waited on.
+        if stopped.load(Ordering::Relaxed) {
+            break;
         }
         let mut event = INPUT_RECORD::default();
         let mut count = 0;
@@ -1121,8 +1160,8 @@ pub(crate) fn request_shutdown(
         Foundation::{ERROR_SUCCESS, GetLastError, LUID},
         Security::{
             AdjustTokenPrivileges, LUID_AND_ATTRIBUTES, LookupPrivilegeValueW,
-            SE_PRIVILEGE_ENABLED, SE_REMOTE_SHUTDOWN_NAME, SE_SHUTDOWN_NAME,
-            TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES, TOKEN_QUERY,
+            SE_PRIVILEGE_ENABLED, SE_SHUTDOWN_NAME, TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES,
+            TOKEN_QUERY,
         },
         System::{
             Shutdown::InitiateSystemShutdownW,
@@ -1130,20 +1169,34 @@ pub(crate) fn request_shutdown(
         },
     };
 
+    if let Some(computer) = computer {
+        // The remote computer checks the authenticated caller's privilege.
+        // SAFETY: both arguments are live NUL-terminated UTF-16 strings.
+        return unsafe {
+            if InitiateSystemShutdownW(
+                computer.as_ptr(),
+                message.as_ptr(),
+                timeout,
+                i32::from(force),
+                i32::from(reboot),
+            ) == 0
+            {
+                GetLastError()
+            } else {
+                ERROR_SUCCESS
+            }
+        };
+    }
+
     // Keep changes to the process privilege serialized, and restore the
     // prior token state whether the requested shutdown succeeds or fails.
     static SHUTDOWN: std::sync::Mutex<()> = std::sync::Mutex::new(());
     let _guard = SHUTDOWN.lock().expect("Windows shutdown privilege lock");
     let mut raw = null_mut();
     let mut identifier = LUID::default();
-    let privilege = if computer.is_some() {
-        SE_REMOTE_SHUTDOWN_NAME
-    } else {
-        SE_SHUTDOWN_NAME
-    };
     // SAFETY: identifier and raw each point to live writable storage.
     let token = unsafe {
-        if LookupPrivilegeValueW(null(), privilege, &mut identifier) == 0
+        if LookupPrivilegeValueW(null(), SE_SHUTDOWN_NAME, &mut identifier) == 0
             || OpenProcessToken(
                 GetCurrentProcess(),
                 TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
@@ -1179,7 +1232,7 @@ pub(crate) fn request_shutdown(
             return error;
         }
         let result = InitiateSystemShutdownW(
-            computer.map_or(null(), <[u16]>::as_ptr),
+            null(),
             message.as_ptr(),
             timeout,
             i32::from(force),

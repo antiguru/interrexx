@@ -41,12 +41,14 @@ pub(crate) fn waiting(interp: &Interp) -> bool {
     // Message~halt queues HALT for the target activity. Stop waiting at the
     // next poll so the activity reaches its clause boundary and the worker
     // sees the cancellation before the interpreter processes that HALT.
-    if interp
-        .activity
-        .pending_traps
-        .iter()
-        .any(|trap| trap.request)
-    {
+    if interp.running_activation().is_some_and(|activation| {
+        !interp.trap_for(b"HALT").is_some_and(|trap| trap.delayed)
+            && interp.activity.pending_traps.iter().any(|pending| {
+                pending.request
+                    && pending.activation == activation.id
+                    && pending.fragment_depth == interp.activity.fragment_depth
+            })
+    }) {
         return false;
     }
     interp
@@ -245,8 +247,7 @@ pub(crate) fn switch_session(
 
 fn wide(bytes: &[u8]) -> Option<Vec<u16>> {
     Some(
-        std::str::from_utf8(bytes)
-            .ok()?
+        host::legacy_windows_text(bytes)?
             .encode_utf16()
             .chain([0])
             .collect(),
