@@ -339,11 +339,12 @@ fn hash_of(interp: &mut Interp, keys: Keys, index: ObjRef) -> Result<u64, Failur
         let text = interp.to_text(index).into_owned();
         return Ok(super::string_hash(interp.hash_seed, &text));
     }
-    // Hashing branches on whether the behaviour is a primitive one. **"Has a
-    // string value" and "is a base-class object" are different questions**: a
-    // `String` subclass has a string value and is not a base class, so its
-    // `HASHCODE` override is reached where a plain string's -- which cannot
-    // exist, since `.String~define` is 98.985 -- would not be.
+    // `r[class.table.indexes.sends]` sends `HASHCODE`; for an index of a base
+    // class that runs `Object`'s primitive, which answers this hash value.
+    // **"Has a string value" and "is of a base class" are different
+    // questions**: an instance of a `String` subclass and an enhanced string
+    // have a string value and are not of a base class, so their own `HASHCODE`
+    // is sent.
     if keys == Keys::Identity || interp.is_base_class(index) {
         return Ok(get_hash_value(interp, index));
     }

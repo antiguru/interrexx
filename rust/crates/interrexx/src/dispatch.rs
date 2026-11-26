@@ -1611,6 +1611,26 @@ impl ObjectModel {
             })
             .collect();
         let nil_behaviour = classes.hiding_behaviour(object, &["COPY", "START", "OBJECTNAME="]);
+        // Each native class whose instance behaviour answers every one of
+        // `BASE_CLASS_MESSAGES` with a primitive is marked. A class that does
+        // not understand one of them itself, as `Stem` and `VariableReference`
+        // do not understand `==`, passes it to its `UNKNOWN`, which sends it
+        // on to another object, so it is not.
+        let native: Vec<ObjRef> = classes
+            .registered()
+            .chain(classes.system_registered())
+            .map(|(_, class)| class)
+            .collect();
+        for class in native {
+            let primitive = BASE_CLASS_MESSAGES.iter().all(|name| {
+                classes
+                    .lookup_instance_method(class, name)
+                    .is_some_and(|(_, method)| natives.get(method).is_some())
+            });
+            if primitive {
+                classes.set_primitive_instances(class);
+            }
+        }
         natives.seal();
         ObjectModel {
             classes,
@@ -1764,6 +1784,11 @@ enum SuperScope {
     /// have changed since the send found the method.
     OfReceiver,
 }
+
+/// The messages whose answer [`Interp::is_base_class`] vouches is a
+/// primitive's: hashing an index, comparing two items, and converting a value
+/// to an array or a string.
+const BASE_CLASS_MESSAGES: [&str; 3] = ["HASHCODE", "==", "REQUEST"];
 
 /// The behaviour a receiver's messages resolve against.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -2022,16 +2047,39 @@ impl Interp {
             .as_bytes()
     }
 
-    /// The id, for any receiver, of the
-    /// class whose behaviour answers this object's messages.
+    /// Whether every one of [`BASE_CLASS_MESSAGES`] sent to `value` runs a
+    /// primitive, so a caller may do what that primitive does instead of
+    /// sending it. `value` answers from the instance behaviour of a native
+    /// class that [`ObjectModel::build`] marked, unchanged: it is an instance
+    /// of that class itself, not of a subclass, and neither `enhanced` nor
+    /// `setMethod` gave it methods of its own. No program can change such a
+    /// class's methods (`r[class.methods.library]`).
+    ///
+    /// A value no class is built for answers true. A class object answers
+    /// false, since a class method can stand in front of its primitives, and so
+    /// does `.nil`, whose behaviour is its own.
     pub(crate) fn is_base_class(&mut self, value: ObjRef) -> bool {
-        let Some(class) = self.class_of_value(value) else {
-            return true;
+        let behaviour = match value.decode() {
+            // A string has no dictionary of its own for `setMethod` to write
+            // to, so it answers from `String`'s instance behaviour.
+            Decoded::SmallInt(_) | Decoded::Text(_) => return true,
+            Decoded::Nil => return false,
+            Decoded::Heap { .. } => match self.heap.get(value).map(|object| &object.body) {
+                Some(Body::Text { .. } | Body::Num { .. }) => return true,
+                Some(Body::Instance { own: Some(_), .. }) => return false,
+                Some(Body::Instance { behaviour, .. }) => *behaviour,
+                _ => match self.receiver_behaviour(value) {
+                    Ok(Behaviour::Instance { methods, .. }) => methods,
+                    Ok(Behaviour::ClassSide(_)) => return false,
+                    Err(_) => return true,
+                },
+            },
         };
-        let id = self.classes().id_string(class).to_string();
-        self.classes().system_lookup(&id) == Some(class)
+        self.classes().is_primitive_behaviour(behaviour)
     }
 
+    /// The id, for any receiver, of the
+    /// class whose behaviour answers this object's messages.
     pub(crate) fn receiver_class_id(&mut self, receiver: ObjRef) -> Option<String> {
         let owner = match self.receiver_behaviour(receiver).ok()? {
             Behaviour::Instance { owner, .. } => owner,
