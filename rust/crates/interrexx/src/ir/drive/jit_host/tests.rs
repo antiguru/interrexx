@@ -5,6 +5,7 @@
 //! rather than passing on the driver alone, and one whose outer loop the gate
 //! refuses does not pass on its inner loop's compile.
 
+use interrexx_cast::CastFrom;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -287,7 +288,7 @@ fn a_value_only_condition_is_tested_in_generated_code() {
         let short = boundaries(super::THRESHOLD + 2000);
         let long = boundaries(super::THRESHOLD + 2000 + more);
         assert!(
-            long - short < more as usize / 100,
+            long - short < usize::cast_from(more) / 100,
             "{header}: the host took {} of {more} more pass boundaries",
             long - short
         );

@@ -692,6 +692,7 @@ dependencies = [
  "interrexx-api",
  "interrexx-capi",
  "interrexx-capi-rxapi",
+ "interrexx-cast",
  "interrexx-classes",
  "interrexx-core",
  "interrexx-extract",
@@ -718,6 +719,7 @@ dependencies = [
 name = "interrexx-api"
 version = "0.1.0"
 dependencies = [
+ "interrexx-cast",
  "interrexx-core",
  "interrexx-upstream",
  "libc",
@@ -730,6 +732,7 @@ name = "interrexx-bench"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "interrexx-cast",
  "interrexx-oracle",
 ]
 
@@ -739,6 +742,7 @@ version = "0.1.0"
 dependencies = [
  "interrexx",
  "interrexx-api",
+ "interrexx-cast",
  "libc",
 ]
 
@@ -747,9 +751,14 @@ name = "interrexx-capi-rxapi"
 version = "0.1.0"
 dependencies = [
  "interrexx-api",
+ "interrexx-cast",
  "libc",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "interrexx-cast"
+version = "0.1.0"
 
 [[package]]
 name = "interrexx-classes"
@@ -766,6 +775,7 @@ dependencies = [
  "ahash",
  "criterion",
  "hashbrown 0.16.1",
+ "interrexx-cast",
  "interrexx-num",
  "rustc-hash",
  "siphasher",
@@ -774,11 +784,15 @@ dependencies = [
 [[package]]
 name = "interrexx-extract"
 version = "0.1.0"
+dependencies = [
+ "interrexx-cast",
+]
 
 [[package]]
 name = "interrexx-inventory"
 version = "0.1.0"
 dependencies = [
+ "interrexx-cast",
  "interrexx-upstream",
 ]
 
@@ -794,6 +808,7 @@ name = "interrexx-num"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "interrexx-cast",
  "interrexx-inventory",
 ]
 
@@ -809,6 +824,7 @@ name = "interrexx-parse"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "interrexx-cast",
  "interrexx-inventory",
  "interrexx-lib",
  "interrexx-num",
@@ -822,6 +838,7 @@ dependencies = [
  "chrono",
  "interprocess",
  "interrexx-api",
+ "interrexx-cast",
  "interrexx-inventory",
  "libc",
  "nix",

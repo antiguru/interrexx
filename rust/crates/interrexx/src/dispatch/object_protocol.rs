@@ -168,7 +168,7 @@ fn class_hash(id: &[u8]) -> u64 {
     for byte in id {
         hash = hash
             .wrapping_mul(31)
-            .wrapping_add(*byte as i8 as i64 as u64);
+            .wrapping_add(i64::from(byte.cast_signed()).cast_unsigned());
     }
     hash
 }

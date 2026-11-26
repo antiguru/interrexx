@@ -4,6 +4,7 @@
 //! (`catgets/catgets.c`, `catgets/open_catalog.c`), checked whole before
 //! any message is read from it.
 
+use interrexx_cast::CastTruncate;
 use std::io::Read as _;
 
 use interrexx_core::ObjRef;
@@ -100,12 +101,11 @@ pub(crate) fn strerror(number: i32) -> Vec<u8> {
 }
 
 /// A positive whole-number argument as it is passed on, to an `int`.
-#[allow(
-    clippy::cast_possible_truncation,
-    reason = "the oracle truncates: SysGetMessage(4294967301) is message 5"
-)]
+///
+/// The low 32 bits, as the oracle's conversion keeps them:
+/// `SysGetMessage(4294967301)` is message 5.
 fn native_int(value: i64) -> i32 {
-    value as i32
+    i32::cast_truncate(value)
 }
 
 /// The interpreter's own message where `catalog` is

@@ -238,7 +238,8 @@ fn magnitude_order(a: &Number, b: &Number, working_digits: u64) -> Option<Orderi
     // legitimately reaches 10^18 - 1, which no narrower comparison holds, and
     // the adjusted lengths below span the whole exponent range twice over.
     let min_exponent = i64::from(a.exponent.min(b.exponent));
-    let adjusted = |n: &Number| i64::from(n.exponent) - min_exponent + n.digits.len() as i64;
+    let adjusted =
+        |n: &Number| i64::from(n.exponent) - min_exponent + crate::signed_len(n.digits.len());
     let (adjusted_a, adjusted_b) = (adjusted(a), adjusted(b));
     let limit = i64::try_from(working_digits).unwrap_or(i64::MAX);
     if adjusted_a > limit || adjusted_b > limit {

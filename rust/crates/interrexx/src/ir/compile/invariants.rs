@@ -1,6 +1,7 @@
 //! The op-stream invariants `compile` asserts over every chunk it builds.
 
 use super::super::Op;
+use interrexx_cast::CastFrom;
 
 /// **Every [`Op::TraceClause`] is the first op of a [`Op::Clause`] region**,
 /// which is both halves of that op's own contract at once.
@@ -12,7 +13,7 @@ pub(super) fn assert_trace_ops_open_a_clause_region(ops: &[Op]) {
         let opens_here = at
             .checked_sub(1)
             .and_then(|before| ops.get(before))
-            .is_some_and(|before| matches!(before, Op::Clause { end, .. } | Op::CallingClause { end, .. } if *end as usize > at));
+            .is_some_and(|before| matches!(before, Op::Clause { end, .. } | Op::CallingClause { end, .. } if usize::cast_from(*end) > at));
         assert!(
             opens_here,
             "the trace op at {at} is not the first op of a Clause region, so it echoes against \
@@ -205,7 +206,7 @@ pub(super) fn assert_exec_regions_hold_nothing_else(ops: &[Op]) {
         let (Op::Clause { end, .. } | Op::CallingClause { end, .. }) = op else {
             continue;
         };
-        let inside = &ops[at + 1..(*end as usize).min(ops.len())];
+        let inside = &ops[at + 1..usize::cast_from(*end).min(ops.len())];
         if !inside.iter().any(|op| matches!(op, Op::Exec { .. })) {
             continue;
         }
@@ -229,7 +230,7 @@ pub(super) fn assert_region_ops_name_their_clause(ops: &[Op]) {
         else {
             continue;
         };
-        for (inside, op) in ops[at + 1..(*end as usize).min(ops.len())]
+        for (inside, op) in ops[at + 1..usize::cast_from(*end).min(ops.len())]
             .iter()
             .enumerate()
         {

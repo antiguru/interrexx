@@ -35,7 +35,7 @@ use crate::ObjRef;
 
 /// Cells every block carries past the last offset a frame may start at: one
 /// more than the largest `u16` index.
-const GUARD: usize = u16::MAX as usize + 1;
+const GUARD: usize = interrexx_cast::usize_from_u16(u16::MAX) + 1;
 
 /// How many cells of a block new frames may start in, validated when built.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -119,7 +119,7 @@ impl RegFrame<'_> {
         // live, zeroed block, and every bit pattern is a valid `ObjRef`. Cells
         // are only ever reached through `Cell`, so this shared access cannot
         // alias a `&mut`.
-        unsafe { (*self.base.as_ptr().add(index as usize)).get() }
+        unsafe { (*self.base.as_ptr().add(usize::from(index))).get() }
     }
 
     /// Writes register `index`.
@@ -127,7 +127,7 @@ impl RegFrame<'_> {
     pub fn set(self, index: u16, value: ObjRef) {
         debug_assert!(index < self.len);
         // SAFETY: as in `get`.
-        unsafe { (*self.base.as_ptr().add(index as usize)).set(value) }
+        unsafe { (*self.base.as_ptr().add(usize::from(index))).set(value) }
     }
 
     /// Writes [`ObjRef::NIL`] to every register from `from` to the end.
@@ -226,11 +226,11 @@ impl FrameArena {
         }
         // SAFETY: `start <= size`, so this stays inside the block (property 2).
         let base = unsafe { self.block.get().add(start) };
-        for index in 0..len as usize {
+        for index in 0..usize::from(len) {
             // SAFETY: `index < GUARD` (property 3).
             unsafe { (*base.as_ptr().add(index)).set(ObjRef::NIL) }
         }
-        self.top.set(start + len as usize);
+        self.top.set(start + usize::from(len));
         RegFrame {
             base,
             len,
@@ -266,9 +266,9 @@ impl FrameArena {
     /// Releases `frame`, which must be the most recently reserved live one.
     #[inline]
     pub fn release(&self, frame: RegFrame<'_>) {
-        let start = self.top.get().wrapping_sub(frame.len as usize);
+        let start = self.top.get().wrapping_sub(usize::from(frame.len));
         debug_assert!(
-            self.top.get() >= frame.len as usize
+            self.top.get() >= usize::from(frame.len)
                 && std::ptr::eq(
                     frame.base.as_ptr(),
                     self.block.get().as_ptr().wrapping_add(start)
@@ -287,7 +287,7 @@ impl FrameArena {
     pub fn park(&self, frame: RegFrame<'_>) -> ParkedFrame {
         debug_assert!(
             std::ptr::eq(
-                frame.base.as_ptr().wrapping_add(frame.len as usize),
+                frame.base.as_ptr().wrapping_add(usize::from(frame.len)),
                 self.block.get().as_ptr().wrapping_add(self.top.get())
             ),
             "frame arena parked a frame that is not the most recent"
@@ -306,9 +306,9 @@ impl FrameArena {
     /// If the most recent frame cannot be `parked`'s, by length or offset.
     #[inline]
     pub fn unpark(&self, parked: ParkedFrame) -> RegFrame<'_> {
-        let start = self.top.get().wrapping_sub(parked.len as usize);
+        let start = self.top.get().wrapping_sub(usize::from(parked.len));
         assert!(
-            self.top.get() >= parked.len as usize && start <= self.size.0,
+            self.top.get() >= usize::from(parked.len) && start <= self.size.0,
             "frame arena unparked a frame that is not the most recent"
         );
         RegFrame {
@@ -377,7 +377,7 @@ mod tests {
     use crate::ObjRef;
 
     fn offset(arena: &FrameArena, frame: super::RegFrame<'_>) -> usize {
-        (frame.base.as_ptr() as usize - arena.block.get().as_ptr() as usize)
+        (frame.base.as_ptr().addr() - arena.block.get().as_ptr().addr())
             / std::mem::size_of::<std::cell::Cell<ObjRef>>()
     }
 
@@ -409,7 +409,7 @@ mod tests {
         assert_eq!(arena.iter().filter(|v| *v == value).count(), 2);
         assert_eq!(arena.blocks(), 1);
         assert_eq!(offset(&arena, big), 1);
-        assert!(offset(&arena, big) + u16::MAX as usize <= 1 + GUARD);
+        assert!(offset(&arena, big) + usize::from(u16::MAX) <= 1 + GUARD);
         arena.release(big);
         arena.release(small);
         assert_eq!(arena.iter().count(), 0);

@@ -1,0 +1,11 @@
+[package]
+name = "interrexx-cast"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Numeric conversions that say what they keep, for interrexx"
+
+[lints]
+workspace = true

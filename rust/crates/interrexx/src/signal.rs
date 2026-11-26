@@ -33,7 +33,25 @@ static INSTALL: Once = Once::new();
 pub(crate) fn current_thread() -> usize {
     // SAFETY: `pthread_self` has no preconditions.
     let thread = unsafe { libc::pthread_self() };
-    thread as usize
+    // A `uintptr_t` on Apple's targets, an `unsigned long` elsewhere: as wide
+    // as a pointer either way.
+    #[cfg(target_vendor = "apple")]
+    {
+        thread
+    }
+    #[cfg(not(target_vendor = "apple"))]
+    {
+        usize::try_from(thread).expect("a pthread_t is as wide as a pointer")
+    }
+}
+
+/// `handler`'s address, as `sigaction` takes it.
+#[expect(
+    clippy::as_conversions,
+    reason = "a function pointer becomes an address only through `as`"
+)]
+fn handler_address(handler: extern "C" fn(libc::c_int)) -> libc::sighandler_t {
+    handler as libc::sighandler_t
 }
 
 /// Flushes the C library's output streams, so that what a C program embedding the interpreter
@@ -79,7 +97,7 @@ fn install_where_unset(signal: libc::c_int, over_ignored: bool) {
             return;
         }
         let mut action: libc::sigaction = std::mem::zeroed();
-        action.sa_sigaction = handler as extern "C" fn(libc::c_int) as libc::sighandler_t;
+        action.sa_sigaction = handler_address(handler);
         libc::sigfillset(&raw mut action.sa_mask);
         action.sa_flags = 0;
         libc::sigaction(signal, &raw const action, std::ptr::null_mut());
@@ -247,8 +265,7 @@ impl Interrupter {
                     return;
                 }
                 let mut action: libc::sigaction = std::mem::zeroed();
-                action.sa_sigaction =
-                    interrupted as extern "C" fn(libc::c_int) as libc::sighandler_t;
+                action.sa_sigaction = handler_address(interrupted);
                 libc::sigfillset(&raw mut action.sa_mask);
                 action.sa_flags = 0;
                 libc::sigaction(interrupting(), &raw const action, std::ptr::null_mut());

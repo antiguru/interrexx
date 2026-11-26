@@ -4,6 +4,7 @@
 //! chunk cache's "compiled once" guarantee, and the cases that build their
 //! source or check the interpreter.
 
+use interrexx_cast::CastFrom;
 use std::rc::Rc;
 
 use interrexx_parse::{ExprKind, InstructionKind, parse_program};
@@ -319,7 +320,7 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
 
 /// An expression whose qualified call is deeper than a call op can address.
 fn unaddressable_call() -> String {
-    let depth = u32::BITS as usize;
+    let depth = usize::cast_from(u32::BITS);
     format!("{}zn:zf(){}", "0 + (".repeat(depth), ")".repeat(depth))
 }
 

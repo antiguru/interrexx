@@ -306,7 +306,7 @@ fn every_class_untouched_by_the_prologue_matches_the_live_oracle_exactly() {
                 None,
                 "object_superclass recorded 'The NIL object'"
             );
-            assert_eq!(r.superclasses(id), &[] as &[ObjRef]);
+            assert_eq!(r.superclasses(id), <&[ObjRef]>::default());
         } else {
             assert_eq!(
                 r.superclass(id),
@@ -1270,8 +1270,8 @@ fn class_and_object_match_their_recorded_own_instance_method_sets() {
 #[test]
 fn every_class_answers_its_recorded_own_class_methods() {
     let r = native_classes(&mut mint);
-    for &(name, expected) in &[
-        ("Class", &["NEW"] as &[&str]),
+    let classes: &[(&str, &[&str])] = &[
+        ("Class", &["NEW"]),
         ("Array", &["NEW", "OF"]),
         ("Set", &["NEW", "OF"]),
         ("Bag", &["NEW", "OF"]),
@@ -1279,7 +1279,8 @@ fn every_class_answers_its_recorded_own_class_methods() {
         ("Method", &["NEW", "NEWFILE", "LOADEXTERNALMETHOD"]),
         ("Routine", &["NEW", "NEWFILE", "LOADEXTERNALROUTINE"]),
         ("Package", &["NEW", "DEFAULTOPTIONS"]),
-    ] {
+    ];
+    for &(name, expected) in classes {
         let id = r.lookup(&name.to_ascii_uppercase()).unwrap();
         for &m in expected {
             assert!(

@@ -1,6 +1,7 @@
 //! The driver: what runs a compiled [`Chunk`] for the activation on top of
 //! the stack.
 
+use interrexx_cast::CastFrom;
 use std::rc::Rc;
 
 use interrexx_core::{FrameId, ObjRef, ParkedFrame, RegFrame};
@@ -1749,7 +1750,7 @@ macro_rules! region_ops {
                     debug_assert_names_the_clause(
                         $code, *$index, $clause, "LoopRun",
                     );
-                    let $index = *$index as usize;
+                    let $index = usize::cast_from(*$index);
                     let (InstructionKind::Do(body)
                     | InstructionKind::Loop(body)) = &$clause.kind
                     else {
@@ -1956,7 +1957,7 @@ macro_rules! open_clause {
         // Where this region starts, which is where `=` at an
         // interactive-debug pause sends the counter back to.
         $clause_pc = $pc;
-        $index = *$op_index as usize;
+        $index = usize::cast_from(*$op_index);
         $region_end = *$op_end;
         // **The instruction this whole region names**, fetched once
         // and read by every index-bearing op inside the region
@@ -2322,7 +2323,12 @@ impl Interp {
         site: u16,
         argc: u16,
     ) -> Result<Started<ObjRef>, Failure> {
-        let Some(mark) = self.activity.value_buffer.len().checked_sub(argc as usize) else {
+        let Some(mark) = self
+            .activity
+            .value_buffer
+            .len()
+            .checked_sub(usize::from(argc))
+        else {
             return Err(Loud::call_op_off_its_node().into());
         };
         // **A kept builtin is the one resolution that runs without the
@@ -2518,7 +2524,12 @@ impl Interp {
         let InstructionKind::Call(call) = &clause.kind else {
             return Err(Loud::call_op_off_its_node().into());
         };
-        let Some(mark) = self.activity.value_buffer.len().checked_sub(argc as usize) else {
+        let Some(mark) = self
+            .activity
+            .value_buffer
+            .len()
+            .checked_sub(usize::from(argc))
+        else {
             return Err(Loud::call_op_off_its_node().into());
         };
         let (name, literal) = match &**call {
@@ -2867,7 +2878,7 @@ impl Interp {
                     clause_pc: pc,
                     at: pc + 1,
                     end,
-                    index: index as usize,
+                    index: usize::cast_from(index),
                     entry: self.enter_loop_test_clause(opened),
                     stale: chunk.trace().clause_echoes() != sink.clause_echoes(),
                     debugging: sink.debugging(),
@@ -4507,7 +4518,7 @@ impl Interp {
                 }
                 _ => return None,
             };
-            match code.body.instructions.get(index as usize) {
+            match code.body.instructions.get(usize::cast_from(index)) {
                 Some(clause) if matches!(clause.kind, InstructionKind::Label { .. }) => pc = end,
                 Some(_) => return Some(pc),
                 None => return None,
@@ -4552,7 +4563,7 @@ impl Interp {
         };
         // Cut short at the clause the permission goes to, so the bound check
         // every op already makes is what finds that clause too.
-        let mut stream = full.get(..grant as usize).unwrap_or(full);
+        let mut stream = full.get(..usize::cast_from(grant)).unwrap_or(full);
         let depth = self.activation_depth();
         // Whether the permission is still worth asking about. It is granted to
         // this activation's first instruction and cleared by the one after it;
@@ -4582,7 +4593,7 @@ impl Interp {
                     // `stop` is `Chunk::op_of`'s entry for `end`, which is where the
                     // branch's own `Op::EndWhen` sits -- so the op is one past what
                     // this range drives and the boundary owes the close itself.
-                    if pc as usize >= stream.len() {
+                    if usize::cast_from(pc) >= stream.len() {
                         if let Some(parked) = resume.take() {
                             clause = match code.body.instructions.get(parked.index) {
                                 Some(clause) => clause,
@@ -4629,21 +4640,21 @@ impl Interp {
                     // `IF`s that end in front of its `END`** too: they run inside the
                     // block, ahead of the `Op::EndWhen` that closes it.
                     #[cfg(debug_assertions)]
-                    if !matches!(stream.get(pc as usize), Some(Op::EndWhen)) {
+                    if !matches!(stream.get(usize::cast_from(pc)), Some(Op::EndWhen)) {
                         debug_assert!(
                             !(self.activity.frames.len() > base
                                 && self.activity.frames.last().is_some_and(|frame| {
                                     pc >= frame.op_end
                                         && !(matches!(frame.kind, FrameKind::Block(_))
                                             && matches!(
-                                                stream.get(pc as usize),
+                                                stream.get(usize::cast_from(pc)),
                                                 Some(Op::EndBranch)
                                             ))
                                 })),
                             "the innermost SELECT frame ended before op {pc}, which is not its own EndWhen"
                         );
                     }
-                    let op = &stream[pc as usize];
+                    let op = &stream[usize::cast_from(pc)];
                     match op {
                         Op::Clause {
                             index: op_index,
@@ -4720,14 +4731,19 @@ impl Interp {
                             }
                         }
                         Op::EnterWhen { select, when } => {
-                            let frame =
-                                self.when_frame(code, chunk, *select as usize, *when as usize)?;
+                            let frame = self.when_frame(
+                                code,
+                                chunk,
+                                usize::cast_from(*select),
+                                usize::cast_from(*when),
+                            )?;
                             self.activity.frames.push(Frame::select(frame));
                             pc += 1;
                             continue 'ops;
                         }
                         Op::EnterOtherwise { select } => {
-                            let frame = self.otherwise_frame(code, chunk, *select as usize)?;
+                            let frame =
+                                self.otherwise_frame(code, chunk, usize::cast_from(*select))?;
                             self.activity.frames.push(Frame::select(frame));
                             pc += 1;
                             continue 'ops;
@@ -4764,7 +4780,7 @@ impl Interp {
                             }
                             debug_assert_eq!(
                                 self.activity.flat_top.as_ref().map(|flat| flat.do_index),
-                                Some(*index as usize),
+                                Some(usize::cast_from(*index)),
                                 "a LoopNext op ended a pass of a loop other than the one it names"
                             );
                             // Compiled passes, once the loop is hot: the
@@ -5101,7 +5117,7 @@ fn debug_assert_names_the_clause(code: &Code<'_>, index: u32, clause: &Instructi
     debug_assert_eq!(
         code.body
             .instructions
-            .get(index as usize)
+            .get(usize::cast_from(index))
             .map(std::ptr::from_ref),
         Some(std::ptr::from_ref(clause)),
         "a {op} op names an instruction that is not the clause of the region it sits in"
@@ -5111,13 +5127,12 @@ fn debug_assert_names_the_clause(code: &Code<'_>, index: u32, clause: &Instructi
 /// The position of the op after `op` in its chunk's stream, for `op` one of
 /// `ops`, which start at position `from`.
 fn op_after(ops: &[Op], op: &Op, from: u32) -> u32 {
-    let offset =
-        (std::ptr::from_ref(op) as usize - ops.as_ptr() as usize) / std::mem::size_of::<Op>();
+    let offset = (std::ptr::from_ref(op).addr() - ops.as_ptr().addr()) / std::mem::size_of::<Op>();
     debug_assert!(
         std::ptr::eq(&ops[offset], op),
         "an op outside the region it was found in"
     );
-    from + offset as u32 + 1
+    from + u32::try_from(offset).expect("a position in a stream op_index holds to u32") + 1
 }
 
 /// The op instruction `target` resumes at, or the loud failure a chunk whose

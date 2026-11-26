@@ -394,9 +394,9 @@ fn date_and_times_option_lists_match_the_oracles_own_error_insert() {
 #[test]
 fn every_date_output_letter_is_accepted() {
     for letter in DATE_OPTIONS1.bytes() {
-        let probe = format!("call date '{}','20070922','S'\n", letter as char);
+        let probe = format!("call date '{}','20070922','S'\n", char::from(letter));
         let (code, stderr) = failure(probe.as_bytes());
-        assert_eq!(code, 0, "letter {}: {stderr}", letter as char);
+        assert_eq!(code, 0, "letter {}: {stderr}", char::from(letter));
     }
 }
 

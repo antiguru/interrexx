@@ -2,6 +2,8 @@
 
 use std::marker::PhantomData;
 
+use interrexx_cast::{CastFrom, u8_truncate_u64, u32_truncate_u64, u64_from_u8, u64_from_u32};
+
 const TAG_BITS: u32 = 2;
 const TAG_MASK: u64 = 0b11;
 const TAG_HEAP: u64 = 0b00;
@@ -74,7 +76,7 @@ impl std::ops::Deref for InlineText {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
-        &self.buf[..self.len as usize]
+        &self.buf[..usize::from(self.len)]
     }
 }
 
@@ -124,7 +126,7 @@ impl ObjRef {
     pub const fn heap(slot: u32, generation: u32) -> Self {
         debug_assert!(generation <= GENERATION_MAX);
         ObjRef(
-            ((generation as u64) << GEN_SHIFT) | ((slot as u64) << SLOT_SHIFT) | TAG_HEAP,
+            (u64_from_u32(generation) << GEN_SHIFT) | (u64_from_u32(slot) << SLOT_SHIFT) | TAG_HEAP,
             PhantomData,
         )
     }
@@ -134,7 +136,7 @@ impl ObjRef {
             return None;
         }
         Some(ObjRef(
-            (((value as u64) << TAG_BITS) & !TAG_MASK) | TAG_INT,
+            ((value.cast_unsigned() << TAG_BITS) & !TAG_MASK) | TAG_INT,
             PhantomData,
         ))
     }
@@ -147,7 +149,7 @@ impl ObjRef {
         }
         let data = pack_short(bytes);
         Some(ObjRef(
-            (data << TEXT_DATA_SHIFT) | ((bytes.len() as u64) << TEXT_LEN_SHIFT) | TAG_TEXT,
+            (data << TEXT_DATA_SHIFT) | (u64::cast_from(bytes.len()) << TEXT_LEN_SHIFT) | TAG_TEXT,
             PhantomData,
         ))
     }
@@ -155,7 +157,7 @@ impl ObjRef {
     /// The inline-text handle for a single byte, as a constant.
     pub const fn inline_byte(byte: u8) -> Self {
         ObjRef(
-            ((byte as u64) << TEXT_DATA_SHIFT) | (1 << TEXT_LEN_SHIFT) | TAG_TEXT,
+            (u64_from_u8(byte) << TEXT_DATA_SHIFT) | (1 << TEXT_LEN_SHIFT) | TAG_TEXT,
             PhantomData,
         )
     }
@@ -171,12 +173,12 @@ impl ObjRef {
     pub const fn decode(self) -> Decoded {
         match self.0 & TAG_MASK {
             TAG_HEAP => Decoded::Heap {
-                slot: ((self.0 >> SLOT_SHIFT) & SLOT_MASK) as u32,
-                generation: (self.0 >> GEN_SHIFT) as u32,
+                slot: u32_truncate_u64((self.0 >> SLOT_SHIFT) & SLOT_MASK),
+                generation: u32_truncate_u64(self.0 >> GEN_SHIFT),
             },
-            TAG_INT => Decoded::SmallInt((self.0 as i64) >> TAG_BITS),
+            TAG_INT => Decoded::SmallInt(self.0.cast_signed() >> TAG_BITS),
             TAG_TEXT => {
-                let len = ((self.0 >> TEXT_LEN_SHIFT) & TEXT_LEN_MASK) as u8;
+                let len = u8_truncate_u64((self.0 >> TEXT_LEN_SHIFT) & TEXT_LEN_MASK);
                 let full = (self.0 >> TEXT_DATA_SHIFT).to_le_bytes();
                 Decoded::Text(InlineText {
                     len,

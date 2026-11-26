@@ -4,6 +4,7 @@
 // `loom`'s primitives outside a model (`sync.rs`).
 #![cfg(not(all(loom, test)))]
 
+use interrexx_cast::CastLossy;
 use interrexx_classes::MethodId;
 use interrexx_core::{Heap, NameMap, ObjRef, RootSet, SlotRef};
 use interrexx_num::Settings;
@@ -241,6 +242,11 @@ pub const DEADLINE_REPORT: &[u8] = b"interrexx: the run exceeded its deadline\n"
 /// getProgramName`'s answer for internal code.
 pub(crate) const LIBRARY_PACKAGE_NAME: &[u8] = b"REXX";
 
+/// [`interrexx_num::DEFAULT_DIGITS`] as the precision argument the conversions take.
+pub(crate) const DEFAULT_DIGITS: usize = 9;
+const _: () =
+    assert!(interrexx_cast::u64_from_usize(DEFAULT_DIGITS) == interrexx_num::DEFAULT_DIGITS);
+
 /// The interpreter thread's stack, in bytes.
 /// ```text
 /// interpreter stack: 536870912 bytes, eval depth reached: 100000, span: 183998160 bytes, per frame: 1840.0 bytes
@@ -437,7 +443,8 @@ impl StackSpan {
     /// Stack bytes one further level of `eval` costs, or `None` when the run
     /// never recursed and there is nothing to divide by.
     pub fn bytes_per_frame(self) -> Option<f64> {
-        (self.max_depth > 1).then(|| self.bytes as f64 / (self.max_depth - 1) as f64)
+        (self.max_depth > 1)
+            .then(|| f64::cast_lossy(self.bytes) / f64::cast_lossy(self.max_depth - 1))
     }
 }
 
@@ -3917,7 +3924,7 @@ impl Interp {
         let mut release = |chunk: &crate::ir::Chunk| {
             interned.extend(chunk.interned_values());
             pinned.extend(chunk.pinned_copies());
-            holds += chunk.site_holds().count() as u32;
+            holds += u32::try_from(chunk.site_holds().count()).expect("fewer than 2^32 holds");
         };
         self.chunks.retain(|(key, _), chunk| {
             let keep = !dead(&key.program);
@@ -4138,6 +4145,13 @@ impl Interp {
     /// native call has been handed one: every table of its space mints with
     /// it, and the directories' handles, if built already, are re-keyed. A
     /// 32-bit target's handles carry no key, and nothing changes there.
+    #[cfg_attr(
+        not(target_pointer_width = "64"),
+        expect(
+            clippy::needless_pass_by_ref_mut,
+            reason = "a 64-bit target re-keys the space; the signature is one for every target"
+        )
+    )]
     fn set_handle_key(&mut self, key: u64) {
         debug_assert!(
             self.global_references.roots().next().is_none(),
@@ -4614,7 +4628,7 @@ fn execute_kept(
     stack: Option<usize>,
 ) -> (Outcome, Option<Interp>) {
     let probe = 0u8;
-    let base = &raw const probe as usize;
+    let base = (&raw const probe).addr();
     // `rexxc` translates its input as source, an image included: `rexxc`
     // answers 13.1 at the `@` of a `.rxo` it is given.
     let source = if matches!(entry, Entry::Translate(_)) {
@@ -4999,7 +5013,7 @@ pub(crate) fn run_instance(
 ) -> (Outcome, Option<Interp>) {
     use interrexx_api::callbacks::Surface as _;
     let probe = 0u8;
-    let base = &raw const probe as usize;
+    let base = (&raw const probe).addr();
     let program = interrexx_parse::program_from(interrexx_parse::ProgramSource::new(
         INSTANCE_ROOT.to_vec(),
         interrexx_parse::SourceKind::Program,

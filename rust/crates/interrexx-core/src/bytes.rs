@@ -49,7 +49,7 @@ impl Bytes {
                 slot.write(POISON);
             }
             Bytes(Repr::Inline {
-                len: source.len() as u8,
+                len: u8::try_from(source.len()).expect("at most INLINE_BYTES"),
                 buf,
             })
         } else {
@@ -86,7 +86,7 @@ impl Bytes {
             slot.write(POISON);
         }
         Bytes(Repr::Inline {
-            len: total as u8,
+            len: u8::try_from(total).expect("at most INLINE_BYTES"),
             buf,
         })
     }
@@ -106,7 +106,7 @@ impl Bytes {
     pub fn as_slice(&self) -> &[u8] {
         match &self.0 {
             Repr::Inline { len, buf } => {
-                let len = *len as usize;
+                let len = usize::from(*len);
                 // Not a redundant bound: it is what says the slice below stays
                 // inside the array, stated where the `unsafe` can see it
                 // rather than left to `len`'s type.
@@ -151,7 +151,7 @@ impl Bytes {
                 }
                 // The new length is set only after the bytes it covers are
                 // written, which is `as_slice`'s invariant.
-                *len = (at + more.len()) as u8;
+                *len = u8::try_from(at + more.len()).expect("at most INLINE_BYTES");
             }
             Repr::Inline { .. } => {
                 let mut grown = Vec::with_capacity(2 * (self.as_slice().len() + more.len()));
@@ -197,8 +197,12 @@ mod tests {
     fn extending_answers_the_joined_bytes() {
         for first in [0, 1, 20, INLINE_BYTES - 1, INLINE_BYTES, INLINE_BYTES + 3] {
             for more in [0, 1, 7, INLINE_BYTES, 100] {
-                let a: Vec<u8> = (0..first).map(|i| (i % 251) as u8).collect();
-                let b: Vec<u8> = (0..more).map(|i| (i % 13) as u8 + 100).collect();
+                let a: Vec<u8> = (0..first)
+                    .map(|i| u8::try_from(i % 251).expect("below 251"))
+                    .collect();
+                let b: Vec<u8> = (0..more)
+                    .map(|i| u8::try_from(i % 13).expect("below 13") + 100)
+                    .collect();
                 let mut grown = Bytes::from_slice(&a);
                 grown.extend_from_slice(&b);
                 let joined = [a.as_slice(), b.as_slice()].concat();
@@ -225,8 +229,12 @@ mod tests {
         for left in lengths {
             for right in lengths {
                 for separator in [None, Some(b' ')] {
-                    let a: Vec<u8> = (0..left).map(|i| (i % 251) as u8).collect();
-                    let b: Vec<u8> = (0..right).map(|i| (i % 13) as u8 + 100).collect();
+                    let a: Vec<u8> = (0..left)
+                        .map(|i| u8::try_from(i % 251).expect("below 251"))
+                        .collect();
+                    let b: Vec<u8> = (0..right)
+                        .map(|i| u8::try_from(i % 13).expect("below 13") + 100)
+                        .collect();
                     let expected = [&a[..], separator.as_slice(), &b[..]].concat();
                     let joined = Bytes::joined(&a, separator, &b);
                     let shape = format!("{left} {separator:?} {right}");
@@ -253,7 +261,9 @@ mod tests {
     #[test]
     fn both_arms_answer_the_bytes_they_were_given() {
         for len in 0..=(INLINE_BYTES + 8) {
-            let source: Vec<u8> = (0..len).map(|i| (i % 251) as u8).collect();
+            let source: Vec<u8> = (0..len)
+                .map(|i| u8::try_from(i % 251).expect("below 251"))
+                .collect();
 
             let from_slice = Bytes::from_slice(&source);
             assert_eq!(from_slice.as_slice(), &source[..], "from_slice at {len}");
@@ -328,7 +338,9 @@ mod tests {
     #[test]
     fn the_bytes_past_len_are_never_part_of_the_value() {
         for len in 0..=INLINE_BYTES {
-            let source: Vec<u8> = (0..len).map(|i| (i % 97) as u8).collect();
+            let source: Vec<u8> = (0..len)
+                .map(|i| u8::try_from(i % 97).expect("below 97"))
+                .collect();
             assert!(
                 !source.contains(&POISON),
                 "the source itself carries the poison byte at {len}"
@@ -349,7 +361,9 @@ mod tests {
     #[test]
     fn the_two_constructors_agree_whatever_is_behind_the_live_bytes() {
         for len in 0..=INLINE_BYTES {
-            let source: Vec<u8> = (0..len).map(|i| (i % 251) as u8).collect();
+            let source: Vec<u8> = (0..len)
+                .map(|i| u8::try_from(i % 251).expect("below 251"))
+                .collect();
             let a = Bytes::from_slice(&source);
             let b = Bytes::from_vec(source.clone());
             assert_eq!(a.as_slice(), b.as_slice(), "value at {len}");

@@ -1,17 +1,18 @@
 use super::{
     CATALOG_MAGIC, Catalog, CatalogImage, rexx_message, search_candidates, strerror, substitute,
 };
+use interrexx_cast::CastFrom;
 
 /// A catalog as gencat lays one out: `(set, number, text)` entries hashed
 /// into `plane_size` buckets, the host-order table, the swapped table, then
 /// the messages.
 fn catalog_bytes(plane_size: u32, entries: &[(u32, u32, &str)]) -> Vec<u8> {
-    let size = plane_size as usize;
+    let size = usize::cast_from(plane_size);
     let mut buckets: Vec<Vec<(u32, u32, u32)>> = vec![Vec::new(); size];
     let mut strings = Vec::new();
     for (set, number, text) in entries {
         let offset = u32::try_from(strings.len()).expect("small");
-        buckets[((set + 1) * number) as usize % size].push((set + 1, *number, offset));
+        buckets[usize::cast_from((set + 1) * number) % size].push((set + 1, *number, offset));
         strings.extend_from_slice(text.as_bytes());
         strings.push(0);
     }

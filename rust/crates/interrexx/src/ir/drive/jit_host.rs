@@ -21,6 +21,7 @@
 //! run by `region_ops!` itself, one op at a time. Every state compiled code
 //! does not handle hands the driver the op it would have run next.
 
+use interrexx_cast::CastFrom;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -78,7 +79,7 @@ impl Loops {
     /// no call into [`Interp::jit_passes`].
     #[inline(always)]
     pub(super) fn hot(&self, do_index: u32) -> bool {
-        let Some(state) = self.state.get(do_index as usize) else {
+        let Some(state) = self.state.get(usize::cast_from(do_index)) else {
             return false;
         };
         match state.get() {
@@ -206,7 +207,7 @@ impl Interp {
     ) -> Option<JitAction> {
         #[cfg(debug_assertions)]
         let depth = self.activation_depth();
-        let state = chunk.jit.state.get(do_index as usize)?;
+        let state = chunk.jit.state.get(usize::cast_from(do_index))?;
         let compiled = match state.get() {
             REFUSED => return None,
             passes if passes < THRESHOLD - 1 => return None,
@@ -234,7 +235,9 @@ impl Interp {
                 };
                 let compiled = Rc::new(compiled);
                 let mut all = chunk.jit.compiled.borrow_mut();
-                state.set(THRESHOLD + all.len() as u32);
+                state.set(
+                    THRESHOLD + u32::try_from(all.len()).expect("fewer than 2^32 compiled loops"),
+                );
                 all.push((
                     Rc::clone(&compiled),
                     budget,
@@ -245,7 +248,7 @@ impl Interp {
             }
             at => {
                 let all = chunk.jit.compiled.borrow();
-                let (compiled, budget, loops, tests) = all.get((at - THRESHOLD) as usize)?;
+                let (compiled, budget, loops, tests) = all.get(usize::cast_from(at - THRESHOLD))?;
                 (
                     Rc::clone(compiled),
                     *budget,
@@ -264,7 +267,7 @@ impl Interp {
             source,
             top,
             loop_pc: pc,
-            do_index: do_index as usize,
+            do_index: usize::cast_from(do_index),
             first,
             open: None,
             range,
@@ -285,7 +288,7 @@ impl Interp {
         COMPILED_LINES.with(|lines| {
             lines
                 .borrow_mut()
-                .insert(chunk.opening_at(do_index as usize).position.line)
+                .insert(chunk.opening_at(usize::cast_from(do_index)).position.line)
         });
         let answer = compiled.run(registers, &mut driven);
         debug_assert_eq!(answer, STOP, "compiled passes end only on a STOP");
@@ -409,7 +412,7 @@ fn pass_of(
         if test {
             steps.push(Step::Test { pc });
         } else {
-            let opening = chunk.opening_at(index as usize);
+            let opening = chunk.opening_at(usize::cast_from(index));
             steps.push(Step::Open {
                 pc,
                 tabled: opening.tabled,
@@ -431,7 +434,7 @@ fn pass_of(
         }) {
             Some(index)
                 if matches!(
-                    code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                    kind_at(code, index),
                     Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
                         if !matches!(body.kind, interrexx_parse::LoopKind::Simple)
                 ) =>
@@ -490,7 +493,7 @@ fn pass_of(
                     if let Some(InstructionKind::Do(body) | InstructionKind::Loop(body)) = code
                         .body
                         .instructions
-                        .get(index as usize)
+                        .get(usize::cast_from(index))
                         .map(|clause| &clause.kind)
                         && matches!(body.kind, interrexx_parse::LoopKind::Simple) =>
                 {
@@ -506,7 +509,7 @@ fn pass_of(
                 // nothing else; its clause, which counts it, stays.
                 Op::Exec { index }
                     if matches!(
-                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        kind_at(code, index),
                         Some(InstructionKind::End {
                             closes: Some(closes),
                             ..
@@ -676,7 +679,7 @@ fn pass_of(
                 } => Step::Compound { pc: at },
                 Op::Store { index, .. }
                     if matches!(
-                        code.body.instructions.get(index as usize).map(|clause| &clause.kind),
+                        kind_at(code, index),
                         Some(InstructionKind::Assignment { target, .. })
                             if matches!(target.kind, ExprKind::Compound(_))
                     ) =>
@@ -774,7 +777,7 @@ fn pass_of(
     if hosted * HOSTED_SHARE > native {
         return None;
     }
-    let budget = (native / HOSTED_SHARE).max(1) as u64;
+    let budget = u64::cast_from((native / HOSTED_SHARE).max(1));
     let tests = loops
         .iter()
         .map(|&index| loop_test(code, chunk, index))
@@ -791,6 +794,14 @@ fn pass_of(
     ))
 }
 
+/// The kind of instruction `index` of `code`, or `None` past its end.
+fn kind_at<'b>(code: &Code<'b>, index: u32) -> Option<&'b InstructionKind> {
+    code.body
+        .instructions
+        .get(usize::cast_from(index))
+        .map(|clause| &clause.kind)
+}
+
 /// What the pass boundary of the loop whose `Op::DO` is instruction
 /// `do_index` tests: its `WHILE` or `UNTIL` from `Chunk::conditions`, as
 /// generated code runs it where each op has a quick form, and the host's
@@ -799,7 +810,7 @@ fn loop_test(code: &Code<'_>, chunk: &Chunk, do_index: u32) -> jit::LoopTest {
     let Some(InstructionKind::Do(body) | InstructionKind::Loop(body)) = code
         .body
         .instructions
-        .get(do_index as usize)
+        .get(usize::cast_from(do_index))
         .map(|clause| &clause.kind)
     else {
         return jit::LoopTest::Host;
@@ -807,10 +818,10 @@ fn loop_test(code: &Code<'_>, chunk: &Chunk, do_index: u32) -> jit::LoopTest {
     let Some(conditional) = &body.conditional else {
         return jit::LoopTest::None;
     };
-    if body.counter.is_some() || chunk.loop_test_at(do_index as usize).is_some() {
+    if body.counter.is_some() || chunk.loop_test_at(usize::cast_from(do_index)).is_some() {
         return jit::LoopTest::Host;
     }
-    let Some(condition) = chunk.condition_at(do_index as usize) else {
+    let Some(condition) = chunk.condition_at(usize::cast_from(do_index)) else {
         return jit::LoopTest::Host;
     };
     let Some(ops) = chunk.condition_ops(condition) else {
@@ -896,9 +907,9 @@ fn loop_test(code: &Code<'_>, chunk: &Chunk, do_index: u32) -> jit::LoopTest {
 /// Where a pass of the loop whose `Op::DO` is instruction `do_index` starts:
 /// its header test region where it has one, its body's first op otherwise.
 fn pass_start(chunk: &Chunk, do_index: u32) -> Option<u32> {
-    match chunk.loop_test_at(do_index as usize) {
+    match chunk.loop_test_at(usize::cast_from(do_index)) {
         Some(test) => Some(test.test),
-        None => chunk.op_at(do_index as usize + 1),
+        None => chunk.op_at(usize::cast_from(do_index) + 1),
     }
 }
 
@@ -1072,7 +1083,7 @@ impl Host for Driven<'_, '_> {
             Err(Failure::Slice) => return self.stop(JitExit::Slice(pc)),
             Err(failure) => return self.stop(JitExit::Fail(failure)),
         };
-        let index = index as usize;
+        let index = usize::cast_from(index);
         let Some(clause) = self.code.body.instructions.get(index) else {
             return self.stop(JitExit::Fail(Loud::chunk_map_too_short().into()));
         };
@@ -1137,7 +1148,7 @@ impl Host for Driven<'_, '_> {
             // An inner loop's pass boundary, as the driver's `Op::LoopNext` arm
             // takes it: not an op the host runs in the driver's stead, so not
             // weighed against the native steps.
-            Some(&Op::LoopNext { index }) if index as usize != self.do_index => {
+            Some(&Op::LoopNext { index }) if usize::cast_from(index) != self.do_index => {
                 self.hosted -= 1;
                 return self.inner_next(pc);
             }
@@ -1145,11 +1156,11 @@ impl Host for Driven<'_, '_> {
             // the driver's `Op::LoopTest` arm and `region_ops!` take them.
             Some(&Op::LoopTest { index, .. }) => {
                 self.hosted -= 1;
-                return self.test_open(pc, index as usize != self.do_index);
+                return self.test_open(pc, usize::cast_from(index) != self.do_index);
             }
             Some(&Op::LoopTested { index, .. }) => {
                 self.hosted -= 1;
-                let inner = index as usize != self.do_index;
+                let inner = usize::cast_from(index) != self.do_index;
                 if inner && let Some(k) = self.loops.iter().position(|&at| at == index) {
                     self.loop_state[k].ask = true;
                 }
@@ -1166,8 +1177,8 @@ impl Host for Driven<'_, '_> {
                 return match self.interp.when_frame(
                     self.code,
                     self.chunk,
-                    select as usize,
-                    when as usize,
+                    usize::cast_from(select),
+                    usize::cast_from(when),
                 ) {
                     Ok(frame) => {
                         self.interp.activity.frames.push(Frame::select(frame));
@@ -1177,10 +1188,11 @@ impl Host for Driven<'_, '_> {
                 };
             }
             Some(&Op::EnterOtherwise { select }) => {
-                return match self
-                    .interp
-                    .otherwise_frame(self.code, self.chunk, select as usize)
-                {
+                return match self.interp.otherwise_frame(
+                    self.code,
+                    self.chunk,
+                    usize::cast_from(select),
+                ) {
                     Ok(frame) => {
                         self.interp.activity.frames.push(Frame::select(frame));
                         CONTINUE
@@ -1383,7 +1395,7 @@ impl Host for Driven<'_, '_> {
                     .code
                     .body
                     .instructions
-                    .get(index as usize)
+                    .get(usize::cast_from(index))
                     .map(|clause| &clause.kind)
                 else {
                     return false;
@@ -1477,11 +1489,12 @@ impl Host for Driven<'_, '_> {
             at if at <= layout::clause_header(0)
                 && at >= layout::clause_header(layout::MAX_LOOPS - 1) =>
             {
-                let record = &native.loops[(layout::clause_header(0) - at) as usize];
+                let record = &native.loops
+                    [usize::try_from(layout::clause_header(0) - at).expect("below MAX_LOOPS")];
                 self.interp.enter_compiled_clause(
-                    record.end as usize,
-                    record.line as usize,
-                    record.indent as usize,
+                    usize::try_from(record.end).expect("written from a usize"),
+                    usize::try_from(record.line).expect("written from a usize"),
+                    usize::try_from(record.indent).expect("written from a usize"),
                 );
             }
             // A clause compiled code opened, which `pass_of` took only from
@@ -1492,11 +1505,12 @@ impl Host for Driven<'_, '_> {
                     .and_then(|pc| self.chunk.ops_in(pc, pc + 1))
                     .and_then(<[Op]>::first);
                 if let Some(&(Op::Clause { index, .. } | Op::CallingClause { index, .. })) = op {
-                    let position = self.chunk.opening_at(index as usize).position;
-                    let indent = position.indent as usize + self.interp.activity.activation_indent;
+                    let position = self.chunk.opening_at(usize::cast_from(index)).position;
+                    let indent =
+                        usize::cast_from(position.indent) + self.interp.activity.activation_indent;
                     self.interp.enter_compiled_clause(
-                        index as usize,
-                        position.line as usize,
+                        usize::cast_from(index),
+                        usize::cast_from(position.line),
                         indent,
                     );
                 } else {
@@ -1538,7 +1552,7 @@ impl Host for Driven<'_, '_> {
         // call. Generated code reads the parts only between calls, and this
         // runs after every one.
         (native.slots, native.slot_count) = match window {
-            Some(window) => (window.as_mut_ptr(), window.len() as u64),
+            Some(window) => (window.as_mut_ptr(), u64::cast_from(window.len())),
             None => (std::ptr::null_mut(), 0),
         };
         if !self.retire
@@ -1577,9 +1591,11 @@ impl Host for Driven<'_, '_> {
                 .flat_top
                 .as_ref()
                 .map(|flat| flat.do_index);
-            if let Some(k) =
-                top.and_then(|top| self.loops.iter().position(|&index| index as usize == top))
-            {
+            if let Some(k) = top.and_then(|top| {
+                self.loops
+                    .iter()
+                    .position(|&index| usize::cast_from(index) == top)
+            }) {
                 self.refresh_loop(native, k, key);
             }
         }
@@ -1607,7 +1623,7 @@ impl Host for Driven<'_, '_> {
             Some(window) => {
                 native.slots.is_null()
                     || (window.as_mut_ptr() == native.slots
-                        && window.len() as u64 == native.slot_count)
+                        && u64::cast_from(window.len()) == native.slot_count)
             }
             None => native.slots.is_null(),
         }
@@ -1624,7 +1640,7 @@ impl Host for Driven<'_, '_> {
         let entry = self.interp.adopt_stepped_clause();
         self.open = Some(Open {
             pc,
-            index: index as usize,
+            index: usize::cast_from(index),
             end,
             entry,
         });
@@ -1687,17 +1703,19 @@ impl Driven<'_, '_> {
         let Some(compiled) = self.tests.get(k).copied().flatten() else {
             return;
         };
-        if let Some(quick) = self.interp.quick_pass(self.loops[k] as usize) {
+        if let Some(quick) = self.interp.quick_pass(usize::cast_from(self.loops[k])) {
             // Both read off the loop's own instruction.
             debug_assert_eq!(
                 compiled, quick.test,
                 "loop record {k}'s quick pass is not what its code was compiled for"
             );
             match quick.kind {
-                QuickKind::Controlled { slot, step, to } if (slot as u64) < native.slot_count => {
+                QuickKind::Controlled { slot, step, to }
+                    if u64::cast_from(slot) < native.slot_count =>
+                {
                     record.ready = 1;
                     record.kind = layout::LOOP_CONTROLLED;
-                    record.slot = slot as u64;
+                    record.slot = u64::cast_from(slot);
                     record.step = step;
                     record.to = to;
                 }
@@ -1712,9 +1730,9 @@ impl Driven<'_, '_> {
                     record.kind = layout::LOOP_FOREVER;
                 }
             }
-            record.line = quick.line as u64;
-            record.indent = quick.open_indent as u64;
-            record.end = quick.end_index as u64;
+            record.line = u64::cast_from(quick.line);
+            record.indent = u64::cast_from(quick.open_indent);
+            record.end = u64::cast_from(quick.end_index);
             if record.ready != 0 {
                 state.key = Some(key);
             }
@@ -1740,7 +1758,7 @@ impl Driven<'_, '_> {
                     .flat_top
                     .as_ref()
                     .map(|flat| flat.do_index),
-                Some(index as usize),
+                Some(usize::cast_from(index)),
                 "an inner LoopNext ended a pass of a loop other than the one it names"
             );
             if let Some(k) = self

@@ -403,7 +403,7 @@ fn quiet_state(interp: &mut Interp) -> String {
     let window = interp
         .roots
         .top_window(frame)
-        .map(|window| (window.as_ptr() as usize, window.len()));
+        .map(|window| (window.as_ptr().addr(), window.len()));
     let activity = &interp.activity;
     format!(
         "{settings:?} {trace:?} {window:?} {:?}",

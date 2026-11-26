@@ -17,6 +17,8 @@ crate-type = ["cdylib", "rlib"]
 interrexx.workspace = true
 # The `#[repr(C)]` structs of `api/rexx.h` and `api/oorexxapi.h`.
 interrexx-api.workspace = true
+# The numeric conversions, each named for what it keeps.
+interrexx-cast.workspace = true
 # `malloc` and `free`, which `librexxapi`'s exports, owned here, use.
 libc = "0.2.186"
 

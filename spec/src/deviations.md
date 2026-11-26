@@ -1639,3 +1639,17 @@ creates a class at run time. ooRexx creates the subclass, then raises
 `SYNTAX 41.1` when `NEW` first instantiates it. A class declared with
 `::CLASS ... SUBCLASS TraceObject` can be instantiated on both interpreters
 ([example](r:class.traceobject.deviation.184)). Ruled by the owner in #1036.
+
+## 185. A macro's search position
+
+The native API's `RexxAddMacro` and `RexxReorderMacro` take only the two
+search positions a macro can have, `RXMACRO_SEARCH_BEFORE` (1) and
+`RXMACRO_SEARCH_AFTER` (2). Any other answers `RXMACRO_INVALID_POSITION` (8)
+and changes nothing, and a saved macrospace file with a macro of another
+position loads as a file cut short at that macro does. So `RexxQueryMacro`
+answers only 1 or 2 for a macro it finds. ooRexx stores any position with a
+return code of 0, and its `RexxQueryMacro` answers the stored position through
+an `unsigned short`, so a macro added at 65537 reads back as 1. A position other
+than 1 or 2 names no place in the search for a routine, so such a macro is
+reported as present but no call finds it. The RexxUtil functions take `B` and
+`A` only, on both interpreters. Ruled by the owner in #1054.

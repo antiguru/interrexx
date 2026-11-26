@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use interrexx_api::ffi::ThreadContext;
 use interrexx_api::handles::Table;
 use interrexx_api::invoke;
-use interrexx_api::layout::{POINTER, wholenumber_t};
+use interrexx_api::layout::POINTER;
 use interrexx_api::load::{self, NativeMethodEntry, NativeRoutineEntry};
 use interrexx_api::values::{
     Activation, CStringPool, Class, Constants, Conversion, Failure, Host, Numeric,
@@ -56,8 +56,8 @@ thread_local! {
     static POINTERS: RefCell<Vec<POINTER>> = const { RefCell::new(Vec::new()) };
     /// The condition each call left pending, in order.
     static RAISED: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
-    /// The numbers handed to `WholeNumberToObject`, in order.
-    static NUMBERS: RefCell<Vec<wholenumber_t>> = const { RefCell::new(Vec::new()) };
+    /// The numbers the host makes whole-number objects of, in order.
+    static NUMBERS: RefCell<Vec<i64>> = const { RefCell::new(Vec::new()) };
     static VARIABLES_SET: Cell<usize> = const { Cell::new(0) };
     static VARIABLES_DROPPED: Cell<usize> = const { Cell::new(0) };
 }
@@ -163,7 +163,7 @@ impl Host for Interpreter {
     }
 
     fn whole_number(&mut self, value: i64) -> ObjRef {
-        NUMBERS.with(|seen| seen.borrow_mut().push(value as wholenumber_t));
+        NUMBERS.with(|seen| seen.borrow_mut().push(value));
         match ObjRef::small_int(value) {
             Some(object) => object,
             None => self.text(value.to_string().as_bytes()),

@@ -3,6 +3,8 @@
 //! empty match terminates. The compiler bounds the size of the automaton.
 
 /// One automaton state.
+use interrexx_cast::{CastFrom, CastTruncate};
+
 #[derive(Clone, Debug)]
 enum State {
     /// Consumes one byte in the set, then goes to `next`.
@@ -323,11 +325,8 @@ fn atoi(text: &[u8]) -> i64 {
             value.saturating_mul(10).saturating_add(digit)
         };
     }
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "the C `(int)` cast of a `long`, which is the conversion measured"
-    )]
-    let truncated = value as i32;
+    // The C `(int)` cast of a `long`, which is the conversion measured.
+    let truncated = i32::cast_truncate(value);
     i64::from(truncated)
 }
 
@@ -444,13 +443,13 @@ impl Builder {
             Node::Star(inner) => {
                 let split = self.push(State::Jump(next));
                 let body = self.build(inner, split);
-                self.states[split as usize] = State::Split(body, next);
+                self.states[usize::cast_from(split)] = State::Split(body, next);
                 split
             }
             Node::Plus(inner) => {
                 let split = self.push(State::Jump(next));
                 let body = self.build(inner, split);
-                self.states[split as usize] = State::Split(body, next);
+                self.states[usize::cast_from(split)] = State::Split(body, next);
                 body
             }
             Node::Count(inner, count) => {
@@ -481,7 +480,7 @@ impl Threads {
 
     fn clear(&mut self) {
         for state in self.members.drain(..) {
-            self.start_of[state as usize] = ABSENT;
+            self.start_of[usize::cast_from(state)] = ABSENT;
         }
     }
 
@@ -496,15 +495,15 @@ impl Regex {
     fn add(&self, threads: &mut Threads, state: u32, start: u32, stack: &mut Vec<u32>) {
         stack.push(state);
         while let Some(state) = stack.pop() {
-            let held = threads.start_of[state as usize];
+            let held = threads.start_of[usize::cast_from(state)];
             if held <= start {
                 continue;
             }
             if held == ABSENT {
                 threads.members.push(state);
             }
-            threads.start_of[state as usize] = start;
-            match self.states[state as usize] {
+            threads.start_of[usize::cast_from(state)] = start;
+            match self.states[usize::cast_from(state)] {
                 State::Split(a, b) => {
                     stack.push(b);
                     stack.push(a);
@@ -519,10 +518,15 @@ impl Regex {
     fn step(&self, current: &Threads, byte: u8, next: &mut Threads, stack: &mut Vec<u32>) {
         next.clear();
         for &state in &current.members {
-            if let State::Byte { set, next: target } = self.states[state as usize]
-                && set_has(&self.sets[set as usize], byte)
+            if let State::Byte { set, next: target } = self.states[usize::cast_from(state)]
+                && set_has(&self.sets[usize::cast_from(set)], byte)
             {
-                self.add(next, target, current.start_of[state as usize], stack);
+                self.add(
+                    next,
+                    target,
+                    current.start_of[usize::cast_from(state)],
+                    stack,
+                );
             }
         }
     }
@@ -530,7 +534,7 @@ impl Regex {
     /// The earliest start among the threads at the accepting state, which is
     /// the first state built.
     fn accepted(&self, threads: &Threads) -> Option<u32> {
-        Some(threads.start_of[ACCEPT as usize]).filter(|start| *start != ABSENT)
+        Some(threads.start_of[usize::cast_from(ACCEPT)]).filter(|start| *start != ABSENT)
     }
 
     /// Runs the automaton anchored at the start of `subject`, calling
@@ -601,9 +605,9 @@ impl Regex {
                 // Only an earlier start can still change the answer.
                 let Threads { start_of, members } = &mut current;
                 members.retain(|state| {
-                    let keep = start_of[*state as usize] < held;
+                    let keep = start_of[usize::cast_from(*state)] < held;
                     if !keep {
-                        start_of[*state as usize] = ABSENT;
+                        start_of[usize::cast_from(*state)] = ABSENT;
                     }
                     keep
                 });
@@ -617,7 +621,7 @@ impl Regex {
             self.step(&current, byte, &mut next, &mut stack);
             std::mem::swap(&mut current, &mut next);
         }
-        best.map(|(start, end)| (start as usize, end - start as usize))
+        best.map(|(start, end)| (usize::cast_from(start), end - usize::cast_from(start)))
     }
 
     /// `pos(haystack)`: the 1-based start of the leftmost shortest match, or
@@ -651,6 +655,8 @@ impl Regex {
 
 #[cfg(test)]
 mod tests {
+    use interrexx_cast::CastFrom;
+
     use super::{CompileError, ILLEGAL_NUMBER, STATE_BUDGET, compile};
 
     /// A count whose copies would pass the budget is error 5 at its `{`,
@@ -682,7 +688,7 @@ mod tests {
         let (regex, consumed) = compile(b"(a{1000}){1000}").expect("within the budget");
         assert_eq!(consumed, 15);
         assert_eq!(regex.sets.len(), 1);
-        assert!(regex.states.len() as u64 <= STATE_BUDGET + 1);
+        assert!(u64::cast_from(regex.states.len()) <= STATE_BUDGET + 1);
         let subject = vec![b'a'; 1_000_000];
         assert_eq!(regex.match_maximal(&subject), (true, 1_000_000));
         assert!(!regex.match_maximal(&subject[1..]).0);

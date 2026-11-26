@@ -5,6 +5,7 @@
 //! what serves the context, which is why one frame carries both the receiver's
 //! pool and the local references.
 
+use interrexx_cast::{CastFrom, CastLossy};
 use std::borrow::Cow;
 
 use interrexx_api::handles::Table;
@@ -1732,7 +1733,7 @@ impl PooledCall {
             inbox: posts,
             activity: self.activity,
             frame: self.frame,
-            base: &raw const probe as usize,
+            base: (&raw const probe).addr(),
         };
         let entered = Lent::wait(&self.baton);
         let (mut call, thread) = self.work.take(&self.baton);
@@ -2252,11 +2253,8 @@ impl Host for Interp {
 
     fn double_value(&mut self, object: ObjRef) -> Result<Option<f64>, Condition> {
         if let Decoded::SmallInt(number) = object.decode() {
-            #[expect(
-                clippy::cast_precision_loss,
-                reason = "`RexxInteger::doubleValue` is the same C conversion"
-            )]
-            return Ok(Some(number as f64));
+            // `RexxInteger::doubleValue` is the same C conversion.
+            return Ok(Some(f64::cast_lossy(number)));
         }
         let text = self.native_string_conversion(object)?;
         let bytes = self.to_text(text);
@@ -2716,7 +2714,7 @@ impl Interp {
     /// As [`Interp::native_frame`].
     fn native_token(&self) -> u64 {
         let row = self.activity.native_handles.len() - 1;
-        (row as u64) << 32 | u64::from(self.activity.native_handles[row].id)
+        u64::cast_from(row) << 32 | u64::from(self.activity.native_handles[row].id)
     }
 
     /// The running native activation.

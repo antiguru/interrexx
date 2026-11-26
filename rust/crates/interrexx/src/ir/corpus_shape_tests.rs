@@ -1,6 +1,7 @@
 //! **The corpus-wide net over what `compile` emitted, as an invariant rather
 //! than a transcript.**
 
+use interrexx_cast::CastFrom;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -325,7 +326,7 @@ fn regions(chunk: &Chunk) -> BTreeMap<u32, &[Op]> {
     let mut out = BTreeMap::new();
     for (at, op) in chunk.ops.iter().enumerate() {
         if let Op::Clause { index, end } | Op::CallingClause { index, end } = op {
-            let previous = out.insert(*index, &chunk.ops[at + 1..*end as usize]);
+            let previous = out.insert(*index, &chunk.ops[at + 1..usize::cast_from(*end)]);
             assert!(
                 previous.is_none(),
                 "instruction {index} opened two Clause regions"
@@ -499,7 +500,7 @@ fn check_body(
                             render(&chunk)
                         )
                     });
-                    let ops = &chunk.ops[test.test as usize..test.body as usize];
+                    let ops = &chunk.ops[usize::cast_from(test.test)..usize::cast_from(test.body)];
                     assert!(
                         matches!(ops.first(), Some(Op::LoopTest { index: at, .. }) if *at == at_u32(index))
                             && matches!(ops.last(), Some(Op::LoopTested { index: at, .. }) if *at == at_u32(index)),

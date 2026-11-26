@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_cast::CastTruncate;
 use interrexx_core::INLINE_TEXT;
 use interrexx_num::DivOp;
 
@@ -289,7 +290,7 @@ fn text_len_agrees_with_to_text() {
                 std::ptr::null_mut(),
             ))),
             Some(Box::new(interrexx_core::NativeState::Pointer(
-                std::ptr::without_provenance_mut(0x7f01_2345_6789_u64 as usize),
+                std::ptr::without_provenance_mut(usize::cast_truncate(0x7f01_2345_6789_u64)),
             ))),
         ] {
             let instance = interp.alloc_with(
@@ -534,7 +535,9 @@ fn a_short_value_holds_its_bytes_in_the_slot_and_a_long_one_does_not() {
         INLINE_BYTES + 1,
         400,
     ] {
-        let source: Vec<u8> = (0..len).map(|i| b'a' + (i % 26) as u8).collect();
+        let source: Vec<u8> = (0..len)
+            .map(|i| b'a' + u8::try_from(i % 26).expect("a letter"))
+            .collect();
         let mut interp = Interp::new();
 
         for value in [interp.text(&source), interp.text_owned(source.clone())] {
@@ -826,7 +829,9 @@ fn try_text_answers_only_where_the_bytes_already_exist() {
 #[test]
 fn a_value_short_enough_is_the_handle_and_has_no_slot() {
     for len in 0..=INLINE_TEXT {
-        let source: Vec<u8> = (0..len).map(|i| b'a' + (i % 26) as u8).collect();
+        let source: Vec<u8> = (0..len)
+            .map(|i| b'a' + u8::try_from(i % 26).expect("a letter"))
+            .collect();
         let mut interp = Interp::new();
         let before = interp.heap.live_count();
 

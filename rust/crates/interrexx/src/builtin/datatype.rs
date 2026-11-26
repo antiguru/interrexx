@@ -267,7 +267,7 @@ pub(crate) fn datatype_letter_matches(text: &[u8], letter: u8) -> Option<Option<
         b'W' => return None,
         b'X' => text.is_empty() || grouped(text, |b| b.is_ascii_hexdigit(), 2),
         b'9' => parse_number(text)
-            .and_then(|n| n.whole_value(interrexx_num::DEFAULT_DIGITS as usize))
+            .and_then(|n| n.whole_value(crate::DEFAULT_DIGITS))
             .is_some(),
         _ => return Some(None),
     };
@@ -719,8 +719,7 @@ mod tests {
     #[test]
     fn no_byte_above_0x7f_is_alphanumeric_upper_lower_or_mixed() {
         let mut interp = Interp::new();
-        for byte in 0x80u16..=0xff {
-            let byte = byte as u8;
+        for byte in 0x80u8..=0xff {
             let text = interp.text(&[byte]);
             for option in [b"A", b"U", b"L", b"M"] {
                 let opt = interp.text(option);

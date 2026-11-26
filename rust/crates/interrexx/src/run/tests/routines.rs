@@ -529,32 +529,33 @@ fn the_invocation_prefixes_fire_for_exactly_the_four_label_tracing_letters() {
     for letter in *b"ailr" {
         let source = format!(
             "call rtn\n::routine rtn\ntrace {}\nreturn\n",
-            letter as char
+            char::from(letter)
         );
         let outcome = crate::run_program(PATH, source.into_bytes(), crate::Invocation::none());
         let stderr = String::from_utf8_lossy(&outcome.stderr).into_owned();
         assert!(
             stderr.starts_with(&announced[..announced.find('\n').unwrap() + 1]),
             "trace {}: expected the `>I>` line first, got {stderr:?}",
-            letter as char
+            char::from(letter)
         );
         assert!(
             stderr.ends_with(&announced[announced.find('\n').unwrap() + 1..]),
             "trace {}: expected the `<I<` line last, got {stderr:?}",
-            letter as char
+            char::from(letter)
         );
     }
     for letter in *b"ncefo" {
         let source = format!(
             "call rtn\n::routine rtn\ntrace {}\nreturn\n",
-            letter as char
+            char::from(letter)
         );
         let outcome = crate::run_program(PATH, source.into_bytes(), crate::Invocation::none());
         assert_eq!(
-            outcome.stderr, b"",
+            outcome.stderr,
+            b"",
             "trace {}: this setting does not trace labels, so neither line \
              may be announced",
-            letter as char
+            char::from(letter)
         );
     }
 }
