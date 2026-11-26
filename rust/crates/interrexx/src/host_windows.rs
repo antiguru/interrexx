@@ -442,6 +442,9 @@ pub(crate) fn decode_code_page(page: u32, flags: u32, bytes: &[u8]) -> Result<Ve
         Globalization::MultiByteToWideChar,
     };
 
+    if bytes.is_empty() {
+        return Ok(Vec::new());
+    }
     let length = i32::try_from(bytes.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
     // SAFETY: bytes contains length readable bytes. A null destination and
     // zero capacity ask the API to compute the required number of code units.
@@ -482,13 +485,19 @@ pub(crate) fn encode_code_page(
         Globalization::{CP_UTF7, CP_UTF8, WideCharToMultiByte},
     };
 
+    if wide.is_empty() {
+        return Ok((Vec::new(), false));
+    }
     let length = i32::try_from(wide.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
-    let replacement = default.as_ref().map_or(null(), |bytes| bytes.as_ptr());
     let mut used = 0;
-    let used_pointer = if matches!(page, CP_UTF7 | CP_UTF8) {
-        null_mut()
+    // The UTF code pages require both substitution pointers to be null.
+    let (replacement, used_pointer) = if matches!(page, CP_UTF7 | CP_UTF8) {
+        (null(), null_mut())
     } else {
-        &mut used
+        (
+            default.as_ref().map_or(null(), |bytes| bytes.as_ptr()),
+            &raw mut used,
+        )
     };
     // SAFETY: the input has length readable units, the optional replacement
     // has room for the longest replacement character, and a null output with
@@ -537,7 +546,7 @@ pub(crate) fn read_profile(
     section: Option<&[u16]>,
     key: Option<&[u16]>,
     fallback: Option<&[u16]>,
-) -> Vec<u16> {
+) -> Option<Vec<u16>> {
     use windows_sys::Win32::System::WindowsProgramming::GetPrivateProfileStringW;
 
     let string = |value: Option<&[u16]>| value.map_or(std::ptr::null(), <[u16]>::as_ptr);
@@ -556,9 +565,12 @@ pub(crate) fn read_profile(
             )
         } as usize;
         let terminator = if key.is_some() { 1 } else { 2 };
-        if count < buffer.len() - terminator || buffer.len() >= 32_768 {
+        if count < buffer.len() - terminator {
             buffer.truncate(count);
-            return buffer;
+            return Some(buffer);
+        }
+        if buffer.len() >= 32_768 {
+            return None;
         }
         buffer.resize(buffer.len() * 2, 0);
     }
