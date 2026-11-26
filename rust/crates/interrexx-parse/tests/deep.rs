@@ -152,3 +152,21 @@ fn a_long_prefix_chain_parses_on_a_default_stack_thread() {
         .join()
         .expect("parses without overflowing");
 }
+
+/// The variables a `GUARD ... WHEN` watches are collected in a loop over the
+/// condition's nodes (`r[instr.guard.when.exposed]`), so a long condition
+/// costs no native stack. The chain nests to the left, where a recursion
+/// over it cannot be a tail call.
+#[test]
+fn a_long_guard_condition_parses_on_a_default_stack_thread() {
+    let mut src = String::from("expose x\nguard on when x");
+    src.push_str(&" + x".repeat(100_000));
+    src.push_str(" = 0\n");
+    // An explicit 2 MiB, as in the prefix chain above.
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || drop(parse_program(src.into_bytes()).expect("parses")))
+        .expect("spawns")
+        .join()
+        .expect("parses without overflowing");
+}

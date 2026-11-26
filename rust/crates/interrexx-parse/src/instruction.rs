@@ -28,7 +28,7 @@ use crate::expr::{
     parse_constant_expression, parse_expr, parse_expression, parse_logical, parse_message_term,
     parse_paren_expression, parse_variable_or_message_term, push_binary, symbol_kind,
 };
-use crate::exprs::{Args, ExprId, ExprRef, ExprView};
+use crate::exprs::{ExprId, NodeKind};
 use crate::source::SourceKind;
 use crate::token::{
     Operator, ParseCtx, ParseError, SymbolClass, SymbolId, Tag, Token, TokenCursor, TokenKind,
@@ -977,7 +977,7 @@ impl<'a> Inst<'a> {
                 // capture is unconditional over the whole expression and those
                 // two paths are reached for exactly the variable references in
                 // it.
-                self.guard_exposes(self.ctx.exprs.borrow().get(condition), block, &mut watched);
+                self.guard_exposes(condition, block, &mut watched);
                 if watched.is_empty() {
                     return Err(self.error(E99_913, []));
                 }
@@ -1828,8 +1828,9 @@ impl<'a> Inst<'a> {
 
     /// Adds to `watched` each variable exposed at this point that `condition`
     /// names, once: the variables `GUARD ... WHEN` watches, of which it
-    /// requires at least one.
-    fn guard_exposes(&self, condition: ExprRef<'_>, block: &Block, watched: &mut Vec<Box<[u8]>>) {
+    /// requires at least one. A loop over the condition's nodes in index
+    /// order, which meets the leaves left to right.
+    fn guard_exposes(&self, condition: ExprId, block: &Block, watched: &mut Vec<Box<[u8]>>) {
         let mut watch = |name: &str| {
             if block.is_exposed(name.as_bytes())
                 && !watched.iter().any(|seen| **seen == *name.as_bytes())
@@ -1837,53 +1838,38 @@ impl<'a> Inst<'a> {
                 watched.push(name.as_bytes().into());
             }
         };
-        let each = |args: Args<'_>, watched: &mut Vec<Box<[u8]>>| {
-            for arg in args.iter().flatten() {
-                self.guard_exposes(arg, block, watched);
-            }
-        };
-        match condition.kind() {
-            ExprView::Variable(id) | ExprView::Stem(id) => watch(self.ctx.symbols.name(id)),
-            // `>name` watches the variable it names, the same as reading it
-            // (`r[instr.guard.when.exposed]`).
-            ExprView::VariableReference { symbol, .. } => watch(self.ctx.symbols.name(symbol)),
-            // A compound contributes its stem and its variable tail pieces,
-            // wherever else in the body it is referenced
-            // (`r[instr.guard.when.exposed]`).
-            ExprView::Compound(id) => {
-                let (stem, tails) = compound_parts(self.ctx.symbols.name(id));
-                watch(stem);
-                for tail in tails {
-                    if let Tail::Variable(piece) = tail {
-                        watch(piece);
+        let exprs = self.ctx.exprs.borrow();
+        for node in exprs.range(condition) {
+            match *node.kind() {
+                NodeKind::Variable(id) | NodeKind::Stem(id) => watch(self.ctx.symbols.name(id)),
+                // `>name` watches the variable it names, the same as reading
+                // it (`r[instr.guard.when.exposed]`).
+                NodeKind::VariableReference { symbol, .. } => watch(self.ctx.symbols.name(symbol)),
+                // A compound contributes its stem and its variable tail
+                // pieces, wherever else in the body it is referenced
+                // (`r[instr.guard.when.exposed]`).
+                NodeKind::Compound(id) => {
+                    let (stem, tails) = compound_parts(self.ctx.symbols.name(id));
+                    watch(stem);
+                    for tail in tails {
+                        if let Tail::Variable(piece) = tail {
+                            watch(piece);
+                        }
                     }
                 }
+                NodeKind::Literal(_)
+                | NodeKind::Constant(_)
+                | NodeKind::DotVariable(_)
+                | NodeKind::ClassResolver { .. }
+                | NodeKind::Omitted
+                | NodeKind::Prefix { .. }
+                | NodeKind::Binary { .. }
+                | NodeKind::Call { .. }
+                | NodeKind::QualifiedCall { .. }
+                | NodeKind::Message { .. }
+                | NodeKind::List(_)
+                | NodeKind::Logical(_) => {}
             }
-            ExprView::Prefix { operand, .. } => self.guard_exposes(operand, block, watched),
-            ExprView::Binary { left, right, .. } => {
-                self.guard_exposes(left, block, watched);
-                self.guard_exposes(right, block, watched);
-            }
-            ExprView::Call { args, .. } | ExprView::QualifiedCall { args, .. } => {
-                each(args, watched)
-            }
-            ExprView::Message {
-                target,
-                super_class,
-                args,
-                ..
-            } => {
-                self.guard_exposes(target, block, watched);
-                if let Some(super_class) = super_class {
-                    self.guard_exposes(super_class, block, watched);
-                }
-                each(args, watched);
-            }
-            ExprView::List(items) | ExprView::Logical(items) => each(items, watched),
-            ExprView::Literal(_)
-            | ExprView::Constant(_)
-            | ExprView::DotVariable(_)
-            | ExprView::ClassResolver { .. } => {}
         }
     }
 }

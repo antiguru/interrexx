@@ -1299,6 +1299,18 @@ fn guard_takes_on_or_off_and_an_optional_when() {
     assert_eq!(err("guard on 1"), (25, 912));
 }
 
+/// `GUARD ... WHEN` watches each exposed variable its condition names, once,
+/// in the order the names are written (`r[instr.guard.when.exposed]`).
+#[test]
+fn guard_watches_its_exposed_names_once_in_written_order() {
+    let instructions = ok("expose a b. c d\nguard on when f(d, b.c, e) & a~m(>c) & d");
+    let InstructionKind::Guard(guard) = &instructions[1].kind else {
+        panic!("not a GUARD: {:?}", names(&instructions));
+    };
+    let watched: Vec<&[u8]> = guard.watched.iter().map(|name| &**name).collect();
+    assert_eq!(watched, [&b"D"[..], b"B.", b"C", b"A"]);
+}
+
 #[test]
 fn a_reference_in_a_guard_condition_names_an_exposed_variable() {
     // `r[instr.guard.when.exposed]`: `>a` names `a`, so the condition watches it.
