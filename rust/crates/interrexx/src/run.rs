@@ -1007,12 +1007,14 @@ impl Interp {
                     name,
                     args,
                 } => {
-                    let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
-                    let name = code.symbols.name(*name).as_bytes().to_vec();
-                    let package = self.running_program().ok_or_else(Loud::missing_body)?;
-                    let resolution = self.namespace_routine(package, &namespace, &name);
-                    let resolved = self.resolved_after_arguments(code, resolution, args)?;
-                    self.invoke_named_call(code, CallResolution::Settled(resolved), &name, args)
+                    let namespace = code.symbols.name(*namespace).as_bytes();
+                    let name = code.symbols.name(*name).as_bytes();
+                    self.invoke_named_call(
+                        code,
+                        CallResolution::Qualified { namespace },
+                        name,
+                        args,
+                    )
                 }
             },
 
@@ -3967,7 +3969,8 @@ impl Interp {
             }
             // A `CALL`'s argument `slot`.
             (InstructionKind::Call(call), slot) => match &**call {
-                interrexx_parse::Call::Named { args, .. } => {
+                interrexx_parse::Call::Named { args, .. }
+                | interrexx_parse::Call::Qualified { args, .. } => {
                     args.get(usize::from(slot))?.as_ref()?
                 }
                 _ => return None,
