@@ -34,12 +34,10 @@ fn stem_argument(
         return Ok(value);
     }
     let text = interp.required_string_value(value)?;
-    if text != ObjRef::NIL {
-        let name = interp.to_text(text).into_owned();
-        if let Some(stem) = interp.context_stem_named(&name) {
-            interp.roots.activity_mut().push_temp(stem);
-            return Ok(stem);
-        }
+    let name = interp.to_text(text).into_owned();
+    if let Some(stem) = interp.context_stem_named(&name) {
+        interp.roots.activity_mut().push_temp(stem);
+        return Ok(stem);
     }
     let found = interp.string_value_text(value)?;
     Err(marshalled(Raised::native_argument_not_a_stem(

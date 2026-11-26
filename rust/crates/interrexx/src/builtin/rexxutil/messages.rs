@@ -212,14 +212,10 @@ fn substitute(message: &[u8], values: &[Vec<u8>]) -> Vec<u8> {
     out
 }
 
-/// `ObjectToStringValue`: the value's requested string, as the C string
-/// measured with `strlen`. A string request answering `.nil` is read as the
-/// null string.
+/// `ObjectToStringValue`: the value's string value (`r[conv.string.answer]`),
+/// as the C string measured with `strlen`.
 fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let string = interp.required_string_value(value)?;
-    if string == ObjRef::NIL {
-        return Ok(Vec::new());
-    }
     Ok(c_string(&interp.to_text(string)).to_vec())
 }
 
