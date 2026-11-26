@@ -518,18 +518,9 @@
   end
   return reverse(d2c(h, 8))
 
-/* r[class.index.string]: a value whose STRING answer has no string value
-   fails the method's number check, as its default string would; '' stands
-   in for that string. */
+/* r[class.index.string]: a number argument is read as a builtin reads one,
+   by the string value r[conv.string.answer] gives it. */
 ::routine timeSpanNumberText
   use arg value
   if value~isInstanceOf:.object(.string) then return value~makeString:.string
-  value~request('STRING')
-  if var('RESULT') then do
-    if result~isInstanceOf:.object(.string) then return result~makeString:.string
-  end
-  value~string
-  if var('RESULT') then do
-    if result~isInstanceOf:.object(.string) then return result~makeString:.string
-  end
-  return ''
+  return '' || value
