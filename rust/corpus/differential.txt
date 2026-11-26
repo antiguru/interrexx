@@ -981,6 +981,7 @@ lang/directory_enumeration_runs_no_method.rex
 lang/environment_symbol_after_store_changes.rex
 lang/environment_symbol_entry_changes.rex
 lang/send_site_unknown_changes.rex
+lang/send_site_no_unknown.rex
 lang/directive_class_environment_raises.rex
 lang/library_routine_requires.rex
 lang/library_routine_load_library.rex

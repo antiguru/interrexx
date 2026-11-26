@@ -4445,6 +4445,7 @@ impl Interp {
                         .begin_unknown(receiver, Some(behaviour), name, args, unknown, true)
                         .map(|ran| ran.map_or(Started::Entered, Started::Ran));
                 }
+                None => return self.begin_nomethod_or_own_unknown(receiver, behaviour, name, args),
                 found => found.map(|(resolution, _)| resolution),
             },
         };
@@ -4457,6 +4458,26 @@ impl Interp {
             Err(miss) => self
                 .begin_unknown_or_nomethod(receiver, name, args, miss, true)
                 .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
+        }
+    }
+
+    /// [`Interp::begin_send_at`] for a name `behaviour` answers neither as a
+    /// method nor through an `UNKNOWN`: only the receiver's own `UNKNOWN` is
+    /// left to ask, so the class graph is not searched for it a second time.
+    #[cold]
+    #[inline(never)]
+    fn begin_nomethod_or_own_unknown(
+        &mut self,
+        receiver: ObjRef,
+        behaviour: Behaviour,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        match self.own_lookup(receiver, UNKNOWN, None) {
+            Some(Some(own)) => self
+                .begin_unknown(receiver, Some(behaviour), name, args, own, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
+            _ => Err(self.nomethod(receiver, name, Miss::NoMethod)),
         }
     }
 

@@ -1595,7 +1595,9 @@ pub(crate) struct EnvMemo {
 
 /// An environment symbol's directory item, kept while the hash stores'
 /// counters stand where they stood when it was read: see
-/// [`Interp::dot_variable_memoized`].
+/// [`Interp::dot_variable_memoized`]. The counters are interpreter-wide, so a
+/// write to any hash store drops the entry, not only a write to a directory
+/// the search read; the read then takes the full search again.
 #[derive(Copy, Clone)]
 pub(crate) struct EnvEntry {
     generation: u64,

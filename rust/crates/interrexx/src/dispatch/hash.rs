@@ -1170,9 +1170,9 @@ pub(crate) fn directory_get(
     directory_read(interp, directory, key, view).map(|(entry, _, fresh)| (entry, fresh))
 }
 
-/// [`directory_get`], also answering whether the entry is the contents' own
-/// item, which no method ran to produce: an answer that holds while no hash
-/// store is written.
+/// Reads `key` from `directory` as `directory_get` does, also answering
+/// whether the entry is the contents' own item, which no method ran to
+/// produce: an answer that holds while no hash store is written.
 pub(crate) fn directory_read(
     interp: &mut Interp,
     directory: ObjRef,
@@ -1196,7 +1196,7 @@ pub(crate) fn directory_read(
     Ok((entry, stored, Some(view)))
 }
 
-/// [`directory_get`] for a package local, kept apart from it so that the
+/// [`directory_read`] for a package local, kept apart from it so that the
 /// `.local` and `.environment` lookup is its one caller.
 pub(crate) fn package_local_get(
     interp: &mut Interp,
