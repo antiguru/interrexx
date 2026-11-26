@@ -238,8 +238,8 @@ fn every_unbounded_shape_this_crate_can_take_is_bounded() {
         // boundary never sees it. Unbounded only in time: the nesting ends in
         // 11.1 once the control stack is full. Measured with no deadline in
         // the optimized `test` profile, that is about 3.3 s in on i686 and
-        // about 4.6 s in on x86_64, where every level keeps its fragment and
-        // the run peaks at about 3.4 GB resident. Both are inside the 30 s
+        // about 4.6 s in on x86_64, where the run peaks at about 3.4 GB
+        // resident. Both are inside the 30 s
         // watchdog and an 8 GB cap, so a regression here fails the row with
         // rc 245 rather than `DEADLINE_EXIT`; on a host slower or tighter on
         // memory it could instead end at the watchdog or run out of memory.
@@ -249,7 +249,8 @@ fn every_unbounded_shape_this_crate_can_take_is_bounded() {
         // optimized i686 build fills its stack about 0.55 s in, near enough
         // to `SHORT` that the stack won the race on CI and, before nesting
         // was bounded, aborted this binary (#1102). More `NOP`s per level
-        // run out of a 32-bit heap first.
+        // run out of a 32-bit heap first: on every target each level keeps
+        // its fragment.
         (
             "INTERPRET recursion",
             b"zs = copies('nop; ', 50) 'interpret zs'\ninterpret zs\n",
