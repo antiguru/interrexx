@@ -684,7 +684,8 @@ pub(super) fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
         rest = &rest[1..];
         let value = *value;
         // [`keep_capacity`] binds the contents' slot name alone, as a copy of
-        // [`PoolNames`]' own, so it is recognised by identity too.
+        // [`PoolNames`]' own. Recognising it by identity only skips the byte
+        // comparisons below, which would read it as `HASH_BUCKETS` all the same.
         if Rc::ptr_eq(name, &names.contents[3]) {
             parts.contents.slots = Some(value);
             continue;
@@ -707,9 +708,9 @@ pub(super) fn read_parts(interp: &mut Interp, receiver: ObjRef) -> Parts {
     parts
 }
 
-/// The contents' entries when they are the first the pool binds, which is
+/// The contents' entries when they are the first five the hash scope binds,
 /// where [`install_store`] puts them in a store built before anything else
-/// is bound: [`read_parts`]'s first step, without the rest of its pass.
+/// is bound in that scope: [`read_parts`]'s first step, without the rest of its pass.
 #[inline]
 pub(super) fn leading_contents(interp: &mut Interp, receiver: ObjRef) -> Option<Found> {
     let scope = hash_scope(interp);

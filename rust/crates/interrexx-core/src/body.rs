@@ -1035,7 +1035,13 @@ impl ScopePools {
             .iter()
             .position(|record| record.value == scope)
         else {
-            self.entries.push(order_record(scope));
+            // Order records exist here, so the last entry is one, and its
+            // empty name is shared rather than allocated afresh.
+            let empty = self.entries.last().map(|last| Rc::clone(&last.name));
+            self.entries.push(order_record(
+                scope,
+                empty.unwrap_or_else(|| Rc::from(&b""[..])),
+            ));
             return real;
         };
         self.entries[real + rank + 1..]
@@ -1049,19 +1055,12 @@ impl ScopePools {
     }
 
     /// [`Self::set`] for each of `entries` in turn, with each name a copy of
-    /// the caller's own, and room made for the names it does not yet hold at
+    /// the caller's own, and, on an empty list, room for all of them made at
     /// once.
     pub fn set_all(&mut self, scope: ObjRef, entries: &[(&Rc<[u8]>, ObjRef)]) {
-        let absent = entries
-            .iter()
-            .filter(|(name, _)| {
-                !self
-                    .entries
-                    .iter()
-                    .any(|entry| entry.scope == scope && *entry.name == ***name)
-            })
-            .count();
-        self.entries.reserve_exact(absent);
+        if self.entries.is_empty() {
+            self.entries.reserve_exact(entries.len());
+        }
         for &(name, value) in entries {
             match self
                 .entries
@@ -1133,7 +1132,11 @@ impl ScopePools {
                 seen.push(entry.scope);
             }
         }
-        self.entries.extend(seen.into_iter().map(order_record));
+        let empty: Rc<[u8]> = Rc::from(&b""[..]);
+        self.entries.extend(
+            seen.into_iter()
+                .map(|scope| order_record(scope, Rc::clone(&empty))),
+        );
     }
 
     /// The value `name` holds in the pool created last that binds it, each new
@@ -1158,12 +1161,12 @@ impl ScopePools {
         &self.entries[start..start + run]
     }
 
-    /// The first `N` entries of the whole list, when they all belong to
-    /// `scope`: the start of its run where that run is the list's first, which
-    /// is found without measuring the run.
+    /// The first `N` entries of `scope`'s run, when they all belong to
+    /// `scope`, found without measuring the run.
     #[inline]
     pub fn leading<const N: usize>(&self, scope: ObjRef) -> Option<&[PoolEntry; N]> {
-        let first = self.entries.first_chunk::<N>()?;
+        let start = self.entries.iter().position(|entry| entry.scope == scope)?;
+        let first = self.entries[start..].first_chunk::<N>()?;
         first
             .iter()
             .all(|entry| entry.scope == scope)
@@ -1176,8 +1179,9 @@ impl ScopePools {
         let mut previous = None;
         for entry in &self.entries {
             if is_order_record(entry) {
-                // The scope it stands for is reached through its own entries
-                // while it has any, and through this record while it has none.
+                // The scope it stands for is reached through this record when it
+                // has no entries. One that still has entries is pushed again
+                // here, which the collector's marks absorb.
                 out.push(entry.value);
                 continue;
             }
@@ -1197,10 +1201,10 @@ fn is_order_record(entry: &PoolEntry) -> bool {
     entry.scope == ObjRef::MARKER
 }
 
-fn order_record(scope: ObjRef) -> PoolEntry {
+fn order_record(scope: ObjRef, empty: Rc<[u8]>) -> PoolEntry {
     PoolEntry {
         scope: ObjRef::MARKER,
-        name: Rc::from(&b""[..]),
+        name: empty,
         value: scope,
     }
 }

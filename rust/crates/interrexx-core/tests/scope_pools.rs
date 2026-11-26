@@ -251,3 +251,50 @@ fn the_nil_scopes_entries_are_its_own_names() {
         .collect::<Vec<_>>();
     assert_eq!(names, vec![(b"Y".to_vec(), y)]);
 }
+
+/// The leading entries of a scope's run are found wherever the run starts,
+/// not only at the head of the whole list.
+#[test]
+fn leading_entries_are_found_behind_another_scopes_run() {
+    let (sup, sub) = scopes();
+    let mut pools = ScopePools::new();
+    pools.set(sub, b"X", ObjRef::heap(9, 0));
+    for (i, name) in [b"A", b"B", b"C", b"D", b"E"].into_iter().enumerate() {
+        pools.set(sup, name, ObjRef::heap(i as u32 + 1, 0));
+    }
+    let found = pools.leading::<5>(sup).expect("five entries of sup's run");
+    let names: Vec<&[u8]> = found.iter().map(|entry| &*entry.name).collect();
+    assert_eq!(names, [b"A", b"B", b"C", b"D", b"E"]);
+    assert!(pools.leading::<5>(sub).is_none());
+    pools.clear(sup, b"E");
+    assert!(pools.leading::<5>(sup).is_none());
+}
+
+/// A scope with entries is pushed again through its order record; the set of
+/// objects reached is the same either way.
+#[test]
+fn tracing_with_order_records_reaches_each_scope_and_value() {
+    let (sup, sub) = scopes();
+    let (v, x) = (ObjRef::heap(1, 0), ObjRef::heap(3, 0));
+    let mut pools = ScopePools::new();
+    pools.set(sup, b"V", v);
+    pools.set(sub, b"V", x);
+    pools.clear(sup, b"V");
+    let class = ObjRef::heap(1_000_000 + 2, 0);
+    let mut out = Vec::new();
+    Body::Instance {
+        class,
+        behaviour: BehaviourHandle::new(0),
+        name: None,
+        pools,
+        own: None,
+        native: None,
+    }
+    .trace(&mut out);
+    let mut reached = out.clone();
+    reached.sort_by_key(|handle| format!("{handle:?}"));
+    reached.dedup();
+    let mut expected = vec![class, sup, sub, x];
+    expected.sort_by_key(|handle| format!("{handle:?}"));
+    assert_eq!(reached, expected);
+}
