@@ -115,6 +115,21 @@ listing covers failed tests only. Any other group that does not pass fails the j
 listed group that passes, crashes, times out or runs no tests. The script also runs locally, with
 the environment overrides listed in its header.
 
+## The ooSQLite examples
+
+The `ooSQLite nightly` workflow runs `scripts/run-oosqlite.sh` on `main` once a night. It exports
+ooSQLite and the APICommon helper it compiles with from ooRexx's svn repository at the revision
+pinned in the script (both are under ooRexx's licence, so nothing of them is committed), compiles
+`liboosqlite.so` and the example extension libraries unmodified against `include/`, and runs each
+example program listed in `ci/oosqlite-examples.txt` on the release `rexx` and on the oracle, from
+the same fresh copy of the examples tree. Exit status and standard output must match byte for
+byte, and standard error in its error codes only. The examples found must be exactly the listed
+ones. An example listed with its reason in `ci/oosqlite-expected-differences.txt` must instead match
+up to the order of the words on each line (Deviation 33: a result row kept as a `Directory` lists
+its columns in the order they were put), and fails the run if it matches exactly. ooSQLite keeps
+local object references across native calls, so this is the run that exercises Deviation 95's
+rule. The script also runs locally, with the environment overrides listed in its header.
+
 Older, narrower instruments still run: extracted ooTest assertions run standalone
 (`assertions.rs`, `bif_assertions.rs`, `keyword_assertions.rs`), and gate tables of directive,
 concept and class rows (`gate_tables/`).

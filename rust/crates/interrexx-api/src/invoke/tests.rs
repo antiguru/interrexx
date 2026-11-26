@@ -34,6 +34,12 @@ enum Event {
 
 thread_local! {
     static EVENTS: RefCell<Vec<Event>> = const { RefCell::new(Vec::new()) };
+    /// The handle space of every stand-in interpreter on this thread: a
+    /// thread's table keeps the constants' handles of the first call made on
+    /// it, as one interpreter's do, so the stand-ins share one space, as one
+    /// interpreter's tables do. (The null string here is a heap object, whose
+    /// handle carries the space's key.)
+    static SPACE: crate::handles::HandleSpace = crate::handles::HandleSpace::new();
 }
 
 fn record(event: Event) {
@@ -176,7 +182,7 @@ impl Interpreter {
             heap: Heap::new(),
             asked: 0,
             variables: Vec::new(),
-            locals: Table::new(&crate::handles::HandleSpace::new()),
+            locals: SPACE.with(Table::new),
             numeric: Numeric {
                 digits: 9,
                 fuzz: 0,

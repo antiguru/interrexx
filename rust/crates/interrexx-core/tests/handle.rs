@@ -94,3 +94,30 @@ fn an_inline_string_is_not_a_slot_an_integer_or_nil() {
         assert_ne!(handle, ObjRef::small_int(-1).expect("fits"));
     }
 }
+
+/// **The bits of a carried value come back as that value; heap bits and bits
+/// no constructor makes do not.** A text tag with bytes past its length, as
+/// an aligned address less one has, is not a string.
+#[test]
+fn carried_answers_only_the_exact_bits_of_a_value_in_the_handle() {
+    for value in [
+        ObjRef::small_int(42).unwrap(),
+        ObjRef::small_int(-7).unwrap(),
+        ObjRef::inline_text(b"short").unwrap(),
+        ObjRef::inline_text(b"").unwrap(),
+        ObjRef::NIL,
+    ] {
+        assert_eq!(ObjRef::carried(value.bits()), Some(value));
+    }
+    assert_eq!(ObjRef::carried(ObjRef::heap(5, 3).bits()), None);
+    let three_bytes = ObjRef::inline_text(b"abc").unwrap().bits();
+    assert_eq!(ObjRef::carried(three_bytes | (0xff << 48)), None);
+    assert_eq!(ObjRef::carried(0x5555_5555_6010_u64 - 1), None);
+    // Not every address is rejected: one whose low byte is 0x20, one in 16 of
+    // 16-byte-aligned addresses, is exactly the bits of a 7-byte string, and
+    // reads as one (Deviation 95).
+    assert!(matches!(
+        ObjRef::carried(0x5555_5555_6020_u64 - 1).map(|value| value.decode()),
+        Some(interrexx_core::Decoded::Text(text)) if text.len() == 7
+    ));
+}

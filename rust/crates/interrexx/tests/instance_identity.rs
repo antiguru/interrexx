@@ -1187,3 +1187,56 @@ fn loaders_loading_each_others_library_do_not_wait_for_each_other() {
         "{stdout}"
     );
 }
+
+/// **A handle kept in one instance names nothing in another** (`decisions.md`, interpreter
+/// instances share no objects). The fixture `kept_across.cpp`, built as a program, creates
+/// instances A and B, which run the same steps, so the string each lends sits in the same slot at
+/// the same generation. B's own kept handle still names its string in a later call; A's names
+/// nothing in B, where without the interpreter's handle key it would name B's string.
+// A 32-bit target's handles carry no instance key (native-api.md, Handles
+// and lifetimes), so instance isolation of kept handles is a 64-bit property.
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn a_handle_kept_in_one_instance_names_nothing_in_another() {
+    let dir = fresh_dir("instance-kept-across");
+    for library in [cdylibs::librexx(), cdylibs::librexxapi()] {
+        let name = library.file_name().expect("a library name").to_owned();
+        let mut versioned = name.clone();
+        versioned.push(".4");
+        fs::copy(&library, dir.join(&versioned)).expect("a copy of the library");
+        std::os::unix::fs::symlink(&versioned, dir.join(&name)).expect("the link name");
+    }
+    compile(
+        "kept_across.cpp",
+        &[
+            "-shared",
+            "-fPIC",
+            "-o",
+            &dir.join("libkeptacross.so").to_string_lossy(),
+        ],
+    );
+    let driver = dir.join("keptdriver");
+    compile(
+        "kept_across.cpp",
+        &[
+            "-DDRIVER",
+            "-pthread",
+            "-o",
+            &driver.to_string_lossy(),
+            &format!("-L{}", dir.display()),
+            &format!("-Wl,-rpath,{}", dir.display()),
+            "-lrexx",
+            "-lrexxapi",
+        ],
+    );
+    fs::copy(fixture("kept_across.rex"), dir.join("kept_across.rex")).expect("the program");
+    assert_eq!(
+        run(&driver, &dir, None, None),
+        (
+            "B, its own kept handle: 33\nB, A's kept handle: refused\n".to_owned(),
+            String::new(),
+            0
+        )
+    );
+    fs::remove_dir_all(&dir).expect("the run's directory is removable");
+}

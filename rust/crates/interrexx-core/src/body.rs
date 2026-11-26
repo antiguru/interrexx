@@ -1558,6 +1558,10 @@ pub struct Object {
     /// never cleared, as variable dependents stay once created: the one test a
     /// variable store or drop makes before looking for watchers.
     pub(crate) watched: bool,
+    /// Set once the object has been handed to native code, and never
+    /// cleared: a handle an extension kept from that call names the object
+    /// from a later one for as long as it lives, as an ooRexx pointer does.
+    pub(crate) lent: bool,
 }
 
 impl Object {
@@ -1571,6 +1575,18 @@ impl Object {
     /// Marks this object as one whose variables a `GUARD WHEN` has watched.
     pub fn mark_watched(&mut self) {
         self.watched = true;
+    }
+
+    /// Whether the object has been handed to native code. See the field.
+    #[inline(always)]
+    pub fn lent(&self) -> bool {
+        self.lent
+    }
+
+    /// Marks this object as one native code has been handed.
+    #[inline(always)]
+    pub fn mark_lent(&mut self) {
+        self.lent = true;
     }
 
     /// Whether this object defines an `UNINIT` method. See the field.
