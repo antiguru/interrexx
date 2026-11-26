@@ -196,8 +196,13 @@ pub struct FrameArena {
     /// `blocks[current]`, dangling before the first block.
     block: Cell<NonNull<Cell<ObjRef>>>,
     /// The used length of `block`; above `size` when the next frame must open
-    /// a block, which includes the state before the first one.
+    /// a block, which includes every state with no frame reserved.
     top: Cell<usize>,
+    /// Whether a frame is reserved: set when a frame opens the first block,
+    /// cleared when that frame is released. A frame of length 0 at the start
+    /// of the first block leaves `current` and `top` as no frame does, so
+    /// only this tells the two apart.
+    entered: Cell<bool>,
 }
 
 impl FrameArena {
@@ -209,6 +214,7 @@ impl FrameArena {
             current: Cell::new(0),
             block: Cell::new(NonNull::dangling()),
             top: Cell::new(usize::MAX),
+            entered: Cell::new(false),
         }
     }
 
@@ -239,13 +245,14 @@ impl FrameArena {
         }
     }
 
-    /// Moves to the next block, allocating it the first time, and answers the
-    /// offset the new frame starts at.
+    /// Moves to the next block, or to the first when no frame is reserved,
+    /// allocating it the first time, and answers the offset the new frame
+    /// starts at.
     #[cold]
     #[inline(never)]
     fn open_block(&self) -> usize {
         let mut blocks = self.blocks.borrow_mut();
-        if !blocks.is_empty() {
+        if self.entered.replace(true) {
             self.tops.borrow_mut().push(self.top.get());
             self.current.set(self.current.get() + 1);
         }
@@ -323,11 +330,15 @@ impl FrameArena {
     #[cold]
     #[inline(never)]
     fn close_block(&self) {
-        // The first block's opener leaves that block current, at `top` 0.
+        // The first block's opener leaves that block current, and the next
+        // frame opens it again.
         if let Some(top) = self.tops.borrow_mut().pop() {
             self.current.set(self.current.get() - 1);
             self.block.set(self.blocks.borrow()[self.current.get()]);
             self.top.set(top);
+        } else {
+            self.entered.set(false);
+            self.top.set(usize::MAX);
         }
     }
 
@@ -336,9 +347,8 @@ impl FrameArena {
         self.blocks.borrow().len()
     }
 
-    /// Whether no frame of positive length is reserved: the state a new
-    /// arena is in, apart from the blocks it keeps. A frame of length 0 holds
-    /// no cell, so one at the start of the first block cannot be told apart.
+    /// Whether no frame is reserved, of any length: the state a new arena is
+    /// in, apart from the blocks it keeps.
     ///
     /// Such an arena can serve another activity as a new one would. Every
     /// cell still holds an `ObjRef` bit pattern (property 1, and a cell is
@@ -347,12 +357,12 @@ impl FrameArena {
     /// cell is neither a root (`iter` walks only reserved frames) nor any
     /// register's starting value.
     pub fn is_idle(&self) -> bool {
-        self.current.get() == 0 && (self.top.get() == 0 || self.blocks.borrow().is_empty())
+        !self.entered.get()
     }
 
     /// Every register of every live frame.
     pub fn iter(&self) -> impl Iterator<Item = ObjRef> + '_ {
-        let live = if self.blocks.borrow().is_empty() {
+        let live = if !self.entered.get() {
             0
         } else {
             self.current.get() + 1
@@ -490,6 +500,16 @@ mod tests {
     #[test]
     fn an_arena_is_idle_only_with_no_frame_reserved_in_any_block() {
         let arena = FrameArena::new(FrameBlock::new(2).expect("in range"));
+        assert!(arena.is_idle());
+        let opener = arena.reserve(0);
+        assert!(!arena.is_idle());
+        arena.release(opener);
+        assert!(arena.is_idle());
+        arena.release(arena.reserve(1));
+        let empty = arena.reserve(0);
+        assert_eq!((arena.current.get(), arena.top.get()), (0, 0));
+        assert!(!arena.is_idle());
+        arena.release(empty);
         assert!(arena.is_idle());
         let outer = arena.reserve(2);
         assert!(!arena.is_idle());

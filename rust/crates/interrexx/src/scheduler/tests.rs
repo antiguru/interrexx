@@ -2141,9 +2141,10 @@ fn a_refused_recall_of_a_send_again_passes_its_lock_on() {
     );
 }
 
-/// Runs `source` on an interpreter thread of its own, answering its outcome
-/// and how many new activities adopted a pooled frame arena.
-fn run_counting_adoptions(source: &str) -> (Outcome, u64) {
+/// Runs `source` with frame blocks of `block` on an interpreter thread of its
+/// own, answering its outcome and how many new activities adopted a pooled
+/// frame arena.
+fn run_counting_adoptions(source: &str, block: interrexx_core::FrameBlock) -> (Outcome, u64) {
     let text = source.as_bytes().to_vec();
     std::thread::Builder::new()
         .stack_size(crate::INTERPRETER_STACK_BYTES)
@@ -2152,7 +2153,9 @@ fn run_counting_adoptions(source: &str) -> (Outcome, u64) {
                 b"/tmp/arenas.rex",
                 text,
                 false,
-                Invocation::none().with_deadline(RUN_DEADLINE),
+                Invocation::none()
+                    .with_deadline(RUN_DEADLINE)
+                    .with_frame_block(block),
                 Some(crate::INTERPRETER_STACK_BYTES),
             );
             (outcome, crate::scheduler::adopted_arenas())
@@ -2166,12 +2169,29 @@ fn run_counting_adoptions(source: &str) -> (Outcome, u64) {
 /// arena, and its variables start unassigned as a fresh one's do.
 #[test]
 fn a_started_activity_adopts_the_frame_arena_of_one_that_ended() {
-    let (outcome, adopted) = run_counting_adoptions(
-        "o = .k~new\ndo i = 1 to 3\n  say o~start('m', i)~result\nend\n\
-         ::class k\n::method m\n  use arg n\n  if n = 1 then x = 'set'\n  \
-         say n symbol('X')\n  return n * 10\n",
-    );
+    let (outcome, adopted) =
+        run_counting_adoptions(THREE_STARTS, interrexx_core::FrameBlock::DEFAULT);
     assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
-    assert_eq!(stdout(&outcome), "1 VAR\n10\n2 LIT\n20\n3 LIT\n30\n");
+    assert_eq!(stdout(&outcome), THREE_STARTS_OUTPUT);
     assert_eq!(adopted, 2);
+}
+
+/// Three sequential `~start`s, each on an activity of its own that ends
+/// before the next starts.
+const THREE_STARTS: &str = "o = .k~new\ndo i = 1 to 3\n  say o~start('m', i)~result\nend\n\
+    ::class k\n::method m\n  use arg n\n  if n = 1 then x = 'set'\n  \
+    say n symbol('X')\n  return n * 10\n";
+
+const THREE_STARTS_OUTPUT: &str = "1 VAR\n10\n2 LIT\n20\n3 LIT\n30\n";
+
+/// An arena whose block is larger than the default is not pooled, so the
+/// pool's memory stays bounded whatever block size an embedding picks.
+#[test]
+fn an_arena_with_a_block_larger_than_the_default_is_not_pooled() {
+    let larger = interrexx_core::FrameBlock::new(interrexx_core::FrameBlock::DEFAULT.cells() + 1)
+        .expect("in range");
+    let (outcome, adopted) = run_counting_adoptions(THREE_STARTS, larger);
+    assert_eq!(outcome.exit_code, 0, "{}", stderr(&outcome));
+    assert_eq!(stdout(&outcome), THREE_STARTS_OUTPUT);
+    assert_eq!(adopted, 0);
 }

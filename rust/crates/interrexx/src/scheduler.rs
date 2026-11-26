@@ -10,7 +10,7 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
 use std::time::Instant;
 
-use interrexx_core::{ActivityRoots, FrameArena, ObjRef};
+use interrexx_core::{ActivityRoots, FrameArena, FrameBlock, ObjRef};
 use rustc_hash::FxHashMap;
 
 use crate::activity::Activity;
@@ -481,15 +481,18 @@ const STACK_MARGIN: usize = 32 * 1024 * 1024;
 /// An ended activity is pooled while the pool holds no more than this.
 const MAX_POOLED: usize = 5;
 
-/// An ended activity's frame arena is pooled while the pool holds fewer than
-/// this; each keeps its blocks' memory.
+/// The most frame arenas the pool holds. Each keeps one block of at most
+/// [`FrameBlock::DEFAULT`]'s size, so the pool's memory is bounded whatever
+/// block size an embedding picks.
 const MAX_POOLED_ARENAS: usize = 4;
 
 impl Activities {
     /// Pools the frame arena of the ended activity whose roots are `roots`,
-    /// where it can serve another ([`ActivityRoots::take_idle_frames`]).
+    /// where it can serve another ([`ActivityRoots::take_idle_frames`]) and
+    /// its block is no larger than [`FrameBlock::DEFAULT`].
     fn pool_frames(&mut self, roots: &mut ActivityRoots) {
         if self.frame_arenas.len() < MAX_POOLED_ARENAS
+            && roots.frames().size().cells() <= FrameBlock::DEFAULT.cells()
             && let Some(arena) = roots.take_idle_frames()
         {
             self.frame_arenas.push(arena);
@@ -1101,10 +1104,11 @@ impl Interp {
         }
         let mut roots = ActivityRoots::new();
         let size = self.roots.activity().frames().size();
-        let arenas = &mut self.activities.frame_arenas;
-        match arenas.iter().rposition(|arena| arena.size() == size) {
-            Some(index) => roots.adopt_frames(arenas.swap_remove(index)),
-            None => roots.set_frame_block(size),
+        // A pooled arena of another size is dropped, so none keeps a slot it
+        // cannot serve from.
+        match self.activities.frame_arenas.pop() {
+            Some(arena) if arena.size() == size => roots.adopt_frames(arena),
+            _ => roots.set_frame_block(size),
         }
         #[cfg(test)]
         if roots.frames().blocks() != 0 {

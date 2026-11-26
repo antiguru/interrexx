@@ -607,9 +607,10 @@ impl ActivityRoots {
 
     /// The register frame arena, for another activity to adopt, where it has
     /// exactly one block (so a pool of arenas holds a bounded amount of
-    /// memory), no frame reserved ([`FrameArena::is_idle`]) and no other
-    /// handle; this activity is left an empty arena of the same size. A
-    /// frame borrows a handle, so with none elsewhere no frame is in use.
+    /// memory), no frame reserved ([`FrameArena::is_idle`], which counts a
+    /// parked frame and a frame of length 0) and no other handle, so that no
+    /// `RegFrame` borrows it; this activity is left an empty arena of the
+    /// same size.
     pub fn take_idle_frames(&mut self) -> Option<FrameArena> {
         let frames = &self.frames;
         if frames.blocks() != 1 || !frames.is_idle() || Rc::strong_count(frames) != 1 {
@@ -620,18 +621,21 @@ impl ActivityRoots {
     }
 
     /// Replaces the register frame arena with `arena`, which
-    /// [`ActivityRoots::take_idle_frames`] answered.
+    /// [`ActivityRoots::take_idle_frames`] answered. Like
+    /// [`ActivityRoots::set_frame_block`], it sets the block size, to
+    /// `arena`'s.
     ///
     /// # Panics
     ///
     /// If the current arena has ever reserved a frame or is held elsewhere,
-    /// or `arena` has a frame reserved.
+    /// or `arena` has a frame reserved or other than one block.
     pub fn adopt_frames(&mut self, arena: FrameArena) {
         assert!(
             self.frames.blocks() == 0 && Rc::strong_count(&self.frames) == 1,
             "an arena is adopted before the first frame"
         );
         assert!(arena.is_idle(), "an adopted arena has no frame reserved");
+        assert_eq!(arena.blocks(), 1, "an adopted arena has one block");
         self.frames = Rc::new(arena);
     }
 

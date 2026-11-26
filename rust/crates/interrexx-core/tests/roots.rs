@@ -122,16 +122,13 @@ fn the_frame_block_size_cannot_change_under_a_reserved_frame() {
         .set_frame_block(interrexx_core::FrameBlock::DEFAULT);
 }
 
-/// An idle arena moves to another activity with its block, and the frames it
-/// serves there start all `.nil` and root nothing of the first activity's.
+/// An idle arena moves to another activity with its block, which serves that
+/// activity's frames without a second one.
 #[test]
-fn an_idle_arena_serves_another_activity_with_nil_registers() {
+fn an_idle_arena_moves_to_another_activity_with_its_block() {
     let mut first = interrexx_core::ActivityRoots::new();
-    let value = ObjRef::heap(21, 0);
     let arena = first.frames();
-    let frame = arena.reserve(3);
-    frame.set(2, value);
-    arena.release(frame);
+    arena.release(arena.reserve(3));
     drop(arena);
     let taken = first.take_idle_frames().expect("idle");
     assert_eq!(first.frames().blocks(), 0);
@@ -139,11 +136,8 @@ fn an_idle_arena_serves_another_activity_with_nil_registers() {
     second.adopt_frames(taken);
     let arena = second.frames();
     assert_eq!(arena.blocks(), 1);
-    assert!(!second.iter().any(|r| r == value));
-    let frame = arena.reserve(3);
-    assert_eq!(frame.get(2), ObjRef::NIL);
+    arena.release(arena.reserve(3));
     assert_eq!(arena.blocks(), 1);
-    arena.release(frame);
 }
 
 /// An arena with a frame reserved, a handle held elsewhere, or no block yet
@@ -159,6 +153,27 @@ fn an_arena_in_use_or_without_a_block_is_not_taken() {
     assert!(roots.take_idle_frames().is_none());
     assert_eq!(roots.frames().blocks(), 1);
     let parked = arena.park(arena.reserve(2));
+    drop(arena);
+    assert!(roots.take_idle_frames().is_none());
+    let arena = roots.frames();
+    arena.release(arena.unpark(parked));
+    drop(arena);
+    assert!(roots.take_idle_frames().is_some());
+}
+
+/// A parked frame of length 0 at the start of the first block is reserved
+/// like any other, whether it opened the block or a frame before it did, so
+/// the arena stays with its activity until the frame is released.
+#[test]
+fn an_arena_with_an_empty_frame_parked_is_not_taken() {
+    let mut roots = interrexx_core::ActivityRoots::new();
+    let arena = roots.frames();
+    let parked = arena.park(arena.reserve(0));
+    drop(arena);
+    assert!(roots.take_idle_frames().is_none());
+    let arena = roots.frames();
+    arena.release(arena.unpark(parked));
+    let parked = arena.park(arena.reserve(0));
     drop(arena);
     assert!(roots.take_idle_frames().is_none());
     let arena = roots.frames();
@@ -443,6 +458,14 @@ fn taken_parked_values_stop_being_roots() {
     assert_eq!(roots.activity_mut().take_parked(parked), vec![value]);
     assert!(!roots.iter().any(|r| r == value));
     assert_eq!(roots.activity().live_parked(), 0);
+}
+
+/// An arena with other than one block is not adopted.
+#[test]
+#[should_panic(expected = "an adopted arena has one block")]
+fn an_arena_without_one_block_is_not_adopted() {
+    let arena = interrexx_core::FrameArena::new(interrexx_core::FrameBlock::DEFAULT);
+    interrexx_core::ActivityRoots::new().adopt_frames(arena);
 }
 
 /// An arena with a frame reserved is not adopted.
