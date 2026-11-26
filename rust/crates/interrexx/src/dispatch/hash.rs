@@ -192,6 +192,19 @@ pub(crate) fn owns(interp: &mut Interp, receiver: ObjRef) -> bool {
     kind_of(interp, receiver).has(HashKind::OWNED)
 }
 
+/// [`owns`], with the receiver's [`HashKind`] where it does.
+#[inline]
+fn owned_kind(interp: &mut Interp, receiver: ObjRef) -> Option<HashKind> {
+    if matches!(
+        interp.heap.get(receiver).map(|object| &object.body),
+        Some(Body::Native(_))
+    ) {
+        return None;
+    }
+    let kind = kind_of(interp, receiver);
+    kind.has(HashKind::OWNED).then_some(kind)
+}
+
 /// Whether `receiver`'s class is or inherits from one of `names`.
 fn class_is_one_of(interp: &mut Interp, receiver: ObjRef, names: &[&str]) -> bool {
     let Some(class) = interp.class_of_value(receiver) else {
@@ -1313,11 +1326,7 @@ fn hash_at(
     // `Table`, `IdentityTable`, `StringTable` and `Directory` share one method
     // identity. A table this crate built on `NativeObject`'s map reads that
     // map; everything else reads the store.
-    if !matches!(
-        interp.heap.get(receiver).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && owns(interp, receiver)
-    {
+    if let Some(kind) = owned_kind(interp, receiver) {
         // An index not of a base class may hash and compare through Rexx
         // methods of its own. Any other index may still be compared with a
         // held index whose methods are Rexx code, which a string's `==` sends
@@ -1329,6 +1338,10 @@ fn hash_at(
             .is_some_and(|index| interp.may_run_rexx(index))
         {
             return leveled_store_at(interp, receiver, args, name);
+        }
+        // A string-keyed store compares string values, which sends nothing.
+        if kind.has(HashKind::STRING_KEYED) {
+            return store_at(interp, receiver, args);
         }
         return interp.deferred_level(receiver, name, args, |interp| {
             store_at(interp, receiver, args)
@@ -1382,11 +1395,7 @@ fn hash_put(
     name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // [`native_hash_at`]'s split, for the same reason.
-    if !matches!(
-        interp.heap.get(receiver).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && owns(interp, receiver)
-    {
+    if let Some(kind) = owned_kind(interp, receiver) {
         // An index not of a base class may hash and compare through Rexx
         // methods of its own, and so may a `Set`'s or `Bag`'s item. Any other
         // is still compared with the held indexes, as in `hash_at`.
@@ -1400,6 +1409,10 @@ fn hash_put(
             }
         };
         if plain {
+            // As in `hash_at`.
+            if kind.has(HashKind::STRING_KEYED) {
+                return store_put(interp, receiver, args);
+            }
             return interp.deferred_level(receiver, name, args, |interp| {
                 store_put(interp, receiver, args)
             });

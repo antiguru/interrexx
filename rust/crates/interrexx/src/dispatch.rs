@@ -509,13 +509,17 @@ impl Interp {
     }
 
     /// Pushes the [`Interp::deferred_level`] of the primitive whose own code
-    /// is running, if it has one not yet pushed. Rexx code that the primitive
+    /// is running, if it has one not yet pushed, before it compares `left`
+    /// with `right` and either may run Rexx code. Rexx code that the primitive
     /// runs some other way, such as a `Directory`'s stored method, runs under
     /// an activation of its own, so a comparison that code makes leaves the
     /// level where it is.
     #[cold]
     #[inline(never)]
-    pub(crate) fn raise_deferred_level(&mut self) {
+    pub(crate) fn raise_deferred_level(&mut self, left: ObjRef, right: ObjRef) {
+        if !self.may_run_rexx(left) && !self.may_run_rexx(right) {
+            return;
+        }
         let caller = self.running_activation().map(|activation| activation.id);
         let depth = self.activity.method_levels.len();
         let Some(level) = self
