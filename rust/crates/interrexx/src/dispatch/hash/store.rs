@@ -1288,4 +1288,7 @@ pub(super) fn insert_duplicate(
 }
 
 #[cfg(test)]
+mod model;
+
+#[cfg(test)]
 mod tests;
