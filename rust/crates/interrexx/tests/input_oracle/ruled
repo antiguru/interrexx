@@ -242,6 +242,17 @@ out> internal 1 b.c
 out> internal 2 pk N
 
 run
+lang/trapped_condition_native_levels_filespec.rex
+----
+rc> 0
+out> 88.901 10 1 trapped_condition_native_levels_filespec.rex 3
+out>       10 *-*   x = filespec('N')
+out>        5 *-* call t3
+out>   ROUTINE FILESPEC The NIL object 0 1
+out>   INTERNALCALL T3 10 0 0
+out>   PROGRAM <dir>/trapped_condition_native_levels_filespec.rex 5 0 0
+
+run
 lang/debug_call_return.rex
 ----
 rc> 0
