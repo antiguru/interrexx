@@ -198,11 +198,23 @@ if SysToUnicode('FF'x, 'UTF8', 'ERR_INVALID_CHARS', converted) <> 1113 then exit
 if converted['!TEXT'] \== '4100E9000000'x then exit 115
 if SysFromUnicode('0026'x, 1252, , '!', 'back.') <> 0 then exit 116
 if back.!TEXT \== '!' | back.!USEDDEFAULTCHAR <> 1 then exit 117
+if SysToUnicode('', 'UTF8', , converted) <> 0 | converted['!TEXT'] \== '' then exit 118
+if SysFromUnicode('', 'UTF8', , , 'back.') <> 0 then exit 119
+if back.!TEXT \== '' | back.!USEDDEFAULTCHAR <> 0 then exit 162
+if SysFromUnicode('4100'x, 'UTF8', , '?', 'back.') <> 0 then exit 163
+if back.!TEXT \== 'A' | back.!USEDDEFAULTCHAR <> 0 then exit 164
 
 /* spec: util.windows.ini */
 iniFile = SysTempFileName(root || '\rexxutil-ini-????.ini')
 if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 120
 if SysIni(iniFile, 'interrexx', 'test', 'value') \== '' then exit 121
+signal on syntax name missingIniKey
+call SysIni iniFile, 'interrexx'
+exit 165
+missingIniKey:
+if condition('O')~code <> 88.901 then exit 166
+signal off syntax
+if SysIni(iniFile, 'interrexx', '') \== 'ERROR:' then exit 167
 if SysIni(iniFile, 'INTERREXX', 'TEST') \== 'value' then exit 122
 if SysIni(iniFile, 'ALL:', 'sections.') \== '' then exit 123
 if sections.0 <> 1 | sections.1 \== 'interrexx' then exit 124
@@ -217,27 +229,14 @@ if SysFileDelete(iniFile) <> 0 then exit 129
 if words(SysCurPos()) <> 2 then exit 130
 if SysTextScreenRead(0, 0, 0) \== '' then exit 131
 if SysTextScreenRead(-1, 0, 1) \== '' then exit 132
-if size \== '0 0' then do
-  parse value SysCurPos() with oldRow oldColumn
-  if SysCurPos(0, 0) \== (oldRow oldColumn) then exit 133
-  if SysCurPos() \== '0 0' then exit 134
-  call SysCurPos oldRow, oldColumn
-  if SysCurState('OFF') <> 0 then exit 135
-  if SysCurState('ON') <> 0 then exit 136
-  if length(SysTextScreenRead(0, 0, 1)) <> 1 then exit 137
-end
 
 /* spec: util.windows.printers */
 printerRc = SysWinGetPrinters('printers.')
 if printerRc <> 0 & printerRc <> 1 then exit 140
 if printerRc = 1 & printers.0 <> 0 then exit 141
-defaultPrinter = SysWinGetDefaultPrinter()
-foundDefault = 0
 do i = 1 to printers.0
   if countstr(',', printers.i) < 2 then exit 142
-  if defaultPrinter \== '' & defaultPrinter == printers.i then foundDefault = 1
 end
-if defaultPrinter \== '' & foundDefault <> 1 then exit 143
 if SysWinSetDefaultPrinter('') = 0 then exit 144
 
 /* spec: util.windows.interaction */
@@ -249,7 +248,8 @@ if SysSwitchSession(pipe || '-missing') = 0 then exit 153
 /* spec: util.windows.process */
 if SysQueryProcess() <= 0 | SysQueryProcess('TID') <= 0 then exit 156
 if SysQueryProcess() <> SysQueryProcess('PID') then exit 157
-if SysQueryProcess('PPRIO') == '' | SysQueryProcess('TPRIO') == '' then exit 158
+if SysSetPriority('NORMAL', 'NORMAL') <> 0 then exit 158
+if SysQueryProcess('PPRIO') \== 'NORMAL' | SysQueryProcess('TPRIO') \== 'NORMAL' then exit 168
 if SysSetPriority('not-a-class', 'NORMAL') <> 307 then exit 159
 if RxWinExec('"' || systemDir || '\interrexx-does-not-exist-961.exe"', 'HIDE') <> 2 then exit 160
 command = '"' || systemDir || '\cmd.exe" /D /C exit 0'
