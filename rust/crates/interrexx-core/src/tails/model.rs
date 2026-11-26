@@ -16,6 +16,7 @@
 //! add or mostly drop, so the slab both fills and empties.
 
 use super::*;
+use interrexx_cast::{CastFrom, CastTruncate};
 
 /// splitmix64: a small generator whose sequences are fixed by their seed, so
 /// a failing seed replays.
@@ -31,7 +32,8 @@ impl Rng {
     }
 
     fn below(&mut self, n: usize) -> usize {
-        (self.next() % n as u64) as usize
+        // The remainder is below `n`, so truncating it to a `usize` keeps it whole.
+        usize::cast_truncate(self.next() % u64::cast_from(n))
     }
 
     fn chance(&mut self, percent: usize) -> bool {
