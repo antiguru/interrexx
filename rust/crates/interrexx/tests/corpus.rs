@@ -318,27 +318,30 @@ fn every_opted_in_comparison_names_a_program_the_subset_runs() {
 /// [`stdout_mode`] answers the multiset mode and the trace-cut mode for
 /// exactly the programs of their lists.
 #[test]
-fn the_multiset_stdout_mode_is_selected_for_exactly_the_listed_programs() {
+fn each_stdout_mode_is_selected_for_exactly_its_listed_programs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
     let paths: Vec<PathBuf> = SUBSET_FILES
         .iter()
         .map(|name| corpus_dir.join(name))
         .collect();
     let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
-    assert!(
-        !HASH_ORDERED_STDOUT.is_empty() && HASH_ORDERED_STDOUT.len() < subset.len(),
-        "the list is empty or is the whole subset, so this control separates nothing"
-    );
+    let lists = [
+        (
+            HASH_ORDERED_STDOUT,
+            "HASH_ORDERED_STDOUT",
+            StdoutComparison::Multiset,
+        ),
+        (TRACED_STDOUT, "TRACED_STDOUT", StdoutComparison::TraceCut),
+    ];
+    for (list, name, _) in lists {
+        assert!(
+            !list.is_empty() && list.len() < subset.len(),
+            "{name} is empty or is the whole subset, so this control separates nothing"
+        );
+    }
     for entry in &subset {
         let mode = stdout_mode(entry);
-        for (list, name, selected) in [
-            (
-                HASH_ORDERED_STDOUT,
-                "HASH_ORDERED_STDOUT",
-                StdoutComparison::Multiset,
-            ),
-            (TRACED_STDOUT, "TRACED_STDOUT", StdoutComparison::TraceCut),
-        ] {
+        for (list, name, selected) in lists {
             let listed = list.contains(&entry.as_str());
             assert_eq!(
                 mode == selected,
