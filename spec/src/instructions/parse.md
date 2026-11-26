@@ -296,10 +296,11 @@ NOVALUE Y.4 [NOTHING_HERE][]
 
 r[instr.parse.version]
 PARSE VERSION reads a string of five words. The first is one word that names
-the interpreter and its version, the second is the language level as a
-decimal number, and the last three are a date: the day as a whole number, the
-month as a three-letter name and the year as four digits. The values of the
-words are not specified, and neither is the date.
+the interpreter and its version, the second is the [language
+level](../introduction.md#language-level) as a decimal number, and the last
+three are a date: the day as a whole number, the month as a three-letter
+name and the year as four digits. The values of the words are not specified,
+and neither is the date.
 
 ```rexx
 parse version v

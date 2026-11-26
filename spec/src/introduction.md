@@ -31,6 +31,27 @@ overview at the top of a page, and every note, which is set as a block
 quote that begins **Note.** A note explains where a rule comes from or how
 another definition of Rexx differs; it never adds to or changes a rule.
 
+## Language level
+
+A language level identifies the features an interpreter implements and is the
+same for all programs it runs. interrexx implements **6.06**. The second
+word of [PARSE VERSION](r:instr.parse.version) and
+[`.RexxInfo~languageLevel`](r:class.rexxinfo.version) report `6.06`. The
+instance's `LanguageLevel` and the header's `REXX_CURRENT_LANGUAGE_LEVEL`
+give its [native encoding](r:native.header.versions), `0x00000606`.
+
+A compiled image records its program's [required language
+level](r:env.invocation.rexxc.required-level). `rexxc` writes 6.05 by default
+and 6.06 when a call resolves to the GC built-in or an OPTIONS directive
+explicitly selects NUMERIC INHERIT or NUMERIC NOINHERIT.
+
+Level 6.07 in ooRexx adds CATCH and FINALLY clauses in DO, LOOP and SELECT,
+the THROW instruction, BEEP, DIRECTORY and FILESPEC as built-ins, and a
+second argument to ERRORTEXT for message inserts. [Deviation
+179](deviations.md#179-language-level-606) describes the differences, and
+[issue #804](https://github.com/antiguru/interrexx/issues/804) tracks
+implementing 6.07.
+
 ## Terms
 
 **ooRexx.** The open-source C++ implementation of Object Rexx, version 5.

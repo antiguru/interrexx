@@ -169,9 +169,10 @@ Their values are not specified; the book gives their forms and what each
 says of the others. `version` is `majorVersion`, `release` and
 `modification` as three whole numbers joined by points. `name` is the string
 that [PARSE VERSION](r:instr.parse.version) reads, so that `languageLevel` is
-its second word and `date` its last three, written as a day, a three-letter
-month and a year; `platform` is a string without blanks, and `revision`
-a string whose form is not specified either.
+its second word (the [language level](../introduction.md#language-level)) and
+`date` its last three, written as a day, a three-letter month and a year.
+`platform` is a string without blanks, and `revision` is a string of
+unspecified form.
 
 ```rexx
 r = .rexxinfo

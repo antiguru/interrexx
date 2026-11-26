@@ -195,8 +195,9 @@ hexadecimal digits each for the release's three parts, `0x00xxyyzz`:
 `REXX_CURRENT_INTERPRETER_VERSION`, the value the instance's
 `InterpreterVersion` answers, is this interpreter's. A package entry's
 required version is compared with it, as [the version
-rule](r:native.loading.version) says. A language level has the same form,
-`0x0000mmnn` for level `m.nn`: `REXX_LANGUAGE_6_<nn>` names one, and
+rule](r:native.loading.version) says. A [language
+level](../introduction.md#language-level) has the same form, `0x0000mmnn`
+for level `m.nn`: `REXX_LANGUAGE_6_<nn>` names one, and
 `REXX_CURRENT_LANGUAGE_LEVEL` is the one the instance's `LanguageLevel`
 answers. The values are:
 * `INSTANCE_INTERFACE_VERSION_4_0_0`: `100`
