@@ -1,0 +1,16 @@
+# An OBJECTNAME answer with no string value reads as the default name, whatever
+# name was set (r[conv.string.answer]): for a class object, the class's default
+# name; the oracle's answers.
+program
+.k~objectName = 'zz'
+say .k
+say length(.k)
+::class k
+::method objectname class
+  return .nil
+----
+rc 0
+[stdout]
+The K class
+11
+[stderr]

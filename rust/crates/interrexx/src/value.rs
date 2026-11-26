@@ -671,8 +671,12 @@ impl Interp {
 
     /// The default name of `value` that its class alone decides: for an
     /// instance its class's id with an article in front, ignoring a name set
-    /// on it, and for anything else [`Interp::default_string_value_text`].
+    /// on it, for a class object the class's own default name, and for
+    /// anything else [`Interp::default_string_value_text`].
     fn class_default_name_text(&mut self, value: ObjRef) -> Vec<u8> {
+        if self.heap.is_class(value) {
+            return self.class_default_name(value).to_vec();
+        }
         let Some(Body::Instance { class, own, .. }) = self.heap.get(value).map(|o| &o.body) else {
             return self.default_string_value_text(value);
         };
