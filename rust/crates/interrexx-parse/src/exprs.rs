@@ -35,6 +35,8 @@
 use std::num::NonZeroU32;
 use std::ops::Range;
 
+use interrexx_cast::CastFrom;
+
 use crate::ast::PrefixOp;
 use crate::selector::Selector;
 use crate::token::{Operator, SymbolId};
@@ -47,7 +49,7 @@ pub struct ExprId(pub(crate) NonZeroU32);
 impl ExprId {
     /// The node's index in the arena's node vector.
     pub fn index(self) -> usize {
-        self.0.get() as usize - 1
+        usize::cast_from(self.0.get()) - 1
     }
 
     /// The id of the node at `index`.
@@ -191,7 +193,7 @@ impl Node {
     /// The byte range in the retained source, which contains every present
     /// child's span.
     pub fn span(&self) -> Range<usize> {
-        self.start as usize..self.end as usize
+        usize::cast_from(self.start)..usize::cast_from(self.end)
     }
 
     /// The first node of this node's subtree, which is this node for a leaf.
@@ -270,7 +272,9 @@ fn children<'a>(
         | NodeKind::QualifiedCall { args, .. }
         | NodeKind::Message { children: args, .. }
         | NodeKind::List(args)
-        | NodeKind::Logical(args) => edges.get(args.start as usize..args.end as usize),
+        | NodeKind::Logical(args) => {
+            edges.get(usize::cast_from(args.start)..usize::cast_from(args.end))
+        }
         NodeKind::Literal(_)
         | NodeKind::Constant(_)
         | NodeKind::Variable(_)
@@ -320,11 +324,11 @@ impl Exprs {
     }
 
     pub fn edges(&self, range: EdgeRange) -> &[ExprId] {
-        &self.edges[range.start as usize..range.end as usize]
+        &self.edges[usize::cast_from(range.start)..usize::cast_from(range.end)]
     }
 
     pub fn bytes(&self, range: BytesRange) -> &[u8] {
-        &self.bytes[range.start as usize..range.end as usize]
+        &self.bytes[usize::cast_from(range.start)..usize::cast_from(range.end)]
     }
 
     /// Checks the invariants, with `roots` the roots of the body's
@@ -343,7 +347,7 @@ impl Exprs {
             if let Some(bytes) = bytes_of(&parent.kind)
                 && self
                     .bytes
-                    .get(bytes.start as usize..bytes.end as usize)
+                    .get(usize::cast_from(bytes.start)..usize::cast_from(bytes.end))
                     .is_none()
             {
                 return Err(Inconsistent::OutOfRange { node });
@@ -382,7 +386,7 @@ impl Exprs {
             for (position, &child) in children.iter().enumerate() {
                 let linked = at(child).is_some_and(|linked| {
                     linked.parent.map(ExprId::index) == Some(node)
-                        && linked.position as usize == position
+                        && usize::cast_from(linked.position) == position
                 });
                 if !linked {
                     return Err(Inconsistent::Link {
@@ -482,8 +486,8 @@ impl Exprs {
             node.parent = Some(id);
             node.position = offset(position, "child positions");
             if !matches!(node.kind, NodeKind::Omitted) {
-                start = start.min(node.start as usize);
-                end = end.max(node.end as usize);
+                start = start.min(usize::cast_from(node.start));
+                end = end.max(usize::cast_from(node.end));
             }
         }
         debug_assert!(
@@ -524,7 +528,7 @@ impl Exprs {
                 | NodeKind::List(args)
                 | NodeKind::Logical(args) => {
                     let start = offset(self.edges.len(), "edge offsets");
-                    for edge in args.start as usize..args.end as usize {
+                    for edge in usize::cast_from(args.start)..usize::cast_from(args.end) {
                         let child = self.edges[edge].shifted(by);
                         self.edges.push(child);
                     }
@@ -566,9 +570,9 @@ impl Exprs {
 
     /// Drops everything pushed since `mark` was taken.
     pub(crate) fn rewind(&mut self, mark: Mark) {
-        self.nodes.truncate(mark.nodes as usize);
-        self.edges.truncate(mark.edges as usize);
-        self.bytes.truncate(mark.bytes as usize);
+        self.nodes.truncate(usize::cast_from(mark.nodes));
+        self.edges.truncate(usize::cast_from(mark.edges));
+        self.bytes.truncate(usize::cast_from(mark.bytes));
     }
 }
 

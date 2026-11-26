@@ -14,7 +14,7 @@
 //! a parse that had already validated its arenas, and the check would read
 //! every body at startup, which that image exists to avoid.
 
-use interrexx_cast::CastTruncate;
+use interrexx_cast::{CastFrom, CastTruncate};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
@@ -244,7 +244,7 @@ impl Image for usize {
 
 impl Image for u32 {
     fn put(&self, out: &mut Writer) {
-        out.usize(*self as usize);
+        out.usize(usize::cast_from(*self));
     }
 
     fn get(input: &mut Reader<'_>) -> Option<Self> {
