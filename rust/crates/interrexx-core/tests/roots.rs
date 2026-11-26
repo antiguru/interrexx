@@ -167,6 +167,31 @@ fn an_arena_in_use_or_without_a_block_is_not_taken() {
     assert!(roots.take_idle_frames().is_some());
 }
 
+/// An arena that grew a second block stays with its activity, so a pool of
+/// idle arenas holds one block each; a one-block arena is still taken.
+#[test]
+fn a_multi_block_arena_is_not_taken() {
+    let mut roots = interrexx_core::ActivityRoots::new();
+    roots.set_frame_block(interrexx_core::FrameBlock::new(3).expect("in range"));
+    let arena = roots.frames();
+    let first = arena.reserve(4);
+    let second = arena.reserve(5);
+    assert_eq!(arena.blocks(), 2);
+    arena.release(second);
+    arena.release(first);
+    drop(arena);
+    assert!(roots.take_idle_frames().is_none());
+    assert_eq!(roots.frames().blocks(), 2);
+
+    let mut single = interrexx_core::ActivityRoots::new();
+    single.set_frame_block(interrexx_core::FrameBlock::new(3).expect("in range"));
+    let arena = single.frames();
+    arena.release(arena.reserve(2));
+    drop(arena);
+    let taken = single.take_idle_frames().expect("one block");
+    assert_eq!(taken.blocks(), 1);
+}
+
 /// An arena is adopted only in place of one that never reserved a frame.
 #[test]
 #[should_panic(expected = "an arena is adopted before the first frame")]

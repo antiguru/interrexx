@@ -606,12 +606,13 @@ impl ActivityRoots {
     }
 
     /// The register frame arena, for another activity to adopt, where it has
-    /// a block, no frame reserved ([`FrameArena::is_idle`]) and no other
+    /// exactly one block (so a pool of arenas holds a bounded amount of
+    /// memory), no frame reserved ([`FrameArena::is_idle`]) and no other
     /// handle; this activity is left an empty arena of the same size. A
     /// frame borrows a handle, so with none elsewhere no frame is in use.
     pub fn take_idle_frames(&mut self) -> Option<FrameArena> {
         let frames = &self.frames;
-        if frames.blocks() == 0 || !frames.is_idle() || Rc::strong_count(frames) != 1 {
+        if frames.blocks() != 1 || !frames.is_idle() || Rc::strong_count(frames) != 1 {
             return None;
         }
         let empty = Rc::new(FrameArena::new(frames.size()));
