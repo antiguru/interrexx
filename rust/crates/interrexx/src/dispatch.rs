@@ -469,13 +469,14 @@ impl Interp {
         ran
     }
 
-    /// [`Interp::primitive_level`] for a `body` whose only Rexx code is what
-    /// a comparison it makes runs ([`collection::same_item`]). The level is
-    /// pushed when the first comparison that may run Rexx code begins, and
-    /// stays until `body` ends; until then no Rexx code runs, so nothing can
-    /// see that it is missing. A string's `==` sends `REQUEST` to the other
-    /// operand, so an argument of a base class does not make this level
-    /// needless.
+    /// [`Interp::primitive_level`] for a `body` that seldom runs Rexx code.
+    /// The level is held aside and pushed only when Rexx code starts while
+    /// `body` runs ([`Interp::raise_deferred_level`], from
+    /// [`Interp::push_boxed_activation`], which every activation passes), and
+    /// it stays until `body` ends. Only Rexx code reads the levels
+    /// (`.context~stackFrames`), so until then nothing can see that it is
+    /// missing. A string's `==` sends `REQUEST` to the other operand, so an
+    /// argument of a base class does not make this level needless.
     #[inline]
     pub(crate) fn deferred_level<T>(
         &mut self,
@@ -497,40 +498,42 @@ impl Interp {
             arguments,
             count: args.len(),
         };
-        let outer = self.activity.deferred_level.replace(deferred);
+        // A primitive that defers, run from the body of another whose level
+        // is still held aside: the outer level goes on first, below this one,
+        // so that Rexx code run under this one sees both.
+        if let Some(outer) = self.activity.deferred_level.replace(deferred) {
+            self.push_deferred_level(outer);
+        }
         let ran = body(self);
-        // `raise_deferred_level` took this level when it pushed it, and any
-        // level a comparison's own code deferred was put back as it ended.
-        if std::mem::replace(&mut self.activity.deferred_level, outer).is_none() {
+        // `raise_deferred_level` took this level when it pushed it. A level
+        // that a nested primitive held aside was taken back when it ended, and
+        // the outer one was pushed above, so none is held aside past here.
+        if self.activity.deferred_level.take().is_none() {
             self.activity.method_levels.pop();
         }
         ran
     }
 
-    /// Pushes the [`Interp::deferred_level`] of the primitive whose own code
-    /// is running, if it has one not yet pushed, before it compares `left`
-    /// with `right` and either may run Rexx code.
-    ///
-    /// The level is still pending only until the first comparison that may
-    /// run Rexx, and a deferring primitive runs no Rexx before then: its
-    /// arguments are of base classes, whose methods cannot be replaced,
-    /// and an `UNINIT` runs when a method returns, after the body. So the code making the comparison is the primitive's own, at
-    /// the activation the level was registered at. A nested primitive that
-    /// defers registers its own level, and the outer one is put back when it
-    /// ends.
+    /// Pushes the level [`Interp::deferred_level`] holds aside, if there is
+    /// one, because Rexx code is about to start.
     #[cold]
     #[inline(never)]
-    pub(crate) fn raise_deferred_level(&mut self, left: ObjRef, right: ObjRef) {
-        if !self.may_run_rexx(left) && !self.may_run_rexx(right) {
-            return;
+    pub(crate) fn raise_deferred_level(&mut self) {
+        if let Some(level) = self.activity.deferred_level.take() {
+            self.push_deferred_level(level);
         }
-        let Some(level) = self.activity.deferred_level.take() else {
-            return;
-        };
+    }
+
+    /// Pushes `level` onto the method levels.
+    ///
+    /// Nothing between a level being held aside and its being pushed runs Rexx
+    /// code, since the first Rexx code to start pushes it; so the activation
+    /// running is still the one the primitive was sent from.
+    fn push_deferred_level(&mut self, level: crate::activity::DeferredLevel) {
         debug_assert_eq!(
             level.caller,
             self.running_activation().map(|activation| activation.id),
-            "a pending deferred level reached a comparison made by other code"
+            "a deferred level is pushed while its primitive's caller is not running"
         );
         self.activity
             .method_levels
@@ -2129,9 +2132,10 @@ impl Interp {
     /// `setMethod` gave it methods of its own. No program can change such a
     /// class's methods (`r[class.methods.library]`).
     ///
-    /// A value no class is built for answers true. A class object answers
-    /// false, since a class method can stand in front of its primitives, and so
-    /// does `.nil`, whose behaviour is its own.
+    /// A value no behaviour is found for answers false, so its messages are
+    /// sent. A class object answers false, since a class method can stand in
+    /// front of its primitives, and so does `.nil`, whose behaviour is its own
+    /// and not one [`ObjectModel::build`] marks.
     pub(crate) fn is_base_class(&mut self, value: ObjRef) -> bool {
         let behaviour = match value.decode() {
             // A string has no dictionary of its own for `setMethod` to write
@@ -2144,8 +2148,8 @@ impl Interp {
                 Some(Body::Instance { behaviour, .. }) => *behaviour,
                 _ => match self.receiver_behaviour(value) {
                     Ok(Behaviour::Instance { methods, .. }) => methods,
-                    Ok(Behaviour::ClassSide(_)) => return false,
-                    Err(_) => return true,
+                    // A value with no behaviour gets its messages sent.
+                    Ok(Behaviour::ClassSide(_)) | Err(_) => return false,
                 },
             },
         };
@@ -4570,6 +4574,12 @@ impl Interp {
 
     /// Whether `value` is not of a base class, so its own methods may be
     /// Rexx code; a string or number answers on the handle alone.
+    ///
+    /// `.nil` answers false although [`Interp::is_base_class`] does too: its
+    /// behaviour is its own, but no program can give it a Rexx method. Its
+    /// methods are `Object`'s, a library class (`r[class.methods.library]`),
+    /// so none of them is Rexx code that could send it `setMethod` or `run`;
+    /// sent from outside, those raise 97.2, and `enhanced` raises 97.1.
     #[inline]
     pub(crate) fn may_run_rexx(&mut self, value: ObjRef) -> bool {
         match value.decode() {

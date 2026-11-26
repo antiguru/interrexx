@@ -91,8 +91,8 @@ pub(crate) struct Activity {
     /// last.
     pub(crate) method_levels: Vec<MethodLevel>,
     /// The level of the primitive running a [`crate::Interp::deferred_level`]
-    /// body, until a comparison that body makes may run Rexx code and pushes
-    /// it onto [`Activity::method_levels`].
+    /// body, until Rexx code starts and pushes it onto
+    /// [`Activity::method_levels`].
     pub(crate) deferred_level: Option<DeferredLevel>,
     /// The thread context every native call and package hook is handed,
     /// which an extension may keep for as long as this interpreter runs;

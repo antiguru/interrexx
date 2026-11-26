@@ -340,6 +340,30 @@ fn a_pointer_comparison_needs_its_argument() {
     assert_eq!((raised.number, raised.sub), (93, 903));
 }
 
+/// A primitive that defers its level, run from the body of another whose
+/// level is still held aside, puts the outer level on first: Rexx code that
+/// starts under the inner one sees both, outer below inner, and both are gone
+/// when the outer body ends.
+#[test]
+fn a_nested_deferred_level_goes_on_above_the_outer_one() {
+    let mut interp = Interp::new();
+    let names = |interp: &Interp| -> Vec<Vec<u8>> {
+        let levels = &interp.activity.method_levels;
+        levels.iter().map(|level| level.name.to_vec()).collect()
+    };
+    let seen = interp
+        .deferred_level(ObjRef::NIL, b"OUTER", &[], |interp| {
+            interp.deferred_level(ObjRef::NIL, b"INNER", &[], |interp| {
+                interp.raise_deferred_level();
+                Ok(names(interp))
+            })
+        })
+        .expect("the bodies answer");
+    assert_eq!(seen, [b"OUTER".to_vec(), b"INNER".to_vec()]);
+    assert!(names(&interp).is_empty());
+    assert!(interp.activity.deferred_level.is_none());
+}
+
 /// Runs `source` and hands back `(exit code, stdout, stderr)`.
 fn run_source(source: &str) -> (i32, String, String) {
     let outcome = crate::run_program(
