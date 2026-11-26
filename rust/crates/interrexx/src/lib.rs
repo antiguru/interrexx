@@ -4145,6 +4145,13 @@ impl Interp {
     /// native call has been handed one: every table of its space mints with
     /// it, and the directories' handles, if built already, are re-keyed. A
     /// 32-bit target's handles carry no key, and nothing changes there.
+    #[cfg_attr(
+        not(target_pointer_width = "64"),
+        expect(
+            clippy::needless_pass_by_ref_mut,
+            reason = "a 64-bit target re-keys the space; the signature is one for every target"
+        )
+    )]
     fn set_handle_key(&mut self, key: u64) {
         debug_assert!(
             self.global_references.roots().next().is_none(),

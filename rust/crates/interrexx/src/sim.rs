@@ -694,7 +694,7 @@ pub(crate) fn reserve_handle_key(config: &mut SimConfig) -> Result<LiveKey, Stri
         let ordinal = config
             .knobs
             .ordinal
-            .map_or(0, |ordinal| ordinal.get() as usize);
+            .map_or(0, |ordinal| usize::cast_from(ordinal.get()));
         let key = key_of(config.seed, ordinal);
         if live.contains(&key) {
             return Err(format!(
@@ -727,7 +727,7 @@ fn key_of(seed: u64, ordinal: usize) -> u64 {
     let mut z = Streams::new(seed)
         .handles
         .next_u64()
-        .wrapping_add((ordinal as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15));
+        .wrapping_add(u64::cast_from(ordinal).wrapping_mul(0x9e37_79b9_7f4a_7c15));
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
     z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
     z ^= z >> 31;

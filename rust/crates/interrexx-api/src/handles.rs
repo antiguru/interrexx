@@ -2,6 +2,7 @@
 
 use rustc_hash::FxHashMap;
 
+use interrexx_cast::CastFrom;
 use interrexx_core::ObjRef;
 
 use crate::layout::RexxObjectPtr;
@@ -352,7 +353,7 @@ impl HandleSpace {
     /// generation. `None` for an address no `ObjRef` encodes to here.
     #[cfg(target_pointer_width = "64")]
     pub fn decode(&self, handle: RexxObjectPtr) -> Option<ObjRef> {
-        let bits = (handle.addr() as u64).wrapping_sub(1);
+        let bits = u64::cast_from(handle.addr()).wrapping_sub(1);
         ObjRef::heap_bits(bits ^ self.key.load(std::sync::atomic::Ordering::Relaxed))
             .or_else(|| ObjRef::carried(bits))
     }
@@ -367,7 +368,7 @@ impl HandleSpace {
         if address & 1 == 0 {
             return None;
         }
-        let bits = (address >> 1) as u64;
+        let bits = u64::cast_from(address >> 1);
         ObjRef::heap_bits(bits).or_else(|| ObjRef::carried(bits))
     }
 
@@ -381,7 +382,7 @@ impl HandleSpace {
                 // The key's two low bits are clear, so the tag stays the heap's
                 // and the address stays odd, never null.
                 let key = self.key.load(std::sync::atomic::Ordering::Relaxed);
-                (object.bits() ^ key).wrapping_add(1) as usize
+                usize::cast_from((object.bits() ^ key).wrapping_add(1))
             }
             _ => carried(object).expect("a 64-bit address carries every ObjRef"),
         }

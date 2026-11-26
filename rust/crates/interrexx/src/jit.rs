@@ -1691,7 +1691,7 @@ fn branch(
         op_helper
     };
     e.call_op_with(
-        helper as *const (),
+        entry::op(helper),
         None,
         Some(clause_pc),
         pc,
