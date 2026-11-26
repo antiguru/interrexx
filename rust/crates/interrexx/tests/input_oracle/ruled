@@ -242,6 +242,16 @@ out> internal 1 b.c
 out> internal 2 pk N
 
 run
+lang/library_routine_site_twice_security_filespec.rex
+----
+rc> 0
+out> declined 1
+out> event CALL FILESPEC
+out> internal b.c
+out> event CALL FILESPEC
+out> internal c
+
+run
 lang/trapped_condition_native_levels_filespec.rex
 ----
 rc> 0
