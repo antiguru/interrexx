@@ -1012,12 +1012,14 @@ impl Interp {
                     name,
                     args,
                 } => {
-                    let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
-                    let name = code.symbols.name(*name).as_bytes().to_vec();
-                    let package = self.running_program().ok_or_else(Loud::missing_body)?;
-                    let resolution = self.namespace_routine(package, &namespace, &name);
-                    let resolved = self.resolved_after_arguments(code, resolution, args)?;
-                    self.invoke_named_call(code, CallResolution::Settled(resolved), &name, args)
+                    let namespace = code.symbols.name(*namespace).as_bytes();
+                    let name = code.symbols.name(*name).as_bytes();
+                    self.invoke_named_call(
+                        code,
+                        CallResolution::Qualified { namespace },
+                        name,
+                        args,
+                    )
                 }
             },
 
@@ -2694,6 +2696,19 @@ impl Interp {
             interpret::Pause::Again => return Ok(Flow::Goto(index)),
             interpret::Pause::Transfer(flow) => return Ok(flow),
         }
+        // **Nested fragments are bounded by the stack, as calls are.** A
+        // fragment runs on this activation, so no activation count grows, and
+        // `Op::ExecWith` hands over a value read from a register, so no
+        // expression level checked the stack on the way here either. Without
+        // this, `zs = 'interpret zs'; interpret zs` overflows the interpreter
+        // thread's stack and aborts the process instead of raising 11.1.
+        // After the `>>>` line and the pause, as on the oracle: under `trace
+        // r` the deepest `INTERPRET` still traces its value before the 11.1.
+        // Before anything below is saved, so the raise leaves nothing to undo.
+        let probe = 0u8;
+        if self.stack_exhausted(&raw const probe) {
+            return Err(Raised::insufficient_stack().into());
+        }
         // **The fragment's level, with delta 0.** Measured: a
         // fragment's clauses print at the enclosing `INTERPRET`
         // clause's own absolute indent plus whatever nests them
@@ -3959,7 +3974,8 @@ impl Interp {
             }
             // A `CALL`'s argument `slot`.
             (InstructionKind::Call(call), slot) => match &**call {
-                interrexx_parse::Call::Named { args, .. } => {
+                interrexx_parse::Call::Named { args, .. }
+                | interrexx_parse::Call::Qualified { args, .. } => {
                     args.get(usize::from(slot))?.as_ref()?
                 }
                 _ => return None,

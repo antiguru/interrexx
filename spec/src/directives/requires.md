@@ -361,11 +361,11 @@ package does not make visible raises `98.988`, and a qualified routine that it
 does not make visible raises `43.902`. What a package makes visible is what
 [the visibility rule](r:dir.requires.visible) says, including the public
 classes and routines that it found through its own ::REQUIRES. A qualified
-function call evaluates its arguments before looking up the namespace and
-the routine. A qualified name written as a function call needs the
+function call or [CALL instruction](r:instr.call.qualified) evaluates its
+arguments before looking up the namespace and the routine. A qualified name
+written as a function call needs the
 parenthesis to follow the name at once. Without it the name is read as a
-class. The CALL instruction does not accept the qualified form, as [its
-error rule](r:instr.call.error) says.
+class.
 
 ```rexx
 fa = 'spec-dir-requires-lk.tmp'

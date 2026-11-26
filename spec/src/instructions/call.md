@@ -1,7 +1,7 @@
 ---
 element: CALL
 kind: instruction
-syntax: "CALL {name | (expression)} [argument] [, [argument]]... | CALL ON condition [NAME label] | CALL OFF condition"
+syntax: "CALL {name | namespace:name | (expression)} [argument] [, [argument]]... | CALL ON condition [NAME label] | CALL OFF condition"
 ansi: "6.3.2.37, 8.3.4"
 rexxref: "Keyword Instructions > CALL"
 ---
@@ -326,16 +326,45 @@ in sub 10
 two lines 10
 ```
 
+## Calling in a namespace
+
+r[instr.call.qualified]
+`CALL namespace:name` evaluates its arguments from left to right, then looks
+up the namespace and the routine it makes visible as [the namespace lookup
+rule](r:dir.requires.namespace.lookup) says. A change to the namespace made
+by an argument is seen by the lookup. The call sets or drops `RESULT` as
+[the result rule](r:instr.call.result) says.
+
+```rexx
+p = .context~package
+first = .package~new('first', .array~of('::routine f public', "return 'first'"))
+second = .package~new('second', .array~of('::routine f public', -
+  "return 'second' arg(1) arg(2, 'o') arg(3)", '::routine g public', 'return'))
+p~addPackage(first, 'ns')
+call ns:f rebind(), , 'last'
+say result
+call ns:g
+say result
+exit
+rebind:
+  p~addPackage(second, 'ns')
+  return 'changed'
+```
+
+```output
+second changed 1 last
+RESULT
+```
+
 ## Errors
 
 r[instr.call.error]
-A CALL with no name raises `SYNTAX 19.2`, and a name written as a symbol with
-a colon after it raises `20.922`, because the colon form is the call of a
-routine of a namespace, which this chapter does not specify. Both are found
-when the program is read, so none of its clauses run. A routine that is not
-found raises `43.1` when the CALL runs, as the search rule says, and an error
-that a built-in function or a routine raises is raised at the CALL. A
-parenthesized name that is not closed raises `36.901`.
+A CALL with no name raises `SYNTAX 19.2`, and a namespace followed by a colon
+without a routine name raises `20.922`. Both are found when the program is
+read, so none of its clauses run. An unqualified routine that is not found
+raises `43.1` when the CALL runs, as the search rule says, and an error that
+a built-in function or a routine raises is raised at the CALL. A parenthesized
+name that is not closed raises `36.901`.
 
 ```rexx
 say 'before'

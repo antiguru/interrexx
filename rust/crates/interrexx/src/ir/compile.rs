@@ -1064,15 +1064,23 @@ fn compile_settled(
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
-            // A `CALL name`/`CALL "name"` clause, whose arguments compile to
-            // ops of their own when every one of them does -- a `>name`
-            // reference carries the caller's own slot rather than an `ObjRef`,
-            // so one keeps the whole clause on `Op::Call` and leaves the
-            // arguments, the `>A>` lines and their intermediates to
-            // `Interp::invoke_call`.
-            InstructionKind::Call(call) if matches!(&**call, Call::Named { .. }) => {
-                let Call::Named { args, .. } = &**call else {
-                    unreachable!("the guard above admits only `Call::Named`")
+            // A named or qualified CALL: argument k is expression slot k.
+            // Where an argument cannot be addressed, the call walks its
+            // arguments and traces them itself.
+            InstructionKind::Call(call)
+                if matches!(&**call, Call::Named { .. } | Call::Qualified { .. }) =>
+            {
+                let (args, qualified) = match &**call {
+                    Call::Named { args, .. } => (args, false),
+                    Call::Qualified { args, .. } => (args, true),
+                    _ => unreachable!("the guard above admits only named or qualified calls"),
+                };
+                let reserve_site = |calls: &mut Calls| {
+                    if qualified {
+                        Ok(super::UNCACHED_CALL)
+                    } else {
+                        calls.reserve()
+                    }
                 };
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
@@ -1111,13 +1119,13 @@ fn compile_settled(
                     )?;
                     ops.push(Op::CallNamed {
                         index: instruction_index(index)?,
-                        site: calls.reserve()?,
+                        site: reserve_site(&mut calls)?,
                         argc,
                     });
                 } else {
                     ops.push(Op::Call {
                         index: instruction_index(index)?,
-                        site: calls.reserve()?,
+                        site: reserve_site(&mut calls)?,
                     });
                 }
                 close_region(&mut ops, at)?;
