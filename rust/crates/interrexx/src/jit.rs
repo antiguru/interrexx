@@ -196,10 +196,14 @@ pub(crate) enum Step {
     Dropped,
     /// `Op::PushArg` of register `src`.
     PushArg { src: u16 },
-    /// An `IF`'s `Op::ConditionJump` at `pc` on register `reg`, the last op
-    /// of its clause: falls through to the clause's close when the value
-    /// holds, and otherwise closes the clause and goes on at `target`.
-    Branch { pc: u32, reg: u16, target: u32 },
+    /// An `Op::ConditionJump` at `pc` on register `reg`: falls through when
+    /// the value holds, and otherwise closes the clause and goes to `target`.
+    Branch {
+        pc: u32,
+        reg: u16,
+        target: u32,
+        keep_open: bool,
+    },
     /// `Op::Jump` to `target`.
     Jump { target: u32 },
     /// `Op::EndBranch` at `pc`.
@@ -383,7 +387,12 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
 /// the host hands back is generated code's again, and the call answers
 /// [`CONTINUE`] for it.
 extern "C" fn op_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
-    guarded(ctx, |ctx| run_op(ctx, clause, pc))
+    guarded(ctx, |ctx| run_op::<true>(ctx, clause, pc))
+}
+
+/// Keep a slow comma-list element's temporaries rooted while later elements run.
+extern "C" fn list_item_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| run_op::<false>(ctx, clause, pc))
 }
 
 /// How many arguments a [`Step::Builtin`] carries at most: one register
@@ -417,7 +426,7 @@ extern "C" fn builtin_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32, args: u64)
             return CONTINUE;
         }
         ctx.host.stage_args(pc, args);
-        run_op(ctx, clause, pc)
+        run_op::<true>(ctx, clause, pc)
     })
 }
 
@@ -432,7 +441,7 @@ extern "C" fn compound_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
             );
             return CONTINUE;
         }
-        run_op(ctx, clause, pc)
+        run_op::<true>(ctx, clause, pc)
     })
 }
 
@@ -462,14 +471,14 @@ extern "C" fn region_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
 }
 
 /// [`op_helper`]'s body.
-fn run_op(ctx: &mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+fn run_op<const HAND_BACK: bool>(ctx: &mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
     let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
     ctx.native.opened = 0;
     ctx.host.enter(&mut ctx.native);
     let host = &mut *ctx.host;
     let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
         CONTINUE => match host.op(pc) {
-            CONTINUE if adopt => host.release(),
+            CONTINUE if adopt && HAND_BACK => host.release(),
             answer => answer,
         },
         answer => answer,
@@ -960,8 +969,20 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     e.b.ins().jump(done, &[]);
                     e.b.switch_to_block(done);
                 }
-                Step::Branch { pc, reg, target } => {
-                    branch(&mut e, clause_pc, pc, reg, labels[&target], target);
+                Step::Branch {
+                    pc,
+                    reg,
+                    target,
+                    keep_open,
+                } => {
+                    branch(
+                        &mut e,
+                        clause_pc,
+                        pc,
+                        reg,
+                        (labels[&target], target),
+                        keep_open,
+                    );
                 }
                 Step::Jump { target } => {
                     e.b.ins().jump(labels[&target], &[]);
@@ -1582,7 +1603,7 @@ fn compare(e: &mut Emit<'_, '_>, slow_path: Slow, op: Compare, lhs: u16, rhs: u1
     e.b.switch_to_block(join);
 }
 
-/// An `IF`'s condition: the driver's quick test of a value that is already
+/// A condition or comma-list item: the quick test of a value that is already
 /// logical, under no `TRACE` of results; the op through the host otherwise.
 /// A condition that does not hold closes the clause as the driver's hot exit
 /// does and goes on at `target`.
@@ -1591,8 +1612,8 @@ fn branch(
     clause_pc: u32,
     pc: u32,
     reg: u16,
-    target_block: Block,
-    target: u32,
+    (target_block, target): (Block, u32),
+    keep_open: bool,
 ) {
     let value = e.register(reg);
     let quick = e.load_native(types::I64, layout::QUICK_VALUES);
@@ -1633,7 +1654,18 @@ fn branch(
 
     e.b.switch_to_block(slow);
     let branched = e.b.create_block();
-    e.call_op(Some(clause_pc), pc, Some((BRANCH, branched)));
+    let helper = if keep_open {
+        list_item_helper
+    } else {
+        op_helper
+    };
+    e.call_op_with(
+        helper as *const (),
+        None,
+        Some(clause_pc),
+        pc,
+        Some((BRANCH, branched)),
+    );
     e.b.ins().jump(fall, &[]);
     e.b.switch_to_block(branched);
     e.b.ins().jump(target_block, &[]);
