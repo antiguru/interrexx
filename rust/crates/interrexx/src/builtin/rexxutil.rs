@@ -10,7 +10,6 @@ pub(crate) mod process;
 pub(crate) mod search;
 pub(crate) mod stems;
 pub(crate) mod timezone;
-#[cfg(unix)]
 pub(crate) mod tree;
 #[cfg(windows)]
 pub(crate) mod windows_console;
