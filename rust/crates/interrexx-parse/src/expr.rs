@@ -516,7 +516,9 @@ impl<'a, 'c> Parser<'a, 'c> {
         let mut extent = self.extent(from);
         // A leading omitted item sits at the end of the token before the
         // first comma, so the list starts there for the item to lie inside it.
-        extent.start = extent.start.min(self.ctx.exprs.borrow().node(parts[0]).span().start);
+        extent.start = extent
+            .start
+            .min(self.ctx.exprs.borrow().node(parts[0]).span().start);
         let items = self.ctx.exprs.borrow_mut().push_edges(&parts);
         Ok(Some(self.ctx.push(NodeKind::List(items), extent)))
     }
