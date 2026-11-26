@@ -457,10 +457,17 @@ impl<'a, 'c> Parser<'a, 'c> {
         start..end
     }
 
-    /// An `Omitted` node, with the empty span where the cursor stands.
+    /// An `Omitted` node, with the empty span at the end of the token before
+    /// the cursor: the omission follows that token, and the token at the
+    /// cursor may be past the clause, where nothing has been read yet.
     fn omitted(&self) -> ExprId {
-        let at = self.extent(self.cursor.position());
-        self.ctx.push(NodeKind::Omitted, at)
+        let position = self.cursor.position();
+        let at = if position > self.cursor.start() {
+            self.ctx.tokens[position - 1].span.end
+        } else {
+            self.extent(position).start
+        };
+        self.ctx.push(NodeKind::Omitted, at..at)
     }
 
     /// A `Literal` leaf holding `value`.

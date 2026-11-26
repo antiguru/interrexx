@@ -120,8 +120,8 @@ fn logical_error(text: &str, term: Terminators) -> (u16, u16) {
 }
 
 /// Asserts the gate's span property over the expression at `root`: every
-/// node's span lies inside `text`, and inside its parent's unless it is an
-/// omitted position, whose empty span marks where it was found.
+/// node's span lies inside `text`, and inside its parent's, an omitted
+/// position's empty one included.
 pub(super) fn check_spans(exprs: &Exprs, root: ExprId, text: &str) {
     for node in exprs.range(root) {
         let span = node.span();
@@ -129,9 +129,7 @@ pub(super) fn check_spans(exprs: &Exprs, root: ExprId, text: &str) {
             span.end <= text.len() && span.start <= span.end,
             "span {span:?} is not a range inside {text:?}"
         );
-        if let Some(parent) = node.parent()
-            && !matches!(node.kind(), crate::exprs::NodeKind::Omitted)
-        {
+        if let Some(parent) = node.parent() {
             let outer = exprs.node(parent).span();
             assert!(
                 outer.start <= span.start && span.end <= outer.end,
@@ -463,6 +461,38 @@ fn trailing_omitted_arguments_are_dropped_but_list_elements_are_kept() {
     assert_eq!(shape("(1,,)"), "(list 1 <omitted> <omitted>)");
     assert_eq!(shape("(,)"), "(list <omitted> <omitted>)");
     assert_eq!(shape("(,1)"), "(list <omitted> 1)");
+}
+
+/// An omitted position's empty span sits at the end of the token it
+/// follows: a trailing one just after its comma, inside its own clause rather
+/// than at whatever starts the next, and an interior one just after the
+/// comma or parenthesis before it.
+#[test]
+fn an_omitted_position_spans_the_end_of_the_token_before_it() {
+    let cases = [
+        // `x = 1,` ends at byte 6, then blanks or a comment, then `;`.
+        ("x = 1,  ;y = 2\n", 6..6),
+        ("x = 1, /* c */ ;y = 2\n", 6..6),
+        // The first `,` ends at byte 9.
+        ("say f(1 , , 2)\n", 9..9),
+        // The `(` ends at byte 5.
+        ("x = ( , 1)\n", 5..5),
+    ];
+    let mut wrong = Vec::new();
+    for (text, span) in cases {
+        let program = crate::parse_program(text.as_bytes().to_vec())
+            .unwrap_or_else(|e| panic!("{text:?} failed to parse: {e:?}"));
+        let exprs = &program.main.exprs;
+        let omitted: Vec<_> = (0..exprs.len())
+            .map(|index| exprs.node(ExprId::from_index(index)))
+            .filter(|node| matches!(node.kind(), crate::exprs::NodeKind::Omitted))
+            .map(crate::exprs::Node::span)
+            .collect();
+        if omitted != [span.clone()] {
+            wrong.push(format!("{text:?}: {omitted:?}, not {span:?}"));
+        }
+    }
+    assert!(wrong.is_empty(), "{wrong:#?}");
 }
 
 #[test]
