@@ -174,7 +174,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="call"><a class="header" href="#call">CALL</a></h1>
-<pre><code>CALL {name | (expression)} [argument] [, [argument]]... | CALL ON condition [NAME label] | CALL OFF condition
+<pre><code>CALL {name | namespace:name | (expression)} [argument] [, [argument]]... | CALL ON condition [NAME label] | CALL OFF condition
 </code></pre>
 <p class="references">ANSI: 6.3.2.37, 8.3.4; rexxref: Keyword Instructions &gt; CALL</p>
 <p>CALL runs a routine as a subroutine and goes on with the clause after it when
@@ -452,15 +452,38 @@ in esub 9
 in sub 10
 two lines 10
 </code></pre>
+<h2 id="calling-in-a-namespace"><a class="header" href="#calling-in-a-namespace">Calling in a namespace</a></h2>
+<div class="rule" id="r-instr.call.qualified"><a href="#r-instr.call.qualified">[instr.call.qualified]</a></div>
+<p><code>CALL namespace:name</code> evaluates its arguments from left to right, then looks
+up the namespace and the routine it makes visible as <a href="../directives/requires.html#r-dir.requires.namespace.lookup">the namespace lookup
+rule</a> says. A change to the namespace made
+by an argument is seen by the lookup. The call sets or drops <code>RESULT</code> as
+<a href="#r-instr.call.result">the result rule</a> says.</p>
+<pre><code class="language-rexx">p = .context~package
+first = .package~new('first', .array~of('::routine f public', "return 'first'"))
+second = .package~new('second', .array~of('::routine f public', -
+  "return 'second' arg(1) arg(2, 'o') arg(3)", '::routine g public', 'return'))
+p~addPackage(first, 'ns')
+call ns:f rebind(), , 'last'
+say result
+call ns:g
+say result
+exit
+rebind:
+  p~addPackage(second, 'ns')
+  return 'changed'
+</code></pre>
+<pre><code class="language-output">second changed 1 last
+RESULT
+</code></pre>
 <h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
 <div class="rule" id="r-instr.call.error"><a href="#r-instr.call.error">[instr.call.error]</a></div>
-<p>A CALL with no name raises <code>SYNTAX 19.2</code>, and a name written as a symbol with
-a colon after it raises <code>20.922</code>, because the colon form is the call of a
-routine of a namespace, which this chapter does not specify. Both are found
-when the program is read, so none of its clauses run. A routine that is not
-found raises <code>43.1</code> when the CALL runs, as the search rule says, and an error
-that a built-in function or a routine raises is raised at the CALL. A
-parenthesized name that is not closed raises <code>36.901</code>.</p>
+<p>A CALL with no name raises <code>SYNTAX 19.2</code>, and a namespace followed by a colon
+without a routine name raises <code>20.922</code>. Both are found when the program is
+read, so none of its clauses run. An unqualified routine that is not found
+raises <code>43.1</code> when the CALL runs, as the search rule says, and an error that
+a built-in function or a routine raises is raised at the CALL. A parenthesized
+name that is not closed raises <code>36.901</code>.</p>
 <pre><code class="language-rexx">say 'before'
 call
 </code></pre>
