@@ -4304,7 +4304,9 @@ impl Interp {
     /// Sets the run's heap limit: `named` where the invocation named one,
     /// else the [`HEAP_LIMIT_ENV`] value of the run's environment. A value
     /// [`parse_heap_limit`] refuses leaves the heap unbounded, and the run's
-    /// standard error says so.
+    /// standard error says so. The first collection falls due as
+    /// [`Interp::bound_by_heap_limit`] paces the later ones, counting what the
+    /// heap could hold so far as live.
     fn set_heap_limit(&mut self, named: Option<usize>) {
         self.heap_limit = match named {
             Some(limit) => Some(limit),
@@ -4318,6 +4320,13 @@ impl Interp {
                 }
             },
         };
+        if let Some(limit) = self.heap_limit {
+            let headroom = limit
+                .saturating_sub(self.heap.body_bytes_bound())
+                .max(limit / 16);
+            let due = self.heap.bytes_since().saturating_add(headroom);
+            self.bytes_due = self.bytes_due.min(due);
+        }
     }
 }
 

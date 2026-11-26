@@ -82,15 +82,16 @@ impl Interp {
         if exits.handlers.iter().all(Option::is_none) {
             return;
         }
-        self.clause_exits =
-            exits.get(exit_code::HLT).is_some() || exits.get(exit_code::TRC).is_some();
         self.exits = Some(Box::new(exits));
+        self.restore_clause_exits();
     }
 
-    /// `clause_exits` as the installed exits and a pending boundary post
-    /// leave it, once a clause that raised it for another reason is done.
+    /// `clause_exits` as the installed exits, a pending boundary post and a
+    /// pending heap-limit raise leave it, once a clause that raised it for
+    /// another reason is done.
     pub(crate) fn restore_clause_exits(&mut self) {
         self.clause_exits = self.boundary_posts.is_some()
+            || self.heap_over_limit
             || self.exit_installed(exit_code::HLT)
             || self.exit_installed(exit_code::TRC);
     }
@@ -295,8 +296,7 @@ impl Interp {
             && self.activation_depth() <= depth
         {
             self.boundary_posts = None;
-            self.clause_exits =
-                self.exit_installed(exit_code::HLT) || self.exit_installed(exit_code::TRC);
+            self.restore_clause_exits();
             self.drain_completions(crate::scheduler::DrainAt::MidRun);
         }
         if !self.exit_installed(exit_code::HLT) && !self.exit_installed(exit_code::TRC) {

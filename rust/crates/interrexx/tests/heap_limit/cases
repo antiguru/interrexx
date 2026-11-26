@@ -191,3 +191,31 @@ say 'second' condition('o')~code (a~items < 200)
 first 5.0
 second 5.0 1
 rc=0
+
+# The limit paces the collections from the start of the run: a clause that
+# passes a limit far below the collector's own first step is raised.
+
+run limit=1M
+signal on syntax
+t = copies('x', 900000) || copies('x', 900000)
+say 'no error'
+exit
+syntax:
+say 'trapped' condition('o')~code
+----
+trapped 5.0
+rc=0
+
+# A raise still owed when the clause that turned interactive tracing on ends
+# is raised at that clause's end.
+
+run limit=1M
+signal on syntax
+t = trace('?N') || copies('x', 900000) || copies('x', 900000)
+say 'no error'
+exit
+syntax:
+say 'trapped' condition('o')~code
+----
+trapped 5.0
+rc=0
