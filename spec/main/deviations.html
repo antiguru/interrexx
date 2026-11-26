@@ -635,7 +635,9 @@ between instances through the native API is refused. ooRexx shares one
 <p>Each instance also has its own objects. A reference that native code got from
 one instance names no object in another: passed as an argument there it is
 omitted, a message sent to it answers <code>NULLOBJECT</code>, and any other call given
-it answers as for <code>NULLOBJECT</code>.
+it answers as for <code>NULLOBJECT</code>. A reference that carries its value, an
+integer, a string of at most 7 bytes or <code>.nil</code> (Deviation 95), is that same
+value in every instance.
 ooRexx keeps the objects of every instance in a process in one space, so an
 extension that holds an object it got from one instance, as BSF4ooRexx does
 for the objects it hands to Java, can use it from any other.</p>
@@ -692,11 +694,16 @@ later process reaches.</p>
 the null string was produced. ooRexx takes a null string from some builtins
 as an omitted <code>tablei</code>. The <a href="builtins/translate.html#r-bif.translate.deviation.94">TRANSLATE page</a>
 states it.</p>
-<h2 id="95-a-native-handle-used-after-its-call"><a class="header" href="#95-a-native-handle-used-after-its-call">95. A native handle used after its call</a></h2>
-<p>An extension that keeps a local object reference past the native call that
-received it, and uses it in a later call, ends the program with exit code
-120 and a message that the handle is no longer held. The API does not
-define such a use; ooRexx may still reach the object or one that replaced it.</p>
+<h2 id="95-a-native-handle-used-after-its-object-is-collected"><a class="header" href="#95-a-native-handle-used-after-its-object-is-collected">95. A native handle used after its object is collected</a></h2>
+<p>An extension may keep a local object reference past the native call that
+received it and use it in a later call: the reference names the same object
+for as long as the object exists, as on ooRexx. A reference to an integer,
+a string of at most 7 bytes or <code>.nil</code> that the reference itself carries
+always names it. A reference whose object has since been collected ends
+the program with exit code 120 and a message that the handle names no live
+object. The API does not define such a use; ooRexx may reach the object that
+replaced it. An address that is no reference at all may read as such a carried
+value rather than be refused; ooRexx does not define that use either.</p>
 <h2 id="96-version-and-library-banners"><a class="header" href="#96-version-and-library-banners">96. Version and library banners</a></h2>
 <p>The version banner (<code>rexx -v</code>, <code>rexxc</code>, and what <code>RexxGetVersionInformation</code>
 returns) names interrexx, its version, the ooRexx version it follows and its
