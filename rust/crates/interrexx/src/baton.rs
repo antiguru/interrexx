@@ -17,9 +17,10 @@ pub(crate) struct Baton<L: Copy> {
     state: Mutex<State<L>>,
     /// Notified at each change of holder, where a thread waits on it.
     changed: Condvar,
-    /// The key ([`me`]) of the thread holding it, or `0` while it is free or
-    /// held by a thread that has not yet asked [`Baton::held_here`] since it
-    /// was handed it. It is written under `state`'s lock at each change of
+    /// The key ([`me`]) of the thread holding it, or `0` while it is free, or
+    /// held by a thread another thread handed it to (a lend, a give-back or a
+    /// handed vacancy) that has not yet asked [`Baton::held_here`] since. A
+    /// thread that takes it itself writes its own key. It is written under `state`'s lock at each change of
     /// holder, and never names a thread that does not hold it.
     held_by: AtomicU64,
     /// How many times a callback took it.
@@ -52,6 +53,11 @@ struct Lend<L> {
 
 /// This thread's key, which no other thread of the process is given and
 /// which is never `0`, and its id.
+///
+/// The value has no destructor, so the thread-local is never torn down and
+/// stays readable while the thread's other thread-locals are dropped: a
+/// baton method may run from their destructors, as where an interpreter a
+/// thread-local owns is dropped as its thread exits.
 fn me() -> (u64, thread::ThreadId) {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     crate::sync::thread_local! {
@@ -605,5 +611,46 @@ mod tests {
                 "a served vacancy was taken back"
             );
         });
+    }
+
+    /// A thread that holds the baton releases it from a thread-local
+    /// destructor, as where an interpreter a thread-local owns is dropped as
+    /// its thread exits: the key `held_here` and `release` read is still
+    /// there, and the baton is free afterwards.
+    #[test]
+    fn a_thread_releases_the_baton_as_it_exits() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static RELEASED: AtomicBool = AtomicBool::new(false);
+        struct OnExit(Option<Arc<Baton<u8>>>);
+        impl Drop for OnExit {
+            fn drop(&mut self) {
+                if let Some(baton) = self.0.take() {
+                    assert!(baton.held_here());
+                    baton.release();
+                    assert!(!baton.held_here());
+                    RELEASED.store(true, Ordering::Relaxed);
+                }
+            }
+        }
+        std::thread_local! {
+            static ON_EXIT: std::cell::RefCell<OnExit> =
+                const { std::cell::RefCell::new(OnExit(None)) };
+        }
+        let baton = Arc::new(Baton::<u8>::new());
+        let exiting = Arc::clone(&baton);
+        std::thread::spawn(move || {
+            ON_EXIT.with(|on_exit| on_exit.borrow_mut().0 = Some(Arc::clone(&exiting)));
+            exiting.acquire();
+        })
+        .join()
+        .expect("the exiting thread");
+        assert!(
+            RELEASED.load(Ordering::Relaxed),
+            "the destructor did not run"
+        );
+        baton.acquire();
+        assert!(baton.held_here());
+        baton.release();
     }
 }

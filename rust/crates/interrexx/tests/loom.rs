@@ -383,10 +383,11 @@ enum Back {
 /// The holder vacates the baton and comes back by `back` while a pool thread
 /// may claim the vacancy, touch interpreter state and then hand it to a
 /// third thread (`hand`) or free it. Nothing orders the claim against the
-/// holder's return. However they interleave, no two threads touch that state
-/// at once, the holder holds the baton again once it has waited the vacancy
-/// out, and no thread is left waiting. Explored with at most three
-/// preemptions: unbounded, four threads do not finish in a gate's time.
+/// holder's return. In every interleaving with at most three preemptions, no
+/// two threads touch that state at once, the holder holds the baton again
+/// once it has waited the vacancy out, and no thread is left waiting. The
+/// bound is there because unbounded, four threads do not finish in a gate's
+/// time.
 fn vacancy_race(back: Back, hand: bool) {
     let mut builder = loom::model::Builder::new();
     builder.preemption_bound = Some(3);
