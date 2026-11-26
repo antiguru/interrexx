@@ -219,7 +219,9 @@ module comment of `rust/crates/interrexx-parse/tests/sourceline_oracle.rs` has t
 * `as_conversions = "deny"`. A numeric conversion is written by what it keeps: `From`/`TryFrom`
   where `std` has them, and otherwise `interrexx-cast`'s `CastFrom` (exact), `CastLossy` (to a
   float), `CastTruncate` (the low bits) or `TryCastFrom` (a float toward zero, `None` out of
-  range). That crate is the only one that writes `as`. A `CastFrom` pair involving `usize` or
+  range). That crate writes its conversions with `as`. Elsewhere `as` turns only a function
+  pointer into an address, which nothing else does, under a local
+  `#[expect(clippy::as_conversions, reason = ...)]`. A `CastFrom` pair involving `usize` or
   `isize` exists only on the pointer widths where it is exact, so code that needs `u64` to `usize`
   does not build for a 32-bit target until it says what a value that does not fit does.
 * Macros only for small mechanical code; prefer an `#[inline(always)]` function.

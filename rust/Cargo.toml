@@ -57,7 +57,8 @@ module_inception = "allow"
 
 # An `as` reads alike whether it is exact, rounds or drops bits, and which it
 # is can change with the target's pointer width. Conversions are written by
-# name through `interrexx-cast`, the one crate that allows `as`.
+# name through `interrexx-cast`, the one crate that allows `as`; elsewhere a
+# function pointer becomes an address under a local `#[expect]` with a reason.
 as_conversions = "deny"
 bool_comparison = "warn"
 borrow_interior_mutable_const = "warn"

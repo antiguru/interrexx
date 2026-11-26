@@ -332,9 +332,9 @@ pub unsafe extern "C-unwind" fn RexxCallBack(
 /// The key a `RexxStart` run is found by, from the `pthread_t` its thread is.
 #[cfg(not(target_vendor = "apple"))]
 fn thread_key(thread: thread_id_t) -> usize {
-    use interrexx_cast::CastFrom;
-    // Linux's `pthread_t`, an `unsigned long`, and Windows' `DWORD` fit `usize`.
-    usize::cast_from(thread)
+    // An `unsigned long` on Linux, a `uintptr_t` on the BSDs and a `DWORD` on
+    // Windows: no wider than a pointer on any of them.
+    usize::try_from(thread).expect("a thread id is no wider than a pointer")
 }
 
 /// The key a `RexxStart` run is found by, from the `pthread_t` its thread is: a
