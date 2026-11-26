@@ -1,5 +1,5 @@
-/* An internal routine called from a line typed at a pause pauses in its own
-   clauses without a second prompt. */
+/* An internal routine a line typed at a pause calls runs untraced: none of its
+   clauses is shown and it takes no stop (r[env.debugging.deviation.182]). */
 trace ?r
 x = 1
 say 'main'
