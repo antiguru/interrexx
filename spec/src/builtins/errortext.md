@@ -234,32 +234,32 @@ say c~rc (errortext(c~rc) \== '') (errortext(c~rc) == c~errortext)
 
 r[bif.errortext.values]
 `values` fills the places of the message of an error code, as the interpreter
-fills them when it raises the error. It is a single string, which stands for an
-array of that one item, or a single-dimensional array, an instance of a
-subclass of `Array` included. A number is a string. Anything else raises
-`SYNTAX 40.912`: `.nil`, a `List`, a `Directory`, a `Stem`, a `MutableBuffer`,
-any other object, and an array of more than one dimension, whatever it
-answers to `REQUEST`, `MAKEARRAY` or `STRING`, none of which is sent to it. It is
-checked whether or not the code has a message. `n` is checked as the rules above
-say.
+fills them when it raises the error. It is a string, which stands for an array
+of that one item, or a single-dimensional array, an instance of a subclass of
+`Array` included. A number is a string. Anything else raises `SYNTAX 40.912`:
+`.nil`, a `List`, a `Queue`, a `CircularQueue`, a `Directory`, a `Stem`, a
+`MutableBuffer`, any other object, and an array of more than one dimension.
+None of `REQUEST`, `MAKEARRAY` and `STRING` is sent to `values`, so what it
+answers to them does not matter. `values` is checked whether or not the code
+has a message, and `n` is checked as the rules above say.
 
-The array has a size, which counts positions with no item: an array that
-had an item removed, or one made with room for more than it holds, is as large as
-it was. Let that size be `k`. The first `k` places of the message, counted from
-its start in the order they stand there, which is not necessarily the order of
-their numbers, are filled. The place `&i` is replaced by the item at index `i`,
-or by the null string where the array has no item at `i`, which includes an
-index past its size. Every place after those `k` stays as written, `&i`. A
-string that is not an array has size 1. What was put in a place is not read for
-places again, so an item `&2` appears as it is. An error code with no message
-answers the null string whatever `values` holds, and a message with no places,
-such as that of an error number, comes back unchanged.
+The array has a size, which counts positions with no item: an array that had an
+item removed, or one made with room for more than it holds, is as large as it
+was. Let that size be `k`. The first `k` places of the message, counted from its
+start in the order they stand there, which is not necessarily the order of their
+numbers, are filled. The place `&i` is replaced by the item at index `i`, or by
+the null string where the array has no item at `i`, which includes an index
+past its size. Every place after those `k` stays as written, `&i`. A string has
+size 1. What was put in a place is not read for places again, so an item `&2`
+appears as it is. An error code with no message answers the null string whatever
+`values` holds, and a message with no places, such as that of an error number,
+comes back unchanged.
 
-An item is put in as its string value is for a string or a number, as the
-contents of a `MutableBuffer`, and as the name that an error message gives an
-object otherwise, which is its `OBJECTNAME` ([the name rule](r:class.object.objectname)),
-`an Array` or `The NIL object` unless its class has an `OBJECTNAME` of its own.
-No `STRING` method is sent to it.
+An item is put in as its string value when it is a string or a number, as its
+contents when it is a `MutableBuffer`, and otherwise as the name that an error
+message gives an object, which is its `OBJECTNAME` ([the name
+rule](r:class.object.objectname)): `an Array` or `The NIL object`, unless its
+class has an `OBJECTNAME` of its own. No `STRING` method is sent to it.
 
 For the condition object `c` of a trapped `SYNTAX` error, `ERRORTEXT(c~code,
 c~additional)` is the `MESSAGE` entry of `c`.
@@ -296,18 +296,19 @@ say countstr('&', errortext('40.912', .array~of('&1', '&2', '&3')))
 3
 ```
 
-The second shows how the items are put in, and that no message is sent to an
-object: the `STRING` and `MAKEARRAY` methods of the class do not run, and the
-values an object is refused as are those of the rule.
+The second shows how the items are put in, and that nothing is sent to an
+object: the `STRING` and `MAKEARRAY` methods of the class do not run, whether
+the object is an item or the `values` themselves.
 
 ```rexx
 t = errortext('40.912', .array~of(.zq~new, .nil, .mutablebuffer~new('MMM')))
 say (pos('a ZQ', t) > 0) (pos('The NIL object', t) > 0) (pos('MMM', t) > 0)
 t = errortext('40.912', .array~of(.array~of(1), 3.10, '4.50'))
-say (pos('an Array', t) > 0) (pos('3.10', t) > 0) (pos('4.5', t) > 0)
-list = .array~of(.nil, .list~new, .directory~new, .stem~new, .mutablebuffer~new('x'), .zq~new, .array~new(2, 2))
-do i = 1 to list~items
-  call try '40.912', list[i]
+say (pos('an Array', t) > 0) (pos('3.10', t) > 0) (pos('4.50', t) > 0)
+refused = .array~of(.nil, .list~new, .queue~new, .directory~new, .stem~new, -
+  .mutablebuffer~new('x'), .zq~new, .array~new(2, 2))
+do v over refused
+  call try '40.912', v
 end
 call try 40, .nil
 call try '60.1', .nil
@@ -330,6 +331,7 @@ bad: say condition('o')~code
 ```output
 1 1 1
 1 1 1
+40.912
 40.912
 40.912
 40.912

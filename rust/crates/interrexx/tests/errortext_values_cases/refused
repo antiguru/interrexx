@@ -1,0 +1,76 @@
+# A second argument that is neither a string nor a single-dimensional array
+# raises 40.912, whether or not the code has a message, and is not sent
+# REQUEST, MAKEARRAY or STRING.
+
+program
+say refused('40.912', .nil)
+say refused('40.912', .list~of('a'))
+say refused('40.912', .directory~new)
+say refused('40.912', .stem~new)
+say refused('40.912', .mutablebuffer~new('a'))
+say refused('40.912', .object~new)
+say refused('40.912', .array~new(2, 2))
+say refused('40.912', .set~new)
+say refused('40.912', .circularqueue~new(1))
+say refused('40.912', .queue~of('a'))
+----
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+
+program
+say refused('60.1', .nil)
+say refused('0.0', .nil)
+say refused(40, .nil)
+say refused(40, .array~new(1, 1))
+say refused('40.1', .array~new(1, 1))
+say refused('40.912', .array~of(1))
+----
+40.912
+40.912
+40.912
+40.912
+40.912
+no error
+
+program
+say refused('40.912', .zq~new)
+say refused('40.912', .array~of(.zq~new))
+::class zq
+::method makearray
+  say 'MAKEARRAY sent'
+  return .array~of(1)
+::method string
+  say 'STRING sent'
+  return 'zq'
+::method request
+  say 'REQUEST sent'
+  return 'zq'
+----
+40.912
+no error
+
+# the first argument is checked as it was; a third argument is too many
+program
+say refused(100, .nil)
+say refused('x', .nil)
+say refused('x.y', .nil)
+say refused(-1, 'AAA')
+say refused('40.1000', 'AAA')
+signal on syntax name e
+x = errortext(40, 'a', 'b')
+e: say condition('o')~code
+----
+40.903
+40.12
+40.926
+40.903
+40.926
+40.4

@@ -256,6 +256,14 @@ const CASES: &[Case] = &[
         source: "signal on syntax name e; x = errortext('40.912', .stem~new); say 'no error'; exit; e: say condition('o')~code",
     },
     Case {
+        name: "errortext_values_queue",
+        source: "signal on syntax name e; x = errortext('40.912', .queue~of('a')); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_circular_queue",
+        source: "signal on syntax name e; x = errortext('40.912', .circularqueue~new(2)); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
         name: "errortext_values_buffer",
         source: "signal on syntax name e; x = errortext('40.912', .mutablebuffer~new('a')); say 'no error'; exit; e: say condition('o')~code",
     },
