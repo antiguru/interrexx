@@ -185,7 +185,10 @@ From `rust/`, under the memory cap:
   compile 32-bit. Tests that need a non-root user and `/usr/bin/time` fail without them, as on any
   host. `cargo clippy --workspace --all-targets --target i686-unknown-linux-gnu -- -D warnings`
   checks the 32-bit `cfg` arms from a 64-bit toolchain. A size pin (`assert!(size_of::<T>() == N)`) holds
-  for 64-bit targets only, under `#[cfg(target_pointer_width = "64")]`.
+  for 64-bit targets only, under `#[cfg(target_pointer_width = "64")]`. A test whose outcome
+  depends on how many bytes objects take, such as one that crosses `REXX_HEAP_LIMIT`, must hold
+  at both pointer widths: grow the heap step by step until it crosses, rather than sizing one
+  request to cross.
 * `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
   not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
   with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under
