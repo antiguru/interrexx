@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.event.pull_request.number == 1073 && 'windows-rexxutil-native-proof' || 'windows-cargo-check' }}
+  group: windows-cargo-check
   cancel-in-progress: false
 
 defaults:
@@ -240,17 +240,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Could not restore the Windows time zone' }
             Remove-Item -LiteralPath $dir -Recurse
           }
-
-      - uses: actions/cache@v5
-        if: github.head_ref == 'windows-rexxutil-process'
-        with:
-          path: ${{ runner.temp }}/oorexx-oracle.zip
-          key: oorexx-5.2.0-13156-portable-x64-rexxutil-reference
-      - name: Compare the Windows SysFileTree draft with ooRexx
-        if: github.head_ref == 'windows-rexxutil-process'
-        continue-on-error: true
-        shell: pwsh
-        run: ../ci/windows-rexxutil-oracle.ps1
 
       - name: Check out the pinned ooRexx sources
         working-directory: .
