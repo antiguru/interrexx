@@ -643,3 +643,111 @@ pub(crate) fn write_profile(
         WritePrivateProfileStringW(section.as_ptr(), string(key), string(value), file.as_ptr()) != 0
     }
 }
+
+pub(crate) fn move_console_cursor(row: i16, column: i16) {
+    use windows_sys::Win32::System::Console::{
+        COORD, GetStdHandle, STD_OUTPUT_HANDLE, SetConsoleCursorPosition,
+    };
+
+    // SAFETY: both APIs validate the arguments and the coordinate is passed by value.
+    unsafe {
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), COORD { X: column, Y: row })
+    };
+}
+
+pub(crate) fn set_console_cursor_visible(visible: bool) -> i64 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Console::{
+            CONSOLE_CURSOR_INFO, GetConsoleCursorInfo, GetStdHandle, STD_OUTPUT_HANDLE,
+            SetConsoleCursorInfo,
+        },
+    };
+
+    let mut cursor = CONSOLE_CURSOR_INFO::default();
+    // SAFETY: both APIs validate this handle; cursor is a live writable struct.
+    unsafe {
+        let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if GetConsoleCursorInfo(handle, &mut cursor) == 0 {
+            return i64::from(GetLastError());
+        }
+        cursor.bVisible = i32::from(visible);
+        if SetConsoleCursorInfo(handle, &cursor) == 0 {
+            return i64::from(GetLastError());
+        }
+    }
+    0
+}
+
+pub(crate) fn read_console_screen(row: i16, column: i16, requested: u32) -> Vec<u8> {
+    use windows_sys::Win32::System::Console::{
+        CHAR_INFO, COMMON_LVB_TRAILING_BYTE, COORD, GetStdHandle, ReadConsoleOutputW, SMALL_RECT,
+        STD_OUTPUT_HANDLE,
+    };
+
+    let Some(info) = console_info() else {
+        return Vec::new();
+    };
+    let (width, height) = (info.dwSize.X, info.dwSize.Y);
+    if !(0..height).contains(&row) || !(0..width).contains(&column) {
+        return Vec::new();
+    }
+    let (Ok(cells_per_row), Ok(rows_left), Ok(first_column)) = (
+        u32::try_from(width),
+        u32::try_from(height - row),
+        u32::try_from(column),
+    ) else {
+        return Vec::new();
+    };
+    let mut cells_left = (cells_per_row * rows_left - first_column).min(requested);
+    // The read counts cells, not characters: a full-width character fills two
+    // cells, the second marked as its trailing byte, and is taken once. It is
+    // read one row at a time, so no call needs more than one row's buffer, but
+    // the result holds the whole region asked for: a read with no length over
+    // a large screen buffer is as large as that buffer.
+    let mut wide = Vec::new();
+    let mut cells = Vec::new();
+    let (mut y, mut x) = (row, column);
+    while cells_left > 0 && y < height {
+        let Ok(row_cells) = u32::try_from(width - x) else {
+            break;
+        };
+        let count = row_cells.min(cells_left);
+        let (Ok(count_x), Ok(last)) = (i16::try_from(count), i16::try_from(count - 1)) else {
+            break;
+        };
+        cells.clear();
+        cells.resize(usize::from(count_x.unsigned_abs()), CHAR_INFO::default());
+        let mut region = SMALL_RECT {
+            Left: x,
+            Top: y,
+            Right: x + last,
+            Bottom: y,
+        };
+        // SAFETY: cells holds count CHAR_INFOs, matching the buffer size of
+        // count by 1, and region is a live, writable rectangle.
+        let ok = unsafe {
+            ReadConsoleOutputW(
+                GetStdHandle(STD_OUTPUT_HANDLE),
+                cells.as_mut_ptr(),
+                COORD { X: count_x, Y: 1 },
+                COORD { X: 0, Y: 0 },
+                &mut region,
+            )
+        };
+        if ok == 0 {
+            break;
+        }
+        for cell in &cells {
+            if cell.Attributes & COMMON_LVB_TRAILING_BYTE != 0 {
+                continue;
+            }
+            // SAFETY: ReadConsoleOutputW fills the UnicodeChar member.
+            wide.push(unsafe { cell.Char.UnicodeChar });
+        }
+        cells_left -= count;
+        y += 1;
+        x = 0;
+    }
+    String::from_utf16_lossy(&wide).into_bytes()
+}

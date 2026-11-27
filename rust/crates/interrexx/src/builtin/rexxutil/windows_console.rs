@@ -74,3 +74,80 @@ fn dimensions<const N: usize>(
     }
     Ok(valid.then_some(dimensions))
 }
+
+pub(crate) fn cursor_position(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 2)?;
+    let previous = crate::host::console_info()
+        .unwrap_or_default()
+        .dwCursorPosition;
+    if args.iter().any(Option::is_some) {
+        if let Some([row, column]) = coordinates(interp, args)? {
+            crate::host::move_console_cursor(row, column);
+        }
+    }
+    Ok(interp.text_built(format!("{} {}", previous.Y, previous.X).into_bytes()))
+}
+
+pub(crate) fn cursor_state(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 1)?;
+    let state = super::required_c_string(interp, args, 1)?;
+    let visible = match state.to_ascii_uppercase().as_slice() {
+        b"ON" => true,
+        b"OFF" => false,
+        _ => {
+            return Err(Raised::invalid_routine_option(
+                "SysCurState",
+                "state",
+                "'ON' or 'OFF'",
+                &state,
+            )
+            .into());
+        }
+    };
+    Ok(answer(
+        interp,
+        crate::host::set_console_cursor_visible(visible),
+    ))
+}
+
+pub(crate) fn screen_read(
+    interp: &mut Interp,
+    _: &'static [u8],
+    args: &[Option<ObjRef>],
+) -> Result<ObjRef, Failure> {
+    check_arity(args, 3)?;
+    let point = coordinates(interp, args)?;
+    let length = args
+        .get(2)
+        .copied()
+        .flatten()
+        .map(|length| int_argument(interp, length, 3))
+        .transpose()?;
+    let text = match (point, length) {
+        (Some([row, column]), None) => crate::host::read_console_screen(row, column, u32::MAX),
+        (Some([row, column]), Some(length)) if length > 0 => {
+            crate::host::read_console_screen(row, column, u32::try_from(length).unwrap_or(u32::MAX))
+        }
+        _ => Vec::new(),
+    };
+    Ok(interp.text_built(text))
+}
+
+fn coordinates(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Option<[i16; 2]>, Failure> {
+    let row = required(args, 1)?;
+    let row = int_argument(interp, row, 1)?;
+    let column = required(args, 2)?;
+    let column = int_argument(interp, column, 2)?;
+    Ok(i16::try_from(row)
+        .ok()
+        .zip(i16::try_from(column).ok())
+        .map(|(row, column)| [row, column]))
+}

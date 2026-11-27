@@ -108,6 +108,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(windows)]
     util_run(
+        "SysCurPos",
+        crate::builtin::rexxutil::windows_console::cursor_position,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysCurState",
+        crate::builtin::rexxutil::windows_console::cursor_state,
+    ),
+    #[cfg(windows)]
+    util_run(
         "SysDriveInfo",
         crate::builtin::rexxutil::windows_files::drive_info,
     ),
@@ -339,6 +349,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysTempFileName",
         crate::builtin::rexxutil::search::temp_file_name,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysTextScreenRead",
+        crate::builtin::rexxutil::windows_console::screen_read,
     ),
     #[cfg(windows)]
     util_run(

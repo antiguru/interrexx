@@ -174,3 +174,17 @@ or passing an empty name uses `WIN.INI`. Windows resolves a relative
 profile file against its Windows directory. File names, section and key
 names, and values are UTF-8. The key is required for a section-specific
 call. An empty key answers `ERROR:`.
+
+## Windows console cursor and text
+
+r[util.windows.console-cursor]
+`SysCurPos()` answers the current cursor position as row and column,
+starting at zero. With both coordinates given, it returns the previous
+position and moves the cursor when the new position is in the buffer. `SysCurState('ON')` and
+`SysCurState('OFF')` show or hide the cursor.
+`SysTextScreenRead(row, column[, length])` reads screen characters
+starting at the specified cell. With no length, it reads to the end of
+the screen buffer. A read outside the buffer or with a nonpositive length
+answers the null string. The length counts cells: a full-width
+character fills two cells and is read once. The result is UTF-8, so its
+byte length can differ from the number of cells read.

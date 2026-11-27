@@ -222,3 +222,8 @@ missingKeyBadFile:
 if condition('O')~code <> 88.901 then exit 174
 signal off syntax
 if SysFileDelete(iniFile) <> 0 then exit 129
+
+/* spec: util.windows.console-cursor */
+if words(SysCurPos()) <> 2 then exit 130
+if SysTextScreenRead(0, 0, 0) \== '' then exit 131
+if SysTextScreenRead(-1, 0, 1) \== '' then exit 132
