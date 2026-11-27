@@ -689,7 +689,12 @@ fn a_write_to_a_packages_routines_table_moves_call_resolution() {
     );
 }
 
-/// A STRING answer can have its own intrinsic string value.
+/// A user `STRING` method's answer reads under the primitive string
+/// conversion: an array (or an `Array` subclass) joins its items and a buffer
+/// is its text. A `Queue`, `.nil`, the object itself or any other object has no
+/// string value, and the default string value stands in for it in every
+/// consumer: the bytes, a truth value and a logical operator alike
+/// (`r[conv.string.answer]`).
 #[test]
 fn a_string_answer_reads_as_primitive_make_string_reads_it() {
     let program = |answer: &str| {
@@ -708,6 +713,45 @@ fn a_string_answer_reads_as_primitive_make_string_reads_it() {
             run_source(&program(answer)),
             (0, stdout.to_owned(), String::new()),
             "{answer}"
+        );
+    }
+    for answer in [
+        ".directory~new",
+        ".queue~of('a')",
+        ".nil",
+        ".object~new",
+        "self",
+    ] {
+        let read = format!(
+            "say 'x' .k~new\nsay '' << .k~new\nsay 'abc' < .k~new\n\
+             parse value .k~new with p q; say p '|' q\ncall r .k~new\nsay length(.k~new)\n\
+             exit\nr: parse arg p; say 'arg' p; return\n\
+             ::class k\n::method string\n  return {answer}\n"
+        );
+        assert_eq!(
+            run_source(&read),
+            (
+                0,
+                "x a K\n1\n0\na | K\narg a K\n3\n".to_owned(),
+                String::new()
+            ),
+            "read over {answer}"
+        );
+        let judged = format!(
+            "o = .k~new\nsignal on syntax name s1\nif o then nop\n\
+             s1: say condition('O')~code condition('O')~message\n\
+             signal on syntax name s2\nsay 1 & o\n\
+             s2: say condition('O')~code condition('O')~message\n\
+             exit\n::class k\n::method string\n  return {answer}\n"
+        );
+        assert_eq!(
+            run_source(&judged),
+            (
+                0,
+                expand("34.1 ⟨34.1¦a K⟩\n34.901 ⟨34.901¦a K⟩\n"),
+                String::new()
+            ),
+            "truth over {answer}"
         );
     }
 }

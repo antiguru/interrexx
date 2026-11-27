@@ -210,7 +210,9 @@ that `RAISE SYNTAX` with that number and those substitutions would give in
 result of the call is not delivered. The fixture's routine raises `40.900` and
 then sets a variable of the caller, which shows that it ran on; its method
 raises `93.900`. An error that nothing traps ends the program as any `SYNTAX`
-error does, and the traceback names the routine.
+error does, and the traceback names the routine. A number that no error has
+raises `SYNTAX 98.941`, as [RAISE SYNTAX](r:instr.raise.number) with it would,
+naming the number as the major number, a point and the subcode.
 
 ```rexx
 after = 'unset'
@@ -239,6 +241,28 @@ say fxraise('final')
 ```output rc=216
 ```
 
+```rexx
+do number over .array~of(40999, 93009, 2001, 41001)
+  say number '=>' raised(number)
+end
+exit
+raised: procedure
+  signal on syntax
+  call fxraisenumber arg(1)
+  return 'nothing'
+syntax: o = condition('o')
+  if o~code == 98.941 then return o~code o~additional[1]
+  return o~code
+::requires 'specfixture' LIBRARY
+```
+
+```output
+40999 => 98.941 40.999
+93009 => 98.941 93.9
+2001 => 98.941 2.1
+41001 => 41.1
+```
+
 r[native.calls.condition]
 A routine may raise a condition by name, with a description and an extra
 object. The routine's result is delivered and the clause that called it goes
@@ -260,6 +284,49 @@ h: say 'handler' condition('c') condition('d') condition('a') condition('i')
 returned
 handler USER N2ZQFOO desc extra CALL
 after
+```
+
+r[native.calls.condition-object]
+A routine may also raise a condition from a condition object, a Directory
+whose `CONDITION` entry names it and whose other entries, such as
+`DESCRIPTION`, are those of the condition object the condition gets. It is
+raised as [the rule above](r:native.calls.condition) says. A `SYNTAX`
+condition is raised by its `CODE`, and a `CODE` of the form of [the number of
+RAISE SYNTAX](r:instr.raise.number) that no error has raises `SYNTAX 98.941`,
+as RAISE SYNTAX does, with the same `ADDITIONAL` item.
+
+```rexx
+call on user n2zqobj name h
+d = .directory~new
+d~condition = 'USER N2ZQOBJ'
+d~description = 'desc'
+say fxconditionobject(d)
+do code over .array~of('41.1', '93.9', '40.999', '2.1')
+  d = .directory~new
+  d~condition = 'SYNTAX'
+  d~code = code
+  say code '=>' raised(d)
+end
+exit
+h: say 'handler' condition('c') condition('d')
+  return
+raised: procedure
+  signal on syntax
+  call fxconditionobject arg(1)
+  return 'nothing'
+syntax: o = condition('o')
+  if o~code == 98.941 then return o~code o~additional[1]
+  return o~code
+::requires 'specfixture' LIBRARY
+```
+
+```output
+returned
+handler USER N2ZQOBJ desc
+41.1 => 41.1
+93.9 => 98.941 93.9
+40.999 => 98.941 40.999
+2.1 => 98.941 2.1
 ```
 
 r[native.calls.send]

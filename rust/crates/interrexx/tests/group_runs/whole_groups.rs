@@ -59,9 +59,7 @@ impl Part {
     }
 }
 
-/// The tests every part leaves out, on both sides, each with its reason:
-/// each allocates here until memory runs out, which takes the shared
-/// test process with it.
+/// The tests every part leaves out, on both sides, each with its reason.
 const REST_LEFT_OUT: &[(&str, &str, &str)] = &[
     (
         "base/class/Class.testGroup",
@@ -77,6 +75,16 @@ const REST_LEFT_OUT: &[(&str, &str, &str)] = &[
         "base/class/Object.testGroup",
         "TEST_UNINIT_CLASS",
         "loops until a weak reference is cleared, which here it is not before memory runs out",
+    ),
+    (
+        "base/keyword/RAISE.testGroup",
+        "TEST_RAISE_SYNTAX_BAD_CODE",
+        "uses CATCH, of language level 6.07 (Deviation 179, #804)",
+    ),
+    (
+        "base/keyword/RAISE.testGroup",
+        "TEST_RAISE_SYNTAX_UNKNOWN_CODE",
+        "uses CATCH, of language level 6.07 (Deviation 179, #804)",
     ),
 ];
 
@@ -101,127 +109,43 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "base/class/Class.testGroup",
         "whole",
         "normal",
-        "error, assertions 266, rc 2, last started TEST_UNINHERIT_TWO_ARGS, failing [TEST_CLASS_DEFINE TEST_DEFINE_DELETE TEST_DEFINE TEST_DELETE]",
+        "error, assertions 281, rc 2, last started TEST_UNINHERIT_TWO_ARGS, failing [TEST_CLASS_DEFINE TEST_DEFINE_DELETE TEST_DEFINE TEST_DELETE]",
         "Deviation 110: TEST_CLASS_DEFINE, TEST_DEFINE, TEST_DEFINE_DELETE and TEST_DELETE expect an instance made before a define to keep the methods its class had",
     ),
     (
         "base/class/Class.testGroup",
         "whole",
         "every",
-        "error, assertions 266, rc 2, last started TEST_UNINHERIT_TWO_ARGS, failing [TEST_CLASS_DEFINE TEST_DEFINE_DELETE TEST_DEFINE TEST_DELETE]",
+        "error, assertions 281, rc 2, last started TEST_UNINHERIT_TWO_ARGS, failing [TEST_CLASS_DEFINE TEST_DEFINE_DELETE TEST_DEFINE TEST_DELETE]",
         "Deviation 110: TEST_CLASS_DEFINE, TEST_DEFINE, TEST_DEFINE_DELETE and TEST_DELETE expect an instance made before a define to keep the methods its class had",
     ),
     (
-        "base/class/Method.testGroup",
+        "base/class/Message.testGroup",
         "whole",
         "normal",
-        "error, assertions 92, rc 2, last started TEST_SOURCE, failing [TEST_NEW_ARRAY_FROM_FILE TEST_NEW_FILE_COMPILED]",
-        "tests outside the derived list that fail alone too: Method NEW's array and compiled-file shapes",
+        "failure, assertions 286, rc 1, last started TEST_SUPER_OVERRIDE, failing [TEST_RESULT_CHANGED_CONDITION]",
+        "Deviation 40: TEST_RESULT_CHANGED_CONDITION expects the last line of a child's merged OUTPUT and ERROR to be the error report's",
     ),
     (
-        "base/class/Method.testGroup",
+        "base/class/Message.testGroup",
         "whole",
         "every",
-        "error, assertions 92, rc 2, last started TEST_SOURCE, failing [TEST_NEW_ARRAY_FROM_FILE TEST_NEW_FILE_COMPILED]",
-        "tests outside the derived list that fail alone too: Method NEW's array and compiled-file shapes",
+        "failure, assertions 286, rc 1, last started TEST_SUPER_OVERRIDE, failing [TEST_RESULT_CHANGED_CONDITION]",
+        "Deviation 40: TEST_RESULT_CHANGED_CONDITION expects the last line of a child's merged OUTPUT and ERROR to be the error report's",
     ),
     (
         "base/class/Object.testGroup",
         "whole",
         "normal",
-        "failure, assertions 272, rc 1, last started TEST_UNSETMETHOD_NO_ARG, failing [TEST_INSTANCEMETHOD TEST_SETMETHOD]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt)",
+        "failure, assertions 336, rc 1, last started TEST_UNSETMETHOD_NO_ARG, failing [TEST_COPY_IMAGE_OBJECT_VARIABLES]",
+        "Deviation 36: TEST_COPY_IMAGE_OBJECT_VARIABLES sets OBJECTNAME of .true, a String, which is refused",
     ),
     (
         "base/class/Object.testGroup",
         "whole",
         "every",
-        "failure, assertions 272, rc 1, last started TEST_UNSETMETHOD_NO_ARG, failing [TEST_INSTANCEMETHOD TEST_SETMETHOD]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/class/RexxContext.testGroup",
-        "whole",
-        "normal",
-        "failure, assertions 358, rc 1, last started TEST_SOURCELINE_LAST_LINE, failing [TESTRS01]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/class/RexxContext.testGroup",
-        "whole",
-        "every",
-        "failure, assertions 358, rc 1, last started TEST_SOURCELINE_LAST_LINE, failing [TESTRS01]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/directives/ATTRIBUTE.testGroup",
-        "whole",
-        "normal",
-        "error, assertions 303, rc 2, last started TEST_SET_RETURN, failing [TESTMISPLACEDCLASSMETHOD]",
-        "TESTMISPLACEDCLASSMETHOD: `::attribute 'foo' class` with a body is 99.937 here, 99.905 on the oracle",
-    ),
-    (
-        "base/directives/ATTRIBUTE.testGroup",
-        "whole",
-        "every",
-        "error, assertions 303, rc 2, last started TEST_SET_RETURN, failing [TESTMISPLACEDCLASSMETHOD]",
-        "TESTMISPLACEDCLASSMETHOD: `::attribute 'foo' class` with a body is 99.937 here, 99.905 on the oracle",
-    ),
-    (
-        "base/directives/CONSTANT.testGroup",
-        "whole",
-        "normal",
-        "error, assertions 173, rc 2, last started TEST_SUBCLASS_DEFINITION, failing [TEST_EXPRESSION_NOVALUE_ERROR]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/directives/CONSTANT.testGroup",
-        "whole",
-        "every",
-        "error, assertions 173, rc 2, last started TEST_SUBCLASS_DEFINITION, failing [TEST_EXPRESSION_NOVALUE_ERROR]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/keyword/RAISE.testGroup",
-        "whole",
-        "normal",
-        "failure, assertions 120, rc 1, last started TEST_RAISE_USER, failing [TEST_RAISE_INSERT_CRLF TEST_RAISE_PROPAGATE TEST_RAISE_SYNTAX_EXIT_02 TEST_RAISE_SYNTAX_RETURN_02]",
-        "TEST_RAISE_INSERT_CRLF as alone, and tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/keyword/RAISE.testGroup",
-        "whole",
-        "every",
-        "failure, assertions 120, rc 1, last started TEST_RAISE_USER, failing [TEST_RAISE_INSERT_CRLF TEST_RAISE_PROPAGATE TEST_RAISE_SYNTAX_EXIT_02 TEST_RAISE_SYNTAX_RETURN_02]",
-        "TEST_RAISE_INSERT_CRLF as alone, and tests outside the derived list that fail alone too (whole-groups/alone.txt)",
-    ),
-    (
-        "base/keyword/RAISE.testGroup",
-        "derived",
-        "normal",
-        "failure, assertions 0, rc 1, last started TEST_RAISE_INSERT_CRLF, failing [TEST_RAISE_INSERT_CRLF]",
-        "TEST_RAISE_INSERT_CRLF, as alone: message text conversion",
-    ),
-    (
-        "base/keyword/RAISE.testGroup",
-        "derived",
-        "every",
-        "failure, assertions 0, rc 1, last started TEST_RAISE_INSERT_CRLF, failing [TEST_RAISE_INSERT_CRLF]",
-        "TEST_RAISE_INSERT_CRLF, as alone: message text conversion",
-    ),
-    (
-        "base/keyword/REPLY.testGroup",
-        "whole",
-        "every",
-        "pass, assertions 19, rc 0, last started TEST_REPLY__CODE_RETURN, failing []",
-        "every continuation runs before the program ends; the oracle races them with its end",
-    ),
-    (
-        "base/keyword/REPLY.testGroup",
-        "derived",
-        "every",
-        "pass, assertions 18, rc 0, last started TEST_REPLY__CODE_RETURN, failing []",
-        "every continuation runs before the program ends; the oracle races them with its end",
+        "failure, assertions 336, rc 1, last started TEST_UNSETMETHOD_NO_ARG, failing [TEST_COPY_IMAGE_OBJECT_VARIABLES]",
+        "Deviation 36: TEST_COPY_IMAGE_OBJECT_VARIABLES sets OBJECTNAME of .true, a String, which is refused",
     ),
 ];
 
@@ -705,7 +629,7 @@ fn the_differing_tests_are_read_from_every_key() {
     for (group, test) in [
         ("base/bif/STREAM", "TEST_RELATIVE_FILE_EXISTS2"),
         ("base/bif/STREAM", "TEST_RELATIVE_FILE_NOT_EXISTS2"),
-        ("base/class/RexxContext", "TESTRS01"),
+        ("base/class/Message", "TEST_RESULT_CHANGED_CONDITION"),
     ] {
         assert!(
             tests.contains(&(group.to_string(), test.to_string())),

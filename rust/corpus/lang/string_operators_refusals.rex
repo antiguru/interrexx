@@ -11,9 +11,8 @@
  * halves are here, because either alone is satisfied by the wrong order. `+`
  * and `-` bare are the prefix forms and answer, so they appear here too.
  *
- * The six strict-ordering operators are NOT sent bare here: `'abc'~"<<"`
- * segfaults the oracle, which corpus/oracle-crashes.txt carries and
- * ORACLE_CRASHING_SENDS exempts. They are sent with an operand instead.
+ * The six strict-ordering operators are sent with an operand, which they
+ * compare, and bare, which is 93.903 as for the other binary operators.
  *
  * The final send is untrapped, and it is an operator sent as a *message*, so
  * the built-in method line for + (scope String) an operator message
@@ -66,6 +65,13 @@ select
   when n = 34 then say n 'answered' '12'~'+'()
   when n = 35 then say n 'answered' '12'~'-'()
   when n = 36 then say n 'answered' ''~'*'()
+  /* The strict-ordering six, bare. */
+  when n = 37 then say n 'answered' s~'<<'()
+  when n = 38 then say n 'answered' s~'<<='()
+  when n = 39 then say n 'answered' s~'>>'()
+  when n = 40 then say n 'answered' s~'>>='()
+  when n = 41 then say n 'answered' s~'\<<'()
+  when n = 42 then say n 'answered' s~'\>>'()
   otherwise signal done
 end
 signal next

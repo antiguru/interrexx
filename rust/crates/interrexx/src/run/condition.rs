@@ -6,7 +6,7 @@ pub(crate) use raise::{RaiseLayout, RaisePart, raise_slot};
 use super::{
     ActiveCondition, CallType, Code, ConditionTrap, Cow, Ended, Entry, Failure, Flow, HandlerExit,
     Interp, Loud, Novalue, Number, ObjRef, PendingTrap, Raise, Raised, Rc, ReplyState, Search,
-    Trap, TrappedCondition, body_of, raise_syntax_condition, syntax_code,
+    Trap, TrappedCondition, body_of, names_no_error, raise_syntax_condition,
 };
 use crate::error::FailureSite;
 

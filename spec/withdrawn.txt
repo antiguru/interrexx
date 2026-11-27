@@ -29,3 +29,12 @@ class.routine.deviation.115
 class.package.deviation.115
 bif.lineout.deviation.46
 bif.stream.deviation.35
+conv.string.deviation.30
+conv.string.deviation.169
+conv.string.builtin-argument
+conv.string.argument-kind
+class.index.deviation.30
+class.object.deviation.30
+class.stream.deviation.30
+cond.nostring.deviation.30
+class.commandcontext.deviation.30

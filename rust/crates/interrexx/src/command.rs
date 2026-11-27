@@ -323,9 +323,9 @@ fn unquote(text: &[u8]) -> Vec<u8> {
 /// unquoted, is where this interpreter's own directory moves. Nothing is the home directory. `~`, `~/rest` and `~
 /// rest` are `HOME` with a `/` after it, the rest kept only after `~/`. `~user`
 /// and `~user/rest` are that account's home directory. `None` hands the command
-/// to the shell, where `HOME` is unset or the account is unknown. With `HOME`
-/// unset the reference run dies on `cd ~` (oracle defect,
-/// `corpus/oracle-crashes.txt` entry 44), and that goes to the shell too.
+/// to the shell, where `HOME` is unset or the account is unknown, and `cd ~`
+/// with `HOME` unset goes to the shell too, as in the reference run
+/// (`corpus/oracle-crashes.txt` entry 44, dropped).
 ///
 /// The directory is resolved as `chdir` resolves it, `..` after any link, and
 /// the new directory is its physical path, as `getcwd` answers. A failure is

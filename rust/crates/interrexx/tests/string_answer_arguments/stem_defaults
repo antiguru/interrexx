@@ -1,0 +1,33 @@
+# A STRING answer that is a Stem subclass instance whose default values lead
+# back to one already passed has no string value, and the object reads as its
+# default string value (r[conv.string.answer]): an instance that is its own
+# default, two that are each other's, and a chain that enters a two-cycle after
+# its first link, each read by SAY and by LENGTH; then a chain that ends in a
+# string and one that ends in an instance with no default value. The oracle
+# does not end on any of the cycles: it spins without growing, so these answers
+# are the rule's, not the oracle's.
+program
+a = .substem~new('A'); a[] = a
+b = .substem~new('B'); c = .substem~new('C'); b[] = c; c[] = b
+d = .substem~new('D'); d[] = b
+e = .substem~new('E'); f = .substem~new('F'); e[] = f; f[] = 'tail'
+g = .substem~new('G'); h = .substem~new('H'); g[] = h
+do s over .array~of(a, b, d, e, g)
+  .x~ans = s
+  say '['.x~new']' length(.x~new)
+end
+::class x
+::attribute ans class
+::method string
+  return .x~ans
+::class substem subclass stem
+----
+rc 0
+[stdout]
+[a X] 3
+[a X] 3
+[a X] 3
+[tail] 4
+[H] 1
+[stderr]
+

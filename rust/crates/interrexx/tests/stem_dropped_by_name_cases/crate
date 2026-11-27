@@ -1,8 +1,8 @@
 # A stem passed by name to a RexxUtil stem routine, whose variable a STRING
-# method run by the same call drops before allocating. The oracle's answer
-# depends on when it collects (oracle-crashes.txt entry 47), so the expected
-# blocks are this crate's own output: the routine works on the stem it
-# resolved, as the oracle does when it does not collect.
+# method run by the same call drops before allocating. The expected blocks
+# are this crate's own output, run normally and collecting at every
+# allocation: the routine works on the stem it resolved. The oracle answers
+# every case alike (oracle-crashes.txt entry 47, dropped).
 
 # SysStemCopy: the start argument's STRING drops the source stem
 program

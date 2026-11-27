@@ -28,8 +28,8 @@ page records why they are the way they are.
   side effects are observable: a function call in an operand or an argument runs or does not run.
   When the checks of one operation (one operator, one builtin or method invocation, one
   instruction's checks) find more than one fault, which of their errors is raised is unspecified;
-  it is the error of one of the faults. The faults include a wrong argument count, an omitted
-  required argument and a `STRING` answer that has no string value. A builtin's conversion of its
+  it is the error of one of the faults. The faults include a wrong argument count and an omitted
+  required argument. A builtin's conversion of its
   arguments by `STRING` is part of its checks: a call with no fault sends `STRING` to each argument
   from the left before the other checks (`r[bif.index.call.convert]`), and for a call with a fault, whether and
   how many `STRING` sends happen is unspecified. Whether the checks after the first fault are made,
@@ -168,10 +168,11 @@ page records why they are the way they are.
   `SSIZE_MIN` to be 0. These are fixes, not Deviations.
 * **The language level is the one interrexx implements, not the pinned one** (2026-11-17, #796).
   `REXX_CURRENT_LANGUAGE_LEVEL`, `LanguageLevel`, `.RexxInfo~languageLevel` and `PARSE VERSION`
-  answer 6.06 while the pinned ooRexx answers 6.07, whose CATCH and FINALLY clauses interrexx
-  does not have, so a program that asks for the level is not told features are there that are
+  answer 6.06 while the pinned ooRexx answers 6.07, whose CATCH and FINALLY clauses and THROW
+  instruction interrexx does not have, so a program that asks for the level is not told features are there that are
   not. `include/` declares `REXX_LANGUAGE_6_07`, which only names the level, and
-  the names diff lists the differing current level with this reason. The level moves when the
+  the names diff lists the differing current level with this reason, and the `Throw` and
+  `ThrowObject` entry points and interface versions of THROW too. The level moves when the
   features of the next level are in.
 
 ## Performance

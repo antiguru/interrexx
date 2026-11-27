@@ -2,7 +2,7 @@
 element: "NOSTRING"
 kind: concept
 rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
-deviations: [30, 77, 179]
+deviations: [77, 179]
 ---
 
 # NOSTRING
@@ -179,8 +179,9 @@ The description of a NOSTRING condition is the text that the [`STRING`
 method](r:class.object.string) of the object answers when that is a string,
 and its `ADDITIONAL` entry is the object. When the answer is an object that is
 not a string but has a string value, such as an array, the description is that
-value. When the answer has no string value, [Deviation
-30](r:cond.nostring.deviation.30) applies. The condition object has the
+value. When the answer has no string value, the description is the default
+string value of the object, as [the answer rule](r:conv.string.answer) says.
+The condition object has the
 entries that every condition has, `ADDITIONAL` and `POSITION`, and neither
 `RC` nor `CODE`, as [the entries rule](r:cond.information.object) lists them.
 The text is the one that the object would have as its string value when no
@@ -288,8 +289,8 @@ A NOSTRING that neither its own trap nor the ANY trap answers is ignored, as
 [the untrapped rule](r:cond.index.untrapped) says: the clause goes on and uses
 as the string value of the object the text that its `STRING` method answers
 when that is a string, and the string value of that answer when it is another
-object that has one, such as an array. [Deviation
-30](r:cond.nostring.deviation.30) applies when the answer has none. The
+object that has one, such as an array, and the default string value of the
+object when the answer has none ([the answer rule](r:conv.string.answer)). The
 [::OPTIONS](r:dir.options.condition) directive can turn an untrapped NOSTRING
 into a SYNTAX condition, and its rule specifies that.
 
@@ -372,24 +373,4 @@ n: say 'NOSTRING' '['condition('d')']' condition('o')~additional~class
 aT.
 bdflt
 NOSTRING [a PLAIN] The Stem class
-```
-
-r[cond.nostring.deviation.30]
-With a missing or unusable `STRING` answer, the description of NOSTRING is the fallback text. If the condition goes untrapped, the clause uses that same text. The pinned ooRexx revision can supply an unusable description or fail during conversion.
-
-```rexx
-signal on nostring name n
-say 'x' .weird~new
-n: say 'trapped' condition('c') condition('o')~additional~class
-say 'a' || .weird~new
-say 'after'
-::class weird
-::method string
-  return .directory~new
-```
-
-```output
-trapped NOSTRING The WEIRD class
-aa WEIRD
-after
 ```

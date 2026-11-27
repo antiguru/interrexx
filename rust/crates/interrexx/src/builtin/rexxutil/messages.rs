@@ -168,9 +168,7 @@ impl Substitutions<'_> {
 ///
 /// Every value is converted, in order, before the message is read, an omitted
 /// one as the null string. A conversion that raises ends the call, and no later
-/// value is converted (r[util.sysformatmessage.substitutions]). The reference
-/// run reads a raising value that the message refers to as a null pointer and
-/// dies (oracle defect, `corpus/oracle-crashes.txt` entry 41).
+/// value is converted (r[util.sysformatmessage.substitutions]).
 fn format_message(
     interp: &mut Interp,
     message: &[u8],
@@ -214,14 +212,10 @@ fn substitute(message: &[u8], values: &[Vec<u8>]) -> Vec<u8> {
     out
 }
 
-/// `ObjectToStringValue`: the value's requested string, as the C string
-/// measured with `strlen`. A string request answering `.nil` is read as the
-/// null string.
+/// `ObjectToStringValue`: the value's string value (`r[conv.string.answer]`),
+/// as the C string measured with `strlen`.
 fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let string = interp.required_string_value(value)?;
-    if string == ObjRef::NIL {
-        return Ok(Vec::new());
-    }
     Ok(c_string(&interp.to_text(string)).to_vec())
 }
 
