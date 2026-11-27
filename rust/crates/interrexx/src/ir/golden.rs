@@ -39,6 +39,12 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                     render_register(*src)
                 ));
             }
+            Op::ParseStore { slot, value, .. } => {
+                out.push_str(&format!(
+                    "{index}: ParseStore slot={slot} value={:?}\n",
+                    value.decode()
+                ));
+            }
             Op::ParseBegin {
                 index: at,
                 src,

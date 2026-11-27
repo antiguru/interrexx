@@ -301,6 +301,13 @@ pub(crate) enum Op {
         opening: ParseOpening,
         strings: u8,
     },
+    /// A literal template piece prepared by the plan, after the opening
+    /// checked that the clause doesn't owe parse trace lines.
+    ParseStore {
+        slot: u32,
+        value: ObjRef,
+        scratch: u16,
+    },
     /// Walks template entries `from..to` of the `PARSE` at `index` on from
     /// the walk filed from register `base`: entry `from` with its operand in
     /// register `operand`, and the entries after it, whose operands are read
@@ -454,6 +461,8 @@ pub(crate) enum ParseOpening {
     Engine,
     /// `PARSE VALUE`, from the op's `src` or the null string.
     Value,
+    /// The following ops assign the literal pieces while no value is traced.
+    Literal,
     /// `PARSE VAR` of a simple name.
     Var,
     /// `PARSE ARG`, over the op's `strings` parse strings.

@@ -686,6 +686,25 @@ fn pass_of(
                 {
                     Step::Compound { pc: at }
                 }
+                Op::ParseBegin {
+                    opening: crate::ir::ParseOpening::Literal,
+                    ..
+                } => Step::ParseGuard { pc: at },
+                Op::ParseStore {
+                    slot,
+                    value,
+                    scratch,
+                } => {
+                    steps.push(Step::Const {
+                        dst: scratch,
+                        bits: value.bits(),
+                    });
+                    Step::Store {
+                        pc: at,
+                        slot,
+                        src: scratch,
+                    }
+                }
                 // Ops that neither jump nor trace, which `general` runs; one
                 // that parks the clause for a callee hands it to the driver.
                 Op::PushArg { src } => Step::PushArg { src },
@@ -769,7 +788,8 @@ fn pass_of(
             | Step::Compound { .. }
             | Step::Open { .. }
             | Step::Close { .. }
-            | Step::Trace { .. } => {}
+            | Step::Trace { .. }
+            | Step::ParseGuard { .. } => {}
             _ if inner == 0 => native += 1,
             _ => {}
         }
