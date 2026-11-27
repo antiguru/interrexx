@@ -11,12 +11,18 @@
 //! its choosing. The vacating thread then waits until that thread gives it
 //! back, as a lender does.
 
-use crate::sync::{Condvar, Mutex, lock, thread, wait};
+use crate::sync::{AtomicU64, Condvar, Mutex, MutexGuard, Ordering, lock, thread, wait};
 
 pub(crate) struct Baton<L: Copy> {
     state: Mutex<State<L>>,
-    /// Notified at each change of holder.
+    /// Notified at each change of holder, where a thread waits on it.
     changed: Condvar,
+    /// The key ([`me`]) of the thread holding it, or `0` while it is free, or
+    /// held by a thread another thread handed it to (a lend, a give-back or a
+    /// handed vacancy) that has not yet asked [`Baton::held_here`] since. A
+    /// thread that takes it itself writes its own key. It is written under `state`'s lock at each change of
+    /// holder, and never names a thread that does not hold it.
+    held_by: AtomicU64,
     /// How many times a callback took it.
     #[cfg(all(test, not(loom)))]
     takes: std::sync::atomic::AtomicU64,
@@ -29,6 +35,8 @@ struct State<L> {
     lends: Vec<Lend<L>>,
     /// Nothing will lend it again ([`Baton::close`]).
     closed: bool,
+    /// How many threads wait on `changed`.
+    waiting: usize,
 }
 
 struct Lend<L> {
@@ -41,6 +49,24 @@ struct Lend<L> {
     /// Whether a thread holds the vacancy by its claim
     /// ([`Baton::await_lend_or_vacancy`]), until it hands it on or frees it.
     claimed: bool,
+}
+
+/// This thread's key, which no other thread of the process is given and
+/// which is never `0`, and its id.
+///
+/// The value has no destructor, so the thread-local is never torn down and
+/// stays readable while the thread's other thread-locals are dropped: a
+/// baton method may run from their destructors, as where an interpreter a
+/// thread-local owns is dropped as its thread exits.
+fn me() -> (u64, thread::ThreadId) {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    crate::sync::thread_local! {
+        static ME: (u64, thread::ThreadId) = (
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            thread::current().id(),
+        );
+    }
+    ME.with(|me| *me)
 }
 
 impl<L> Lend<L> {
@@ -70,8 +96,10 @@ impl<L: Copy> Baton<L> {
                 holder: None,
                 lends: Vec::new(),
                 closed: false,
+                waiting: 0,
             }),
             changed: Condvar::new(),
+            held_by: AtomicU64::new(0),
             #[cfg(all(test, not(loom)))]
             takes: std::sync::atomic::AtomicU64::new(0),
         }
@@ -88,6 +116,36 @@ impl<L: Copy> Baton<L> {
     #[cfg(all(test, not(loom)))]
     pub(crate) fn takes(&self) -> u64 {
         self.takes.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// Makes `holder` the thread holding the baton.
+    fn set_holder(&self, state: &mut State<L>, holder: Option<thread::ThreadId>) {
+        state.holder = holder;
+        let (key, id) = me();
+        let held_by = if holder == Some(id) { key } else { 0 };
+        self.held_by.store(held_by, Ordering::Relaxed);
+    }
+
+    /// Waits on `changed` until a change of holder, giving up `state`
+    /// meanwhile.
+    fn await_change<'a>(&self, mut state: MutexGuard<'a, State<L>>) -> MutexGuard<'a, State<L>> {
+        state.waiting += 1;
+        let mut state = wait(&self.changed, state);
+        state.waiting -= 1;
+        state
+    }
+
+    /// Wakes every thread waiting on `changed`, once `state`, which a change
+    /// was made under, is unlocked. A thread counted in `waiting` is between
+    /// its count and its wake, and one not counted takes the lock after the
+    /// change and reads it before it waits, so where none is counted the
+    /// notify would wake nobody and is skipped.
+    fn notify(&self, state: MutexGuard<'_, State<L>>) {
+        let waiting = state.waiting > 0;
+        drop(state);
+        if waiting {
+            self.changed.notify_all();
+        }
     }
 
     /// Blocks until the baton is free, then holds it on this thread.
@@ -109,7 +167,7 @@ impl<L: Copy> Baton<L> {
     /// If this thread does not hold it, or holds it by a lend.
     pub(crate) fn release(&self) {
         let mut state = lock(&self.state);
-        let me = thread::current().id();
+        let me = me().1;
         assert_eq!(
             state.holder,
             Some(me),
@@ -122,20 +180,34 @@ impl<L: Copy> Baton<L> {
                 .is_none_or(|lend| lend.lendee != Some(me)),
             "a thread released a baton lent to it"
         );
-        state.holder = None;
-        drop(state);
-        self.changed.notify_all();
+        self.set_holder(&mut state, None);
+        self.notify(state);
     }
 
     /// Whether this thread holds the baton.
+    ///
+    /// `held_by` names this thread only after this thread wrote it, holding
+    /// the baton. Only the holder hands the baton on, and it writes `held_by`
+    /// as it does; no other thread writes it meanwhile, as each other change
+    /// of holder takes a free baton. So a read that finds this thread's key
+    /// reads this thread's own last write, and the baton is held here.
     pub(crate) fn held_here(&self) -> bool {
-        lock(&self.state).holder == Some(thread::current().id())
+        let (key, id) = me();
+        if self.held_by.load(Ordering::Relaxed) == key {
+            return true;
+        }
+        let state = lock(&self.state);
+        let held = state.holder == Some(id);
+        if held {
+            self.held_by.store(key, Ordering::Relaxed);
+        }
+        held
     }
 
     /// Takes the baton unless this thread holds it, as a callback into the
     /// interpreter does, answering whether it took it.
     pub(crate) fn take_unless_held(&self) -> bool {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         if state.holder == Some(me) {
             return false;
@@ -143,9 +215,9 @@ impl<L: Copy> Baton<L> {
         // A free vacancy is the vacating thread's to take back, or a waiting
         // thread's to claim: a plain take waits until it is reclaimed.
         while state.holder.is_some() || state.lends.last().is_some_and(|lend| lend.vacancy) {
-            state = wait(&self.changed, state);
+            state = self.await_change(state);
         }
-        state.holder = Some(me);
+        self.set_holder(&mut state, Some(me));
         true
     }
 
@@ -156,7 +228,7 @@ impl<L: Copy> Baton<L> {
     ///
     /// If this thread does not hold it.
     pub(crate) fn lend(&self, to: thread::ThreadId, lent: L) {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         assert_eq!(
             state.holder,
@@ -171,17 +243,20 @@ impl<L: Copy> Baton<L> {
             vacancy: false,
             claimed: false,
         });
-        state.holder = Some(to);
-        self.changed.notify_all();
+        self.set_holder(&mut state, Some(to));
+        // Not `notify`: the guard stays held to wait below.
+        if state.waiting > 0 {
+            self.changed.notify_all();
+        }
         while state.lends.len() > depth || state.holder != Some(me) {
-            state = wait(&self.changed, state);
+            state = self.await_change(state);
         }
     }
 
     /// Blocks until the baton is lent to this thread, and answers what was
     /// lent with it.
     pub(crate) fn await_lend(&self) -> L {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         loop {
             if state.holder == Some(me)
@@ -190,7 +265,7 @@ impl<L: Copy> Baton<L> {
             {
                 return lend.lent;
             }
-            state = wait(&self.changed, state);
+            state = self.await_change(state);
         }
     }
 
@@ -198,14 +273,15 @@ impl<L: Copy> Baton<L> {
     /// unless it is closed, and every later one, with [`Awaited::Closed`]: the
     /// state the baton guards is gone, and no holder is left to lend it.
     pub(crate) fn close(&self) {
-        lock(&self.state).closed = true;
-        self.changed.notify_all();
+        let mut state = lock(&self.state);
+        state.closed = true;
+        self.notify(state);
     }
 
     /// What was lent with the baton, where this thread holds it by the
     /// innermost lend.
     pub(crate) fn lent(&self) -> Option<L> {
-        let me = thread::current().id();
+        let me = me().1;
         let state = lock(&self.state);
         match state.lends.last() {
             Some(lend) if state.holder == Some(me) && lend.lendee == Some(me) => Some(lend.lent),
@@ -219,7 +295,7 @@ impl<L: Copy> Baton<L> {
     ///
     /// If the innermost lend is not to this thread.
     pub(crate) fn give_back(&self) {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         assert_eq!(
             state.holder,
@@ -235,9 +311,8 @@ impl<L: Copy> Baton<L> {
             Some(me),
             "a thread gave back another thread's lend"
         );
-        state.holder = Some(lend.lender);
-        drop(state);
-        self.changed.notify_all();
+        self.set_holder(&mut state, Some(lend.lender));
+        self.notify(state);
     }
 
     /// Vacates the baton this thread holds, with `lent`, and answers the
@@ -249,7 +324,7 @@ impl<L: Copy> Baton<L> {
     ///
     /// If this thread does not hold it.
     pub(crate) fn vacate(&self, lent: L) -> usize {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         assert_eq!(
             state.holder,
@@ -264,9 +339,8 @@ impl<L: Copy> Baton<L> {
             vacancy: true,
             claimed: false,
         });
-        state.holder = None;
-        drop(state);
-        self.changed.notify_all();
+        self.set_holder(&mut state, None);
+        self.notify(state);
         depth
     }
 
@@ -277,10 +351,10 @@ impl<L: Copy> Baton<L> {
     /// `false` where a thread holds the baton otherwise, by the vacancy
     /// handed to it or by a lend above it.
     pub(crate) fn take_vacancy(&self, depth: usize) -> bool {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         loop {
-            if Self::take_vacancy_locked(&mut state, depth, me) {
+            if self.take_vacancy_locked(&mut state, depth, me) {
                 return true;
             }
             let claimed = state.lends.len() == depth + 1
@@ -290,11 +364,16 @@ impl<L: Copy> Baton<L> {
             }
             // A claimer either hands the vacancy on or frees it, whatever this
             // thread does, so the wait never waits for this thread itself.
-            state = wait(&self.changed, state);
+            state = self.await_change(state);
         }
     }
 
-    fn take_vacancy_locked(state: &mut State<L>, depth: usize, me: thread::ThreadId) -> bool {
+    fn take_vacancy_locked(
+        &self,
+        state: &mut State<L>,
+        depth: usize,
+        me: thread::ThreadId,
+    ) -> bool {
         if state.holder.is_some() || state.lends.len() != depth + 1 {
             return false;
         }
@@ -305,7 +384,7 @@ impl<L: Copy> Baton<L> {
             return false;
         }
         lend.lendee = Some(me);
-        state.holder = Some(me);
+        self.set_holder(state, Some(me));
         true
     }
 
@@ -317,7 +396,7 @@ impl<L: Copy> Baton<L> {
     ///
     /// As [`Baton::give_back`].
     pub(crate) fn give_back_or_free(&self) {
-        let me = thread::current().id();
+        let me = me().1;
         let own = lock(&self.state)
             .lends
             .last()
@@ -336,7 +415,7 @@ impl<L: Copy> Baton<L> {
     ///
     /// If this thread holds no vacancy.
     pub(crate) fn free_vacancy(&self) {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         assert_eq!(
             state.holder,
@@ -350,9 +429,8 @@ impl<L: Copy> Baton<L> {
             .expect("a thread freed a vacancy it does not hold");
         lend.lendee = None;
         lend.claimed = false;
-        state.holder = None;
-        drop(state);
-        self.changed.notify_all();
+        self.set_holder(&mut state, None);
+        self.notify(state);
     }
 
     /// Hands the vacancy this thread claimed to `to`, which holds the baton
@@ -362,7 +440,7 @@ impl<L: Copy> Baton<L> {
     ///
     /// If this thread holds no vacancy.
     pub(crate) fn hand_vacancy(&self, to: thread::ThreadId) {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         assert_eq!(
             state.holder,
@@ -376,9 +454,8 @@ impl<L: Copy> Baton<L> {
             .expect("a thread handed a vacancy it does not hold");
         lend.lendee = Some(to);
         lend.claimed = false;
-        state.holder = Some(to);
-        drop(state);
-        self.changed.notify_all();
+        self.set_holder(&mut state, Some(to));
+        self.notify(state);
     }
 
     /// Blocks until the baton is lent to this thread, or, where `claim`, a
@@ -386,7 +463,7 @@ impl<L: Copy> Baton<L> {
     /// `unless_closed`, the baton is closed ([`Baton::close`]) with neither,
     /// so that what this thread waits for will never come.
     pub(crate) fn await_lend_or_vacancy(&self, claim: bool, unless_closed: bool) -> Awaited<L> {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         loop {
             if state.holder == Some(me)
@@ -403,13 +480,13 @@ impl<L: Copy> Baton<L> {
                 lend.lendee = Some(me);
                 lend.claimed = true;
                 let lent = lend.lent;
-                state.holder = Some(me);
+                self.set_holder(&mut state, Some(me));
                 return Awaited::Vacancy(lent);
             }
             if unless_closed && state.closed {
                 return Awaited::Closed;
             }
-            state = wait(&self.changed, state);
+            state = self.await_change(state);
         }
     }
 
@@ -417,28 +494,28 @@ impl<L: Copy> Baton<L> {
     /// it is free: whether it did. This thread then holds the baton as
     /// before [`Baton::vacate`].
     pub(crate) fn reclaim_free(&self, depth: usize) -> bool {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
-        Self::reclaim_locked(&mut state, depth, me)
+        self.reclaim_locked(&mut state, depth, me)
     }
 
     /// Blocks until the vacancy at `depth`, which this thread vacated, is
     /// given back by the thread it was handed to, or is free and taken back.
     pub(crate) fn await_return(&self, depth: usize) {
-        let me = thread::current().id();
+        let me = me().1;
         let mut state = lock(&self.state);
         loop {
             if state.holder == Some(me) && state.lends.len() == depth {
                 return;
             }
-            if Self::reclaim_locked(&mut state, depth, me) {
+            if self.reclaim_locked(&mut state, depth, me) {
                 return;
             }
-            state = wait(&self.changed, state);
+            state = self.await_change(state);
         }
     }
 
-    fn reclaim_locked(state: &mut State<L>, depth: usize, me: thread::ThreadId) -> bool {
+    fn reclaim_locked(&self, state: &mut State<L>, depth: usize, me: thread::ThreadId) -> bool {
         let free = state.holder.is_none()
             && state.lends.len() == depth + 1
             && state
@@ -447,7 +524,7 @@ impl<L: Copy> Baton<L> {
                 .is_some_and(|lend| lend.free() && lend.lender == me);
         if free {
             state.lends.pop();
-            state.holder = Some(me);
+            self.set_holder(state, Some(me));
         }
         free
     }
@@ -455,7 +532,7 @@ impl<L: Copy> Baton<L> {
     /// What was lent with the baton, where this thread holds it by a lend
     /// above the vacancy at `depth`.
     pub(crate) fn lent_above(&self, depth: usize) -> Option<L> {
-        let me = thread::current().id();
+        let me = me().1;
         let state = lock(&self.state);
         match state.lends.last() {
             Some(lend)
@@ -534,5 +611,46 @@ mod tests {
                 "a served vacancy was taken back"
             );
         });
+    }
+
+    /// A thread that holds the baton releases it from a thread-local
+    /// destructor, as where an interpreter a thread-local owns is dropped as
+    /// its thread exits: the key `held_here` and `release` read is still
+    /// there, and the baton is free afterwards.
+    #[test]
+    fn a_thread_releases_the_baton_as_it_exits() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static RELEASED: AtomicBool = AtomicBool::new(false);
+        struct OnExit(Option<Arc<Baton<u8>>>);
+        impl Drop for OnExit {
+            fn drop(&mut self) {
+                if let Some(baton) = self.0.take() {
+                    assert!(baton.held_here());
+                    baton.release();
+                    assert!(!baton.held_here());
+                    RELEASED.store(true, Ordering::Relaxed);
+                }
+            }
+        }
+        std::thread_local! {
+            static ON_EXIT: std::cell::RefCell<OnExit> =
+                const { std::cell::RefCell::new(OnExit(None)) };
+        }
+        let baton = Arc::new(Baton::<u8>::new());
+        let exiting = Arc::clone(&baton);
+        std::thread::spawn(move || {
+            ON_EXIT.with(|on_exit| on_exit.borrow_mut().0 = Some(Arc::clone(&exiting)));
+            exiting.acquire();
+        })
+        .join()
+        .expect("the exiting thread");
+        assert!(
+            RELEASED.load(Ordering::Relaxed),
+            "the destructor did not run"
+        );
+        baton.acquire();
+        assert!(baton.held_here());
+        baton.release();
     }
 }
