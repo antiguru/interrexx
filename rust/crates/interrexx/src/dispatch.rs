@@ -12,6 +12,7 @@ use interrexx_core::{
 use interrexx_parse::{Access, Args, ExprRef, Operator};
 
 use crate::activation::{Activation, MethodIdentity, Replied, ReplyState, TraceEntry, body_of};
+use crate::activity::DeferredLevel;
 use crate::error::{FailureSite, Raised};
 use crate::method_rows::MethodRows;
 use crate::plan::{BodyKey, Package, ProgramId};
@@ -270,10 +271,12 @@ enum NativeBody {
     /// A [`NativeBody::Run`] that runs Rexx code under a stack frame of its
     /// own.
     Leveled(NativeMethod),
-    /// A [`NativeBody::Leveled`] whose Rexx code is only an argument's own
-    /// `==` or `HASHCODE`, so it takes its level only for an argument not of
-    /// a base class.
-    Compared(NativeMethod),
+    /// A [`NativeBody::Leveled`] that compares or hashes collection items.
+    /// Its row in [`COMPARED_METHODS`] supplies a name to hold without copying.
+    Compared {
+        run: NativeMethod,
+        row: u8,
+    },
 }
 
 /// The primitives that render their items by `stringValue`, which sends a
@@ -495,15 +498,27 @@ impl Interp {
         args: &[Option<ObjRef>],
         body: impl FnOnce(&mut Interp) -> Result<T, Failure>,
     ) -> Result<T, Failure> {
-        use crate::activity::DeferredLevel;
         if args.len() > DeferredLevel::MAX_ARGUMENTS {
             return self.primitive_level(receiver, name, args, body);
         }
+        self.hold_method_level(receiver, name, None, args, body)
+    }
+
+    #[inline]
+    fn hold_method_level<T>(
+        &mut self,
+        receiver: ObjRef,
+        name: &'static [u8],
+        resolution: Option<Resolution>,
+        args: &[Option<ObjRef>],
+        body: impl FnOnce(&mut Interp) -> Result<T, Failure>,
+    ) -> Result<T, Failure> {
         let mut arguments = [None; DeferredLevel::MAX_ARGUMENTS];
         arguments[..args.len()].copy_from_slice(args);
         let deferred = DeferredLevel {
             caller: self.running_activation().map(|activation| activation.id),
             name,
+            resolution,
             receiver,
             arguments,
             count: args.len(),
@@ -550,7 +565,7 @@ impl Interp {
             .push(crate::activity::MethodLevel {
                 caller: level.caller,
                 name: level.name.into(),
-                resolution: None,
+                resolution: level.resolution,
                 receiver: level.receiver,
                 arguments: level.arguments().into(),
             });
@@ -1594,7 +1609,7 @@ impl ObjectModel {
             );
         }
         for (rows, leveled) in [(COMPARED_METHODS, false), (RENDERING_METHODS, true)] {
-            for (class_id, method_name) in rows {
+            for (row, (class_id, method_name)) in rows.iter().enumerate() {
                 let class = classes
                     .lookup(class_id)
                     .or_else(|| classes.system_lookup(class_id))
@@ -1608,7 +1623,10 @@ impl ObjectModel {
                 if let NativeBody::Run(run) = entry.body {
                     entry.body = match leveled {
                         true => NativeBody::Leveled(run),
-                        false => NativeBody::Compared(run),
+                        false => NativeBody::Compared {
+                            run,
+                            row: u8::try_from(row).expect("compared method row fits in a byte"),
+                        },
                     };
                 }
             }
@@ -3172,13 +3190,33 @@ impl Interp {
                     (Arity::Fixed(arity), _) if args.len() > arity => {
                         Err(Raised::too_many_method_arguments(arity).into())
                     }
-                    (_, NativeBody::Compared(run)) if self.argument_may_run_rexx(args) => self
-                        .run_leveled(run, cleared, resolution, receiver, name, args)
-                        .map(NativeStarted::Ran),
-                    (
-                        _,
-                        NativeBody::Run(run) | NativeBody::Leveled(run) | NativeBody::Compared(run),
-                    ) => {
+                    (_, NativeBody::Compared { run, row }) => {
+                        let registered = COMPARED_METHODS[usize::from(row)].1.as_bytes();
+                        if name != registered
+                            || args.len() > DeferredLevel::MAX_ARGUMENTS
+                            || self.argument_may_run_rexx(args)
+                        {
+                            self.run_leveled(run, cleared, resolution, receiver, name, args)
+                                .map(NativeStarted::Ran)
+                        } else {
+                            let ran = self.hold_method_level(
+                                receiver,
+                                registered,
+                                Some(resolution),
+                                args,
+                                |interp| {
+                                    pinned!(
+                                        interp,
+                                        crate::pinning::PinKind::native(registered),
+                                        run(interp, cleared, receiver, args)
+                                    )
+                                },
+                            );
+                            self.serve_posted_halt();
+                            ran.map(NativeStarted::Ran)
+                        }
+                    }
+                    (_, NativeBody::Run(run) | NativeBody::Leveled(run)) => {
                         let ran = pinned!(
                             self,
                             crate::pinning::PinKind::native(name),
