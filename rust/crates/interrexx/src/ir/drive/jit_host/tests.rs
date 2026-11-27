@@ -325,6 +325,34 @@ fn exhausted_for_still_checks_the_control_variable_after_native_passes() {
     );
 }
 
+#[test]
+fn a_constant_used_only_in_while_can_run_in_generated_code() {
+    check_header_constant("while i <= LIMIT");
+}
+
+#[test]
+fn a_constant_used_only_in_until_can_run_in_generated_code() {
+    check_header_constant("until i >= LIMIT");
+}
+
+fn check_header_constant(condition: &str) {
+    let boundaries = |limit: u32| {
+        reset_compiled_runs();
+        let condition = condition.replace("LIMIT", &limit.to_string());
+        ran(format!("n = 0\ndo i = 1 {condition}\n  n = n + 1\nend\nsay n i\n").as_bytes());
+        assert!(compiled_runs() > 0);
+        host_boundaries()
+    };
+    let short = boundaries(super::THRESHOLD + 2000);
+    let more = 18000;
+    let long = boundaries(super::THRESHOLD + 2000 + more);
+    assert!(
+        long - short < usize::cast_from(more) / 100,
+        "{condition}: the host took {} of {more} more pass boundaries",
+        long - short
+    );
+}
+
 /// The budget a compiled loop is retired against is per pass of any loop it
 /// holds, as the host's ops are counted: an inner loop whose body runs an op
 /// on the host on every one of its passes does not retire the outer loop.

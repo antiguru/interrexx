@@ -1809,12 +1809,14 @@ fn compile_settled(
     assert_exec_regions_hold_nothing_else(&ops);
 
     let consts = consts.values;
-    // Sized from the stream rather than from the program's symbol table, which
-    // `compile` does not have: the widest constant symbol this body actually
-    // names, and nothing for a body that names none. `Chunk::interned_symbols`
-    // has why the gap in front of a high id is the right trade.
+    // Sized from the ops rather than from the program's symbol table, which
+    // `compile` does not have. Both the main stream and side-table conditions
+    // cache constant symbols, so use the widest id either of them names.
+    // `Chunk::interned_symbols` has why the gap in front of a high id is the
+    // right trade.
     let widest_constant_symbol = ops
         .iter()
+        .chain(&conditions)
         .filter_map(|op| match op {
             Op::LoadConstant { symbol, .. } => Some(symbol.index()),
             _ => None,
