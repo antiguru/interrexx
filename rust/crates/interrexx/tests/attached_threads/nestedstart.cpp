@@ -9,7 +9,8 @@ static const char *inner_program;
 static size_t RexxEntry nested(const char *, size_t, CONSTRXSTRING *, const char *, RXSTRING *result)
 {
     RXSTRING inner = {0, NULL};
-    int code = RexxStart(0, NULL, inner_program, NULL, "CMD", RXCOMMAND, NULL, NULL, &inner);
+    short inner_rc = 0;
+    int code = RexxStart(0, NULL, inner_program, NULL, "CMD", RXCOMMAND, NULL, &inner_rc, &inner);
     if (code != 0 || inner.strptr == NULL || inner.strlength >= RXAUTOBUFLEN)
     {
         fprintf(stderr, "nested RexxStart: code %d, result length %zu\n", code, inner.strlength);
@@ -37,7 +38,8 @@ int main(int argc, char **argv)
         return 2;
     }
     RXSTRING outer = {0, NULL};
-    int code = RexxStart(0, NULL, argv[1], NULL, "CMD", RXCOMMAND, NULL, NULL, &outer);
+    short outer_rc = 0;
+    int code = RexxStart(0, NULL, argv[1], NULL, "CMD", RXCOMMAND, NULL, &outer_rc, &outer);
     if (outer.strptr)
     {
         printf("outer code %d result %.*s\n", code, (int)outer.strlength, outer.strptr);

@@ -206,8 +206,41 @@ fn count(stdout: &str, label: &str) -> usize {
         .unwrap_or_else(|| panic!("no {label} line:\n{stdout}"))
 }
 
+/// The tests a group run leaves out, as the group, the test and the reason.
+const NOT_RUN: &[(&str, &str, &str)] = &[(
+    "INVOCATION",
+    "TestContextExitThrow",
+    "level 6.07 THROW (Deviation 179, #804)",
+)];
+
+/// Renames the method `test` in the copied group file `group_file`, so the framework does not
+/// count it a test; it must be defined there once.
+fn leave_out(group_file: &Path, test: &str, reason: &str) {
+    let text = std::fs::read_to_string(group_file).expect("the copied group file");
+    let method = format!("::method {test}");
+    let mut found = 0;
+    let lines: Vec<String> = text
+        .split('\n')
+        .map(|line| {
+            if line.trim().eq_ignore_ascii_case(&method) {
+                found += 1;
+                format!("::method SKIPPED_{test}")
+            } else {
+                line.to_owned()
+            }
+        })
+        .collect();
+    assert_eq!(
+        found,
+        1,
+        "{test}, left out for {reason}, is not defined once in {}",
+        group_file.display()
+    );
+    std::fs::write(group_file, lines.join("\n")).expect("the copied group file is writable");
+}
+
 /// Runs `group` of `dir` through `testOORexx.rex`, from a fresh copy of the framework and the
-/// group's directory, with `library_path`.
+/// group's directory, with `library_path`, leaving out the tests [`NOT_RUN`] names.
 fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
     run_group_in(dir, group, library_path, &[])
 }
@@ -274,6 +307,9 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
         copy(&ootest.join(file), &run);
     }
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
+    for (_, test, reason) in NOT_RUN.iter().filter(|(of, ..)| *of == group) {
+        leave_out(&run.join(&group_file), test, reason);
+    }
     let mut command = rexx(
         &["testOORexx.rex", "-f", &group_file, "-U", "-V", "2"],
         &run,
@@ -809,7 +845,8 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// instance's own search path and extensions, and every system exit, as context exits and as
 /// registered ones; and `Terminate` after the creating thread detached, from that thread or from
 /// one never attached (`detach_root_terminate`). The oracle's counts: `INVOCATION` 55 tests and
-/// 295 assertions, `ProcessInvocation` 61 and 298, with no failure. `TestLoadLibrary` loads
+/// 295 assertions with `TestContextExitThrow` left out ([`NOT_RUN`]), 56 and 309 with it,
+/// `ProcessInvocation` 61 and 298, with no failure. `TestLoadLibrary` loads
 /// `rxmath`, which this crate runs in Rust. `TestTerminateOnOtherThreadUninitWaitsForGuard` fails
 /// here and makes neither of its two assertions: the uninit method it waits for sends to an
 /// object of another instance, which this crate refuses (Deviation 85), so that object is never
@@ -1498,7 +1535,7 @@ Error 3.901:  ⟨3.901¦nothere.rex⟩
 fn the_rust_extension_library_groups_match_the_oracles_counts() {
     for (dir, group, ran, assertions) in [
         ("extensions/rxmath", "RxMath", 289, 478),
-        ("extensions/rxregexp", "rxregexp", 33, 11741),
+        ("extensions/rxregexp", "rxregexp", 36, 16511),
     ] {
         let outcome = run_group(dir, group, library_path(false));
         assert_eq!(

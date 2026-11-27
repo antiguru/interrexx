@@ -93,7 +93,9 @@ dimension. An item that is not a string is replaced by
 the string that its `request` with the argument `STRING` answers. When that
 answer is not a string, the item is replaced by the answer of its `STRING`
 method, as with an insert of [SysGetMessage](r:util.sysgetmessage.args). So
-`.nil` is `The NIL object`, and an array that holds `1` is `1`. A place for
+`.nil` is `The NIL object`, and an array that holds `1` is `1`. The items are
+converted in order, and a conversion that raises ends the call: no later item
+is converted. A place for
 which the array has no item gives the null string, and so does every place
 when the array is empty. An array whose size is more than nine raises `SYNTAX
 40.1`, even when fewer than ten of its places hold an item, and one of size
@@ -125,6 +127,7 @@ call try "SysFormatMessage('[&1]', .array~of(.array~of(1)))"
 call try "SysFormatMessage('[&1]', .array~new(9))"
 call try "SysFormatMessage('[&1]', .array~new(10))"
 call try "SysFormatMessage('[&1]', .array~new(2, 2)~~put('m', 1, 1))"
+call try "SysFormatMessage('[&1]', .array~of(.c6zql~new, .c6zqr~new, .c6zql~new))"
 exit
 try:
   signal on syntax name e
@@ -135,6 +138,13 @@ e: say condition('o')~code
 ::class c6zqs
 ::method string
   return 'S'
+::class c6zql
+::method string
+  say 'converted'
+  return 'L'
+::class c6zqr
+::method string
+  raise syntax 93.900 array('r')
 ::class c6zqu
 ::method makearray
   return .array~of('u1', 'u2')
@@ -173,6 +183,8 @@ e: say condition('o')~code
 []
 40.1
 98.913
+converted
+93.900
 ```
 
 ## The answer

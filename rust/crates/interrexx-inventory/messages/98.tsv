@@ -27,6 +27,7 @@
 98	937	EXIT after REPLY must not have an expression.
 98	938	Message search override is valid only in a method of the target object.
 98	939	ADDITIONAL of a SYNTAX condition must be a single-dimensional array of values.
+98	940	Error number of THROW SYNTAX must be one the interpreter defines; found "&1".
 98	941	Error number of RAISE SYNTAX must be one the interpreter defines; found "&1".
 98	942	Class "&1" must be a MIXINCLASS for INHERIT.
 98	943	Class "&1" must be a subclass of base class "&3" of mixin class "&2".

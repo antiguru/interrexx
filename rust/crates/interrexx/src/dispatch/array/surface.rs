@@ -94,9 +94,10 @@ fn native_array_has_item(
         }
         Ok(Some(crate::eval::logical(false)))
     };
-    // An item not of a base class may compare through a Rexx `==`.
+    // An item not of a base class may compare through a Rexx `==`, and a
+    // string's `==` may run an item's Rexx `REQUEST`.
     if interp.is_base_class(wanted) {
-        search(interp)
+        interp.deferred_level(receiver, b"HASITEM", args, search)
     } else {
         interp.primitive_level(receiver, b"HASITEM", args, search)
     }

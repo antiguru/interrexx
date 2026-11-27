@@ -257,18 +257,20 @@ fn an_inner_loop_ending_in_its_test_settles_in_compiled_code() {
     );
 }
 
-/// A loop whose `WHILE` or `UNTIL` runs from `Chunk::conditions` has its pass
-/// boundary taken by generated code, condition and all. The host takes the
-/// ones where the record is worked out, the last, where the condition no
-/// longer holds, and those the clause countdown runs out at, about one in a
-/// thousand clauses: far fewer than one a pass.
+/// A loop with a `FOR` budget or a test from `Chunk::conditions` has its pass
+/// boundary taken by generated code. The host sets up the record, takes the
+/// last boundary when the condition ends the loop or the budget runs out,
+/// and handles the clause countdown running out.
 #[test]
-fn a_value_only_condition_is_tested_in_generated_code() {
+fn budgets_and_value_only_conditions_are_checked_in_generated_code() {
     for header in [
         "do i = 1 while i <= LIMIT",
         "do i = 1 until i >= LIMIT",
         "do LIMIT while n >= 0 & p < LIMIT",
         "do while p < LIMIT | n < 0",
+        "do i = 1 for LIMIT",
+        "do i = 1 for LIMIT while i > 0",
+        "do i = 1 for LIMIT until i < 0",
     ] {
         let boundaries = |limit: u32| {
             reset_compiled_runs();
@@ -293,6 +295,62 @@ fn a_value_only_condition_is_tested_in_generated_code() {
             long - short
         );
     }
+}
+
+#[test]
+fn exhausted_for_still_checks_the_control_variable_after_native_passes() {
+    let boundaries = |limit| {
+        reset_compiled_runs();
+        ran(format!(
+            "signal on novalue\n\
+             n = 0\n\
+             do i = 1 for {limit}\n\
+               n = n + 1\n\
+               if n = {limit} then drop i\n\
+             end\n\
+             bad = 1 / 0\n\
+             novalue: if n \\= {limit} | sigl \\= 6 then bad = 1 / 0\n"
+        )
+        .as_bytes());
+        assert!(compiled_runs() > 0);
+        host_boundaries()
+    };
+    let short = boundaries(super::THRESHOLD + 2000);
+    let more = 18000;
+    let long = boundaries(super::THRESHOLD + 2000 + more);
+    assert!(
+        long - short < usize::cast_from(more) / 100,
+        "the host took {} of {more} more pass boundaries",
+        long - short
+    );
+}
+
+#[test]
+fn a_constant_used_only_in_while_can_run_in_generated_code() {
+    check_header_constant("while i <= LIMIT");
+}
+
+#[test]
+fn a_constant_used_only_in_until_can_run_in_generated_code() {
+    check_header_constant("until i >= LIMIT");
+}
+
+fn check_header_constant(condition: &str) {
+    let boundaries = |limit: u32| {
+        reset_compiled_runs();
+        let condition = condition.replace("LIMIT", &limit.to_string());
+        ran(format!("n = 0\ndo i = 1 {condition}\n  n = n + 1\nend\nsay n i\n").as_bytes());
+        assert!(compiled_runs() > 0);
+        host_boundaries()
+    };
+    let short = boundaries(super::THRESHOLD + 2000);
+    let more = 18000;
+    let long = boundaries(super::THRESHOLD + 2000 + more);
+    assert!(
+        long - short < usize::cast_from(more) / 100,
+        "{condition}: the host took {} of {more} more pass boundaries",
+        long - short
+    );
 }
 
 /// The budget a compiled loop is retired against is per pass of any loop it

@@ -686,6 +686,25 @@ fn pass_of(
                 {
                     Step::Compound { pc: at }
                 }
+                Op::ParseBegin {
+                    opening: crate::ir::ParseOpening::Literal,
+                    ..
+                } => Step::ParseGuard { pc: at },
+                Op::ParseStore {
+                    slot,
+                    value,
+                    scratch,
+                } => {
+                    steps.push(Step::Const {
+                        dst: scratch,
+                        bits: value.bits(),
+                    });
+                    Step::Store {
+                        pc: at,
+                        slot,
+                        src: scratch,
+                    }
+                }
                 // Ops that neither jump nor trace, which `general` runs; one
                 // that parks the clause for a callee hands it to the driver.
                 Op::PushArg { src } => Step::PushArg { src },
@@ -769,7 +788,8 @@ fn pass_of(
             | Step::Compound { .. }
             | Step::Open { .. }
             | Step::Close { .. }
-            | Step::Trace { .. } => {}
+            | Step::Trace { .. }
+            | Step::ParseGuard { .. } => {}
             _ if inner == 0 => native += 1,
             _ => {}
         }
@@ -782,6 +802,18 @@ fn pass_of(
         .iter()
         .map(|&index| loop_test(code, chunk, index))
         .collect();
+    let limited = loops
+        .iter()
+        .enumerate()
+        .fold(0u8, |mask, (record, &index)| {
+            let has_budget = matches!(
+                code.body.instructions.get(usize::cast_from(index)).map(|clause| &clause.kind),
+                Some(InstructionKind::Do(body) | InstructionKind::Loop(body))
+                    if matches!(&body.kind, interrexx_parse::LoopKind::Controlled(controlled)
+                        if controlled.for_count.is_some())
+            );
+            mask | (u8::from(has_budget) << record)
+        });
     Some((
         Pass {
             steps,
@@ -789,6 +821,7 @@ fn pass_of(
             end: loop_pc,
             loops,
             tests,
+            limited,
         },
         budget,
     ))
@@ -1471,13 +1504,15 @@ impl Host for Driven<'_, '_> {
         let own = &mut native.loops[0];
         if own.dirty != 0 {
             own.dirty = 0;
-            self.interp.quick_passes_reached(own.value);
+            self.interp
+                .quick_passes_reached(own.value, own.for_remaining);
         }
         if self.loops.len() > 1 {
             for record in &mut native.loops[1..] {
                 if record.dirty != 0 {
                     record.dirty = 0;
-                    self.interp.quick_passes_reached(record.value);
+                    self.interp
+                        .quick_passes_reached(record.value, record.for_remaining);
                 }
             }
         }
@@ -1710,14 +1745,18 @@ impl Driven<'_, '_> {
                 "loop record {k}'s quick pass is not what its code was compiled for"
             );
             match quick.kind {
-                QuickKind::Controlled { slot, step, to }
-                    if u64::cast_from(slot) < native.slot_count =>
-                {
+                QuickKind::Controlled {
+                    slot,
+                    step,
+                    to,
+                    for_remaining,
+                } if u64::cast_from(slot) < native.slot_count => {
                     record.ready = 1;
                     record.kind = layout::LOOP_CONTROLLED;
                     record.slot = u64::cast_from(slot);
                     record.step = step;
                     record.to = to;
+                    record.for_remaining = for_remaining.unwrap_or(0);
                 }
                 QuickKind::Controlled { .. } => {}
                 QuickKind::Count { remaining } => {

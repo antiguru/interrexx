@@ -35,3 +35,4 @@
 20	934	Symbol expected after COUNTER keyword.
 20	935	Symbol expected after NUMERIC keyword of ::OPTIONS directive.
 20	936	Symbol expected as condition name of a CATCH clause.
+20	937	Symbol expected as condition name of a THROW instruction.

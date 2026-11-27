@@ -420,6 +420,10 @@ impl Interp {
         name: &[u8],
         args: &[Option<ObjRef>],
     ) -> Result<Option<ObjRef>, Failure> {
+        // A level held aside goes on below this one ([`Interp::deferred_level`]).
+        if self.activity.deferred_level.is_some() {
+            self.raise_deferred_level();
+        }
         let caller = self.running_activation().map(|activation| activation.id);
         self.activity
             .method_levels
@@ -454,6 +458,10 @@ impl Interp {
         args: &[Option<ObjRef>],
         body: impl FnOnce(&mut Interp) -> Result<T, Failure>,
     ) -> Result<T, Failure> {
+        // A level held aside goes on below this one ([`Interp::deferred_level`]).
+        if self.activity.deferred_level.is_some() {
+            self.raise_deferred_level();
+        }
         let caller = self.running_activation().map(|activation| activation.id);
         self.activity
             .method_levels
@@ -467,6 +475,85 @@ impl Interp {
         let ran = body(self);
         self.activity.method_levels.pop();
         ran
+    }
+
+    /// [`Interp::primitive_level`] for a `body` that seldom runs Rexx code.
+    /// The level is held aside and pushed only when Rexx code starts while
+    /// `body` runs ([`Interp::raise_deferred_level`], from
+    /// [`Interp::push_boxed_activation`], which every activation passes), and
+    /// it stays until `body` ends. A level pushed while it is held aside,
+    /// eager or deferred, pushes it first, so the stack keeps the order the
+    /// primitives were sent in. Only Rexx code reads the levels
+    /// (`.context~stackFrames`), so until then nothing can see that it is
+    /// missing. A string's `==` sends `REQUEST` to the other operand, so an
+    /// argument of a base class does not make this level needless.
+    #[inline]
+    pub(crate) fn deferred_level<T>(
+        &mut self,
+        receiver: ObjRef,
+        name: &'static [u8],
+        args: &[Option<ObjRef>],
+        body: impl FnOnce(&mut Interp) -> Result<T, Failure>,
+    ) -> Result<T, Failure> {
+        use crate::activity::DeferredLevel;
+        if args.len() > DeferredLevel::MAX_ARGUMENTS {
+            return self.primitive_level(receiver, name, args, body);
+        }
+        let mut arguments = [None; DeferredLevel::MAX_ARGUMENTS];
+        arguments[..args.len()].copy_from_slice(args);
+        let deferred = DeferredLevel {
+            caller: self.running_activation().map(|activation| activation.id),
+            name,
+            receiver,
+            arguments,
+            count: args.len(),
+        };
+        // A primitive that defers, run from the body of another whose level
+        // is still held aside: the outer level goes on first, below this one,
+        // so that Rexx code run under this one sees both.
+        if let Some(outer) = self.activity.deferred_level.replace(deferred) {
+            self.push_deferred_level(outer);
+        }
+        let ran = body(self);
+        // `raise_deferred_level` took this level when it pushed it. A level
+        // that a nested primitive held aside was taken back when it ended, and
+        // the outer one was pushed above, so none is held aside past here.
+        if self.activity.deferred_level.take().is_none() {
+            self.activity.method_levels.pop();
+        }
+        ran
+    }
+
+    /// Pushes the level [`Interp::deferred_level`] holds aside, if there is
+    /// one, because Rexx code is about to start.
+    #[cold]
+    #[inline(never)]
+    pub(crate) fn raise_deferred_level(&mut self) {
+        if let Some(level) = self.activity.deferred_level.take() {
+            self.push_deferred_level(level);
+        }
+    }
+
+    /// Pushes `level` onto the method levels.
+    ///
+    /// Nothing between a level being held aside and its being pushed runs Rexx
+    /// code, since the first Rexx code to start pushes it; so the activation
+    /// running is still the one the primitive was sent from.
+    fn push_deferred_level(&mut self, level: crate::activity::DeferredLevel) {
+        debug_assert_eq!(
+            level.caller,
+            self.running_activation().map(|activation| activation.id),
+            "a deferred level is pushed while its primitive's caller is not running"
+        );
+        self.activity
+            .method_levels
+            .push(crate::activity::MethodLevel {
+                caller: level.caller,
+                name: level.name.into(),
+                resolution: None,
+                receiver: level.receiver,
+                arguments: level.arguments().into(),
+            });
     }
 
     /// The primitive method `name` that runs for `receiver`: the first method
@@ -1395,6 +1482,11 @@ pub(crate) struct ObjectModel {
     /// The scope a `List`'s chain is bound under, which every `List`
     /// method reaches.
     list: ObjRef,
+    /// The scope a `Supplier`'s state is bound under, and the class every
+    /// supplier test compares against.
+    pub(crate) supplier: ObjRef,
+    /// The class [`collection::is_queue`] tests against.
+    queue: ObjRef,
     /// The class `.Context~stackFrames` builds its elements from. Reached
     /// here rather than by name at every build, exactly as `context` beside
     /// it is.
@@ -1598,6 +1690,10 @@ impl ObjectModel {
             .lookup("WeakReference")
             .expect("WeakReference is a native class");
         let list = classes.lookup("List").expect("List is a native class");
+        let supplier = classes
+            .lookup("Supplier")
+            .expect("Supplier is a native class");
+        let queue = classes.lookup("Queue").expect("Queue is a native class");
         let stack_frame = classes
             .lookup("StackFrame")
             .expect("StackFrame is a native class");
@@ -1611,6 +1707,26 @@ impl ObjectModel {
             })
             .collect();
         let nil_behaviour = classes.hiding_behaviour(object, &["COPY", "START", "OBJECTNAME="]);
+        // Each native class whose instance behaviour answers every one of
+        // `BASE_CLASS_MESSAGES` with a primitive is marked. A class that does
+        // not understand one of them itself, as `Stem` and `VariableReference`
+        // do not understand `==`, passes it to its `UNKNOWN`, which sends it
+        // on to another object, so it is not.
+        let native: Vec<ObjRef> = classes
+            .registered()
+            .chain(classes.system_registered())
+            .map(|(_, class)| class)
+            .collect();
+        for class in native {
+            let primitive = BASE_CLASS_MESSAGES.iter().all(|name| {
+                classes
+                    .lookup_instance_method(class, name)
+                    .is_some_and(|(_, method)| natives.get(method).is_some())
+            });
+            if primitive {
+                classes.set_primitive_instances(class);
+            }
+        }
         natives.seal();
         ObjectModel {
             classes,
@@ -1632,6 +1748,8 @@ impl ObjectModel {
             stem,
             weak_reference,
             list,
+            supplier,
+            queue,
             stack_frame,
             store_holders,
             nil_behaviour,
@@ -1718,7 +1836,9 @@ enum Primitive {
 /// [`Interp::lookup_behaviour`] answered for the site's name, with no scope
 /// override, against `behaviour` while the class graph stood at `epoch`. The
 /// lookup reads nothing else, so the answer holds while both match. The
-/// receiver's own methods are asked on every send, ahead of the memo.
+/// receiver's own methods are asked on every send, ahead of the memo. Where
+/// the name missed, the memo keeps the lookup of `UNKNOWN` in the same
+/// behaviour instead ([`MemoTarget::Unknown`]), which reads the same graph.
 #[derive(Copy, Clone)]
 pub(crate) struct SendMemo {
     epoch: interrexx_classes::Epoch,
@@ -1742,6 +1862,11 @@ enum MemoTarget {
     /// Anything else, so that a native method's send does not ask the
     /// tables again on every send to learn it is none of the above.
     Other,
+    /// The site's name resolves to nothing in the memo's behaviour, and the
+    /// memo's resolution is the behaviour's `UNKNOWN` (r[class.methods.unknown]).
+    /// The method tables do not decide either answer, so `rows` does not
+    /// cover this target.
+    Unknown,
 }
 
 /// A memo's `::METHOD` body: what [`Interp::invocable`] answered and the
@@ -1764,6 +1889,11 @@ enum SuperScope {
     /// have changed since the send found the method.
     OfReceiver,
 }
+
+/// The messages whose answer [`Interp::is_base_class`] vouches is a
+/// primitive's: hashing an index, comparing two items, and converting a value
+/// to an array or a string.
+const BASE_CLASS_MESSAGES: [&str; 3] = ["HASHCODE", "==", "REQUEST"];
 
 /// The behaviour a receiver's messages resolve against.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -2022,16 +2152,40 @@ impl Interp {
             .as_bytes()
     }
 
-    /// The id, for any receiver, of the
-    /// class whose behaviour answers this object's messages.
+    /// Whether every one of [`BASE_CLASS_MESSAGES`] sent to `value` runs a
+    /// primitive, so a caller may do what that primitive does instead of
+    /// sending it. `value` answers from the instance behaviour of a native
+    /// class that [`ObjectModel::build`] marked, unchanged: it is an instance
+    /// of that class itself, not of a subclass, and neither `enhanced` nor
+    /// `setMethod` gave it methods of its own. No program can change such a
+    /// class's methods (`r[class.methods.library]`).
+    ///
+    /// A value no behaviour is found for answers false, so its messages are
+    /// sent. A class object answers false, since a class method can stand in
+    /// front of its primitives, and so does `.nil`, whose behaviour is its own
+    /// and not one [`ObjectModel::build`] marks.
     pub(crate) fn is_base_class(&mut self, value: ObjRef) -> bool {
-        let Some(class) = self.class_of_value(value) else {
-            return true;
+        let behaviour = match value.decode() {
+            // A string has no dictionary of its own for `setMethod` to write
+            // to, so it answers from `String`'s instance behaviour.
+            Decoded::SmallInt(_) | Decoded::Text(_) => return true,
+            Decoded::Nil => return false,
+            Decoded::Heap { .. } => match self.heap.get(value).map(|object| &object.body) {
+                Some(Body::Text { .. } | Body::Num { .. }) => return true,
+                Some(Body::Instance { own: Some(_), .. }) => return false,
+                Some(Body::Instance { behaviour, .. }) => *behaviour,
+                _ => match self.receiver_behaviour(value) {
+                    Ok(Behaviour::Instance { methods, .. }) => methods,
+                    // A value with no behaviour gets its messages sent.
+                    Ok(Behaviour::ClassSide(_)) | Err(_) => return false,
+                },
+            },
         };
-        let id = self.classes().id_string(class).to_string();
-        self.classes().system_lookup(&id) == Some(class)
+        self.classes().is_primitive_behaviour(behaviour)
     }
 
+    /// The id, for any receiver, of the
+    /// class whose behaviour answers this object's messages.
     pub(crate) fn receiver_class_id(&mut self, receiver: ObjRef) -> Option<String> {
         let owner = match self.receiver_behaviour(receiver).ok()? {
             Behaviour::Instance { owner, .. } => owner,
@@ -2330,8 +2484,10 @@ impl Interp {
 
     /// [`Interp::lookup_behaviour`] with no scope override, answered from
     /// `memo` while the class graph's epoch and the behaviour are the ones it
-    /// was filled under, with the memo's body where it still holds. A miss is
-    /// not kept: it goes on to `UNKNOWN`, which is a send of its own.
+    /// was filled under, with the memo's body where it still holds. A miss
+    /// answers the behaviour's `UNKNOWN` as a [`MemoTarget::Unknown`], and is
+    /// kept only where there is one: one that finds no `UNKNOWN` either
+    /// answers `None` and raises.
     #[inline]
     fn lookup_memoized(
         &mut self,
@@ -2345,13 +2501,28 @@ impl Interp {
             .filter(|kept| kept.epoch == epoch && kept.behaviour == behaviour);
         let rows = self.method_rows();
         if let Some(kept) = kept
-            && kept.rows == rows
+            && (kept.rows == rows || matches!(kept.target, MemoTarget::Unknown))
         {
+            debug_assert!(
+                !matches!(kept.target, MemoTarget::Unknown)
+                    || (self.lookup_behaviour(behaviour, name, None).is_none()
+                        && self.lookup_behaviour(behaviour, UNKNOWN, None).is_some_and(
+                            |unknown| {
+                                unknown.scope == kept.resolution.scope
+                                    && unknown.method == kept.resolution.method
+                            }
+                        )),
+                "a send memo kept a miss and its UNKNOWN after the class graph changed \
+                 them without a new epoch"
+            );
             return Some((kept.resolution, kept.target));
         }
         let resolution = match kept {
             Some(kept) => kept.resolution,
-            None => self.lookup_behaviour(behaviour, name, None)?,
+            None => match self.lookup_behaviour(behaviour, name, None) {
+                Some(resolution) => resolution,
+                None => return self.memoize_miss(behaviour, memo, epoch, rows),
+            },
         };
         let target = self.memo_target(behaviour, resolution);
         memo.set(Some(SendMemo {
@@ -2362,6 +2533,28 @@ impl Interp {
             rows,
         }));
         Some((resolution, target))
+    }
+
+    /// [`Interp::lookup_memoized`] for a name `behaviour` does not answer:
+    /// its `UNKNOWN`, kept in `memo`.
+    #[cold]
+    #[inline(never)]
+    fn memoize_miss(
+        &mut self,
+        behaviour: Behaviour,
+        memo: &Cell<Option<SendMemo>>,
+        epoch: interrexx_classes::Epoch,
+        rows: u64,
+    ) -> Option<(Resolution, MemoTarget)> {
+        let resolution = self.lookup_behaviour(behaviour, UNKNOWN, None)?;
+        memo.set(Some(SendMemo {
+            epoch,
+            behaviour,
+            resolution,
+            target: MemoTarget::Unknown,
+            rows,
+        }));
+        Some((resolution, MemoTarget::Unknown))
     }
 
     /// The [`MemoTarget`] for `resolution` in `behaviour`: what it runs, where
@@ -2731,9 +2924,15 @@ impl Interp {
     /// The class an arbitrary value is an
     /// instance of, or `None` for a value this crate builds no class for.
     pub(crate) fn class_of_value(&mut self, value: ObjRef) -> Option<ObjRef> {
-        match self.receiver_behaviour(value).ok()? {
-            Behaviour::Instance { owner, .. } => Some(owner),
-            Behaviour::ClassSide(class) => Some(self.classes().class_of(class)),
+        let behaviour = self.receiver_behaviour(value).ok()?;
+        Some(self.class_of_behaviour(behaviour))
+    }
+
+    /// The class an object whose behaviour is `behaviour` belongs to.
+    fn class_of_behaviour(&mut self, behaviour: Behaviour) -> ObjRef {
+        match behaviour {
+            Behaviour::Instance { owner, .. } => owner,
+            Behaviour::ClassSide(class) => self.classes().class_of(class),
         }
     }
 
@@ -4242,6 +4441,22 @@ impl Interp {
                 Some((resolution, MemoTarget::Accessor(generated))) => {
                     return self.begin_memo_accessor(resolution, generated, receiver, name, args);
                 }
+                Some((unknown, MemoTarget::Unknown)) => {
+                    // The receiver's own methods come ahead of the memo for
+                    // `UNKNOWN` as they did for the name, as in
+                    // [`Interp::lookup`].
+                    let unknown = match self.own_lookup(receiver, UNKNOWN, None) {
+                        Some(own) => own,
+                        None => Some(unknown),
+                    };
+                    let Some(unknown) = unknown else {
+                        return Err(self.nomethod(receiver, name, Miss::NoMethod));
+                    };
+                    return self
+                        .begin_unknown(receiver, Some(behaviour), name, args, unknown, true)
+                        .map(|ran| ran.map_or(Started::Entered, Started::Ran));
+                }
+                None => return self.begin_nomethod_or_own_unknown(receiver, behaviour, name, args),
                 found => found.map(|(resolution, _)| resolution),
             },
         };
@@ -4254,6 +4469,26 @@ impl Interp {
             Err(miss) => self
                 .begin_unknown_or_nomethod(receiver, name, args, miss, true)
                 .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
+        }
+    }
+
+    /// [`Interp::begin_send_at`] for a name `behaviour` answers neither as a
+    /// method nor through an `UNKNOWN`: only the receiver's own `UNKNOWN` is
+    /// left to ask, so the class graph is not searched for it a second time.
+    #[cold]
+    #[inline(never)]
+    fn begin_nomethod_or_own_unknown(
+        &mut self,
+        receiver: ObjRef,
+        behaviour: Behaviour,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        match self.own_lookup(receiver, UNKNOWN, None) {
+            Some(Some(own)) => self
+                .begin_unknown(receiver, Some(behaviour), name, args, own, true)
+                .map(|ran| ran.map_or(Started::Entered, Started::Ran)),
+            _ => Err(self.nomethod(receiver, name, Miss::NoMethod)),
         }
     }
 
@@ -4297,7 +4532,23 @@ impl Interp {
         let Some(resolution) = self.lookup(receiver, UNKNOWN, None) else {
             return Err(self.nomethod(receiver, name, miss));
         };
-        let frameless = self.frameless_unknown(resolution, receiver);
+        self.begin_unknown(receiver, None, name, args, resolution, begun)
+    }
+
+    /// [`Interp::begin_unknown_or_nomethod`] once `UNKNOWN` has resolved to
+    /// `resolution` for the receiver, whose behaviour is `behaviour` where
+    /// the caller has it.
+    #[inline(never)]
+    fn begin_unknown(
+        &mut self,
+        receiver: ObjRef,
+        behaviour: Option<Behaviour>,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        resolution: Resolution,
+        begun: bool,
+    ) -> Result<Option<Option<ObjRef>>, Failure> {
+        let frameless = self.frameless_unknown(resolution, receiver, behaviour);
         // A read of an entry a `Directory` or `StringTable` of the base class
         // answers through its primitive `UNKNOWN` uses neither the forwarded
         // arguments nor the message name as an object, so neither is built.
@@ -4377,7 +4628,12 @@ impl Interp {
     /// without a level of its own: `processUnknown` calls it directly for a
     /// `Stem`, a `VariableReference`, and a `Directory` or `StringTable` of
     /// the base class.
-    fn frameless_unknown(&mut self, resolution: Resolution, receiver: ObjRef) -> Option<Frameless> {
+    fn frameless_unknown(
+        &mut self,
+        resolution: Resolution,
+        receiver: ObjRef,
+        behaviour: Option<Behaviour>,
+    ) -> Option<Frameless> {
         self.object_model().natives.get(resolution.method)?;
         let named = self.frameless_classes();
         let scope = Some(resolution.scope);
@@ -4390,7 +4646,11 @@ impl Interp {
         if !(named.directory == scope || named.string_table == scope) {
             return None;
         }
-        (self.class_of_value(receiver) == Some(resolution.scope)).then_some(Frameless::Hash)
+        let class = match behaviour {
+            Some(behaviour) => Some(self.class_of_behaviour(behaviour)),
+            None => self.class_of_value(receiver),
+        };
+        (class == Some(resolution.scope)).then_some(Frameless::Hash)
     }
 
     /// [`FramelessClasses`], resolved again whenever the class registry's
@@ -4448,6 +4708,12 @@ impl Interp {
 
     /// Whether `value` is not of a base class, so its own methods may be
     /// Rexx code; a string or number answers on the handle alone.
+    ///
+    /// `.nil` answers false although [`Interp::is_base_class`] does too: its
+    /// behaviour is its own, but no program can give it a Rexx method. Its
+    /// methods are `Object`'s, a library class (`r[class.methods.library]`),
+    /// so none of them is Rexx code that could send it `setMethod` or `run`;
+    /// sent from outside, those raise 97.2, and `enhanced` raises 97.1.
     #[inline]
     pub(crate) fn may_run_rexx(&mut self, value: ObjRef) -> bool {
         match value.decode() {

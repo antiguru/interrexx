@@ -5,9 +5,9 @@
 //!   `rxregexp.cls` loads that one, as on the oracle (measured: a program
 //!   beside an `rxregexp.cls` defining `RegularExpression~which` prints
 //!   `the program's own` from either directory).
-//! * Review Focus 3: the patterns Deviation 87 rules on, which never answer
-//!   on the oracle, answer here in time and memory bounded by the subject and
-//!   the pattern.
+//! * Review Focus 3: patterns that repeat an empty match, a range to `'7F'x`,
+//!   and counts too large to compile (Deviation 87) answer here in time and
+//!   memory bounded by the subject and the pattern.
 
 use std::time::{Duration, Instant};
 
@@ -105,8 +105,8 @@ fn repeated_empty_matches_and_a_range_to_7f_answer_in_bounded_time_and_memory() 
 /// A count whose copies would pass the automaton's state budget is compile
 /// error 5 at its `{` (Deviation 87), answered before anything is built:
 /// `new` raises 38, `parse` returns 5, and the object then matches
-/// everything. The oracle crashes on each of these (measured). A count
-/// within the budget answers as before.
+/// everything. The oracle uses memory until it is killed on each of these
+/// (measured). A count within the budget answers as before.
 #[test]
 #[expect(
     clippy::disallowed_methods,

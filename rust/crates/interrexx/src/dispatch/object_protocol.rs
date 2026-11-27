@@ -324,14 +324,20 @@ pub(super) fn native_string(
         let send =
             |interp: &mut Interp| interp.send_message(receiver, OBJECTNAME, None, &[], caller);
         // A level of its own where the send reaches a Rexx method.
-        let answered = if interp.answers_by_method(receiver, OBJECTNAME)
-            || interp.answers_by_method(receiver, DEFAULTNAME)
-        {
+        let own_name = interp.answers_by_method(receiver, OBJECTNAME);
+        let answered = if own_name || interp.answers_by_method(receiver, DEFAULTNAME) {
             interp.primitive_level(receiver, b"STRING", &[], send)?
         } else {
             send(interp)?
         };
-        let text = interp.object_name_answer_text(receiver, answered)?;
+        if let Some(answered) = answered {
+            let text = match own_name {
+                true => interp.object_name_answer_text(receiver, answered)?,
+                false => interp.default_string_value_text(answered),
+            };
+            return Ok(Some(interp.text_built(text)));
+        }
+        let text = interp.default_string_value_text(receiver);
         return Ok(Some(interp.text_built(text)));
     }
     let text = match interp.is_stem_object(receiver) {
@@ -1363,9 +1369,10 @@ pub(crate) fn start_trace_delivery(
         interp.roots.activity_mut().push_temp(object);
     }
     let spawner = interp.spawner_of_running()?;
-    let mut idle = interp.new_activity();
+    let mut idle = interp.unnumbered_activity();
     idle.activity.spawner = Some(spawner);
     idle.activity.delivering = true;
+    idle.activity.delivers_for = Some(interp.running_activity());
     idle.activity.depth_base = interp.nesting_depth();
     idle.activity.first = Some(First::Send(Box::new(send)));
     idle.activity.root_then = Some(Then::Started(message));
@@ -2022,9 +2029,8 @@ pub(super) enum ArrayArgument {
 /// `requestArray` where it is not already an array.
 ///
 /// A conversion answering an object that is not an array raises what `.nil`
-/// does. The reference run reads that answer through the array layout, so a
-/// string answer is 98.913 and a `List` answer kills it (oracle defect,
-/// `corpus/oracle-crashes.txt` entry 34).
+/// does, 98.913, as in the reference run (`corpus/oracle-crashes.txt` entry
+/// 34, dropped).
 pub(super) fn array_argument(
     interp: &mut Interp,
     value: ObjRef,

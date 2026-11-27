@@ -161,9 +161,13 @@ pub(super) fn check_not_run(row: &Row, text: &str, context: &Context) -> Result<
         let at = lower
             .find("restrictos(")
             .ok_or("the line holds no restrictOS")?;
-        let argument = source[at + "restrictos(".len()..]
-            .trim_start()
-            .trim_start_matches(['\'', '"']);
+        // Only a string literal names the systems on its own; any other
+        // argument is an expression whose value this check cannot read.
+        let argument = source[at + "restrictos(".len()..].trim_start();
+        if !argument.starts_with(['\'', '"']) {
+            return Err("the restrictOS argument is not a string literal".to_string());
+        }
+        let argument = argument.trim_start_matches(['\'', '"']);
         let argument = argument
             .split(['\'', '"'])
             .next()

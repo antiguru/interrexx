@@ -44,7 +44,8 @@ a fallback. An object that is not a string is replaced by the string that its
 the object is replaced by the answer of its `STRING` method. So `.object~new`,
 whose `STRING` answers `an Object`, raises `SYNTAX 88.905` as `num` and is put
 in as `an Object` as an insert, and an object whose only method is a `STRING`
-that answers `2` names message `2`.
+that answers `2` names message `2`. The inserts are converted in order, and a
+conversion that raises ends the call: no later insert is converted.
 
 ```rexx
 call try "SysGetMessage()"
@@ -69,6 +70,7 @@ call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('1e2', 
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage(.mutablebuffer~new(100), .mutablebuffer~new('rexx.cat'), 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('100.00000000000000000001', , 'a', 'b', 'c')"
 call try "SysGetMessage('1.0000000000000000001')"
+call try "SysGetMessage(5, 'rexx.cat', .c6zql~new, .c6zqr~new, .c6zql~new)"
 exit
 try:
   signal on syntax name e
@@ -79,6 +81,13 @@ e: say condition('o')~code
 ::class c6zqs
 ::method string
   return '2'
+::class c6zql
+::method string
+  say 'converted'
+  return 'L'
+::class c6zqr
+::method string
+  raise syntax 93.900 array('r')
 ```
 
 ```output
@@ -104,6 +113,8 @@ e: say condition('o')~code
 1
 1
 88.905
+converted
+93.900
 ```
 
 ## The catalog
