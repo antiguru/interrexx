@@ -975,10 +975,10 @@ fn compile_settled(
                             .iter()
                             .flatten()
                             .flat_map(|trigger| trigger.targets.iter().flatten())
-                            .map(|target| match body.expr(target).kind() {
-                                ExprView::Variable(id) => plan.slot_for_symbol(id),
-                                _ => None,
-                            })
+                            .map(|&target| body
+                                .expr(target)
+                                .variable()
+                                .and_then(|id| plan.slot_for_symbol(id)))
                             .eq(writes.iter().map(|&(slot, _)| Some(usize::cast_from(slot)))),
                         "prepared PARSE writes disagree with the target slots in this body's plan"
                     );

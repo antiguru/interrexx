@@ -1,6 +1,6 @@
 use super::*;
 use crate::plan::Plan;
-use interrexx_parse::{CodeBody, SymbolTable};
+use interrexx_parse::{CodeBody, ExprView, SymbolTable};
 
 /// The slot writes for a literal source and a template whose positions and
 /// target values are known independently of the running activation.
@@ -13,7 +13,7 @@ pub(crate) fn literal_writes(
     let ParseSource::Value(Some(expression)) = &parse.source else {
         return None;
     };
-    let ExprView::Literal(bytes) = body.expr(expression).kind() else {
+    let ExprView::Literal(bytes) = body.expr(*expression).kind() else {
         return None;
     };
     if parse.upper || parse.lower || crate::value::canonical_small_int(bytes).is_some() {
@@ -26,7 +26,7 @@ pub(crate) fn literal_writes(
         if trigger.kind == TriggerKind::End {
             cursor.move_to_end();
         } else {
-            let operand = match body.expr(trigger.value.as_ref()?).kind() {
+            let operand = match body.expr(trigger.value?).kind() {
                 ExprView::Literal(operand) => operand,
                 ExprView::Constant(id) => symbols.name(id).as_bytes(),
                 _ => return None,
@@ -61,9 +61,7 @@ pub(crate) fn literal_writes(
                 cursor.next_word(bytes)
             };
             let Some(target) = target else { continue };
-            let ExprView::Variable(id) = body.expr(target).kind() else {
-                return None;
-            };
+            let id = body.expr(*target).variable()?;
             let slot = u32::try_from(plan.slot_for_symbol(id)?).ok()?;
             // Inline pieces can live in the plan without adding GC roots.
             writes.push((slot, ObjRef::inline_text(&bytes[piece])?));
