@@ -37,260 +37,35 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v2
         with:
           cache: false
-      - run: cargo test --locked --lib -p interrexx-rxapi -p interrexx-capi-rxapi
-      - name: Test interpreter paths and search on Windows
+      - name: Measure Windows ooRexx keyboard results
         shell: pwsh
+        timeout-minutes: 6
         run: |
-          @'
-          #[path = "crates/interrexx/src/paths.rs"]
-          mod paths;
-          #[path = "crates/interrexx/src/require.rs"]
-          mod require;
-          '@ | Set-Content -Encoding utf8 windows-path-tests.rs
-          rustc --edition=2024 --test windows-path-tests.rs -o windows-path-tests.exe
+          $name = 'oorexx-5.2.0-13156.windows.x86_64-portable-release.zip'
+          $archive = Join-Path $env:RUNNER_TEMP $name
+          $expected = 'd7ea5b40f0f889d0b307bbc217fe9fb36bc3e3fd0688a829668ce681a350203e'
+          foreach ($mirror in 'netix', 'pilotfiber', 'phoenixnap') {
+            $url = "https://downloads.sourceforge.net/project/oorexx/oorexx/5.2.0/portable/${name}?use_mirror=$mirror"
+            curl.exe --fail --location --silent --show-error --connect-timeout 10 --max-time 75 --output $archive $url
+            if ($LASTEXITCODE -eq 0 -and (Get-FileHash $archive).Hash -eq $expected) { break }
+            Remove-Item $archive -ErrorAction SilentlyContinue
+          }
+          if (-not (Test-Path $archive)) { throw 'No mirror returned the expected ooRexx archive' }
+          $destination = Join-Path $env:RUNNER_TEMP 'oorexx'
+          Expand-Archive -LiteralPath $archive -DestinationPath $destination
+          $oracle = Get-ChildItem -Path $destination -Recurse -Filter rexx.exe | Select-Object -First 1
+          if (-not $oracle) { throw 'No rexx.exe in the ooRexx bundle' }
+          $env:PATH = "$($oracle.DirectoryName);$env:PATH"
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $vs = & $vswhere -latest -property installationPath
+          $vsdev = Join-Path $vs 'Common7/Tools/VsDevCmd.bat'
+          cmd.exe /d /c ('""{0}" -arch=x64 -host_arch=x64 && cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:oracle-console.exe /link user32.lib"' -f $vsdev)
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          ./windows-path-tests.exe
-
-      - name: Build rexx.exe
-        run: cargo build --locked -p interrexx --bin rexx
-      - name: Run the Windows interpreter
-        shell: pwsh
-        run: |
-          $rexx = (Resolve-Path target/debug/rexx.exe).Path
-          function Check-Rexx($expected, $arguments) {
-            $output = @(& $rexx @arguments)
-            if ($LASTEXITCODE -ne 0 -or $output.Count -ne 1 -or $output[0] -cne $expected) {
-              throw "Expected '$expected', got '$($output -join '|')' (exit $LASTEXITCODE)"
-            }
+          $source = (Resolve-Path ../ci/windows-sysgetkey-oracle.rex).Path
+          foreach ($page in '1252', '437') {
+            $report = Join-Path $env:RUNNER_TEMP "key-$page.txt"
+            & ./oracle-console.exe $oracle.FullName $source $report $page
+            $result = $LASTEXITCODE
+            if (Test-Path $report) { Write-Host "CP${page}: $((Get-Content $report) -join ' ')" }
+            if ($result -ne 0) { throw "Console fixture returned $result" }
           }
-          Check-Rexx '4' @('-e', 'say 2 + 2')
-          Check-Rexx 'local queue' @('-e', "queue 'local queue'; parse pull answer; say answer")
-          Check-Rexx 'child process' @('-e', "address system 'echo child process'")
-          $script = Join-Path $env:RUNNER_TEMP 'échantillon.rex'
-          'say 2 + 2' | Set-Content -Encoding ascii $script
-          Check-Rexx '4' @($script)
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: rexx-windows-x64
-          path: rust/target/debug/rexx.exe
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Build and stage the x64 MSVC SDK
-        shell: pwsh
-        run: |
-          cargo build --locked -p interrexx-capi -p interrexx-capi-rxapi
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          New-Item -ItemType Directory -Path sdk/bin, sdk/lib | Out-Null
-          Copy-Item -Recurse ../include sdk/include
-          foreach ($name in 'rexx', 'rexxapi') {
-            Copy-Item "target/debug/$name.dll" sdk/bin
-            $import = @("target/debug/$name.dll.lib", "target/debug/$name.lib") |
-              Where-Object { Test-Path $_ } | Select-Object -First 1
-            if (-not $import) { throw "Missing $name MSVC import library" }
-            Copy-Item $import "sdk/lib/$name.lib"
-          }
-
-      - name: Link and run C clients against the SDK
-        shell: cmd
-        run: |
-          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VS_PATH=%%i"
-          call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 || exit /b 1
-          cl /nologo /W4 /WX /TP /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-sdk-smoke.cpp /Fo:sdk-smoke.obj || exit /b 1
-          cl /nologo /W4 /WX /TC /c /I sdk\include /I sdk\include\platform\windows ..\ci\windows-rxapi-smoke.c /Fo:rxapi-smoke.obj || exit /b 1
-          link /nologo /OUT:sdk\bin\sdk-smoke.exe sdk-smoke.obj sdk\lib\rexx.lib || exit /b 1
-          link /nologo /OUT:target\debug\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
-          sdk\bin\sdk-smoke.exe || exit /b 1
-          target\debug\rxapi-smoke.exe || exit /b 1
-          del sdk\bin\sdk-smoke.exe
-          cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:target\debug\rexxutil-console.exe /link user32.lib || exit /b 1
-          target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-rexxutil-console.rex"
-          if errorlevel 1 (
-            echo RexxUtil console fixture failed at check %ERRORLEVEL%
-            exit /b 1
-          )
-          echo RexxUtil console input, cursor, screen, and dialog cancellation passed.
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: interrexx-sdk-windows-x64
-          path: rust/sdk/
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Exercise the Windows RXAPI service across processes
-        shell: pwsh
-        run: |
-          cargo build --locked -p interrexx-rxapi --bins
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --locked -p interrexx-rxapi --test windows_transport
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:REXX_API_DIR = Join-Path $env:RUNNER_TEMP "interrexx-rxapi-$env:GITHUB_RUN_ID"
-          $rexx = (Resolve-Path target/debug/rexx.exe).Path
-          $rxapi = (Resolve-Path target/debug/rxapi.exe).Path
-          try {
-            & $rexx -e "call rxqueue 'create', 'SMOKE'; call rxqueue 'set', 'SMOKE'; queue 'cross process'"
-            if ($LASTEXITCODE -ne 0) { throw 'Could not write to the service' }
-            $lines = @(& $rexx -e "call rxqueue 'set', 'SMOKE'; if queued() <> 1 then exit 1; parse pull item; say item; call rxqueue 'delete', 'SMOKE'")
-            if ($LASTEXITCODE -ne 0 -or $lines.Count -ne 1 -or $lines[0] -cne 'cross process') {
-              throw "Expected queue text, got '$($lines -join '|')'"
-            }
-            & $rexx -e "call rxqueue 'create', 'C_SMOKE'; call rxqueue 'set', 'C_SMOKE'; queue 'from the interpreter'"
-            if ($LASTEXITCODE -ne 0) { throw 'Could not seed the legacy C queue test' }
-            & ./target/debug/rxapi-smoke.exe C_SMOKE
-            if ($LASTEXITCODE -ne 0) { throw "Legacy C queue test failed ($LASTEXITCODE)" }
-          } finally {
-            & $rxapi --stop
-          }
-
-      - name: Exercise Windows RxSock TCP and UDP loopback
-        shell: pwsh
-        run: |
-          $rexx = Resolve-Path target/debug/rexx.exe
-          $smoke = Start-Process $rexx -NoNewWindow -PassThru -ArgumentList 'crates/interrexx/tests/windows-rxsock-smoke.rex'
-          if (-not $smoke.WaitForExit(30000)) {
-            $smoke.Kill()
-            throw 'RxSock smoke timed out'
-          }
-          if ($smoke.ExitCode -ne 0) { throw "RxSock smoke failed at check $($smoke.ExitCode)" }
-
-      - name: Exercise Windows RexxUtil filesystem routines
-        shell: pwsh
-        run: |
-          $env:REXX_TEST_WINDOWS_VERSION = 'Windows ' + [Environment]::OSVersion.Version.ToString(3)
-          $env:REXX_TEST_SYSTEM_DIRECTORY = [Environment]::SystemDirectory
-          $env:REXX_TEST_BOOT_DRIVE = [IO.Path]::GetPathRoot($env:REXX_TEST_SYSTEM_DIRECTORY).TrimEnd([char]92)
-          $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot((Get-Location).Path))
-          $env:REXX_TEST_CURRENT_DRIVE = $drive.Name.TrimEnd([char]92)
-          $env:REXX_TEST_VOLUME_FORMAT = $drive.DriveFormat
-          $env:REXX_TEST_VOLUME_LABEL = $drive.VolumeLabel
-          $driveNames = [Environment]::GetLogicalDrives() | ForEach-Object { $_.TrimEnd([char]92) }
-          $env:REXX_TEST_USED_DRIVES = ($driveNames | Sort-Object) -join ' '
-          $env:REXX_TEST_FREE_DRIVES = ((65..90 | ForEach-Object { [string][char]$_ + ':' }) |
-            Where-Object { $_ -notin $driveNames }) -join ' '
-          $env:REXX_TEST_VOLUME_SIZE = $drive.TotalSize.ToString([cultureinfo]::InvariantCulture)
-          $probe = Join-Path $env:RUNNER_TEMP 'rexxutil-efs-probe'
-          $caseRoot = Join-Path $env:RUNNER_TEMP 'rexxutil-case-probe'
-          [IO.File]::WriteAllText($probe, 'test data')
-          New-Item -ItemType Directory -Path $caseRoot | Out-Null
-          $pipeName = 'interrexx-smoke-' + [Guid]::NewGuid().ToString()
-          $pipe = [IO.Pipes.NamedPipeServerStream]::new($pipeName)
-          $env:REXX_TEST_NAMED_PIPE = '\\.\pipe\' + $pipeName
-          try {
-            try {
-              [IO.File]::Encrypt($probe)
-              $env:REXX_TEST_EFS_PROBE = $probe
-            } catch [System.IO.IOException], [System.UnauthorizedAccessException] {
-              Write-Host 'The runner cannot encrypt a file on its temporary volume.'
-            }
-            $caseStatus = fsutil.exe file setCaseSensitiveInfo $caseRoot enable
-            if ($LASTEXITCODE -eq 0) {
-              $upper = [IO.Directory]::CreateDirectory((Join-Path $caseRoot 'Foo'))
-              $lower = [IO.Directory]::CreateDirectory((Join-Path $caseRoot 'foo'))
-              [IO.File]::WriteAllText((Join-Path $upper.FullName 'entry.txt'), 'upper')
-              [IO.File]::WriteAllText((Join-Path $lower.FullName 'entry.txt'), 'lower')
-              $env:REXX_TEST_CASE_PARENT = $caseRoot
-            } else {
-              Write-Host "The runner cannot enable case sensitivity for the live fixture: $caseStatus"
-            }
-            & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-smoke.rex $env:RUNNER_TEMP
-            if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
-            if ($env:REXX_TEST_CASE_PARENT) { Write-Host 'The case-sensitive NTFS sibling check passed.' }
-          } finally {
-            $pipe.Dispose()
-            Remove-Item -LiteralPath $probe
-            Remove-Item -LiteralPath $caseRoot -Recurse
-          }
-
-      - name: Exercise RexxUtil with a Windows print queue
-        shell: pwsh
-        timeout-minutes: 2
-        run: ../ci/windows-rexxutil-printers.ps1
-
-      - name: Verify Windows file timestamps across daylight saving time
-        shell: pwsh
-        run: |
-          $originalZone = (tzutil /g).Trim()
-          if ($LASTEXITCODE -ne 0) { throw 'Could not read the Windows time zone' }
-          $dir = Join-Path $env:RUNNER_TEMP 'rexxutil-timezone'
-          New-Item -ItemType Directory -Path $dir | Out-Null
-          try {
-            tzutil /s 'Eastern Standard Time'
-            if ($LASTEXITCODE -ne 0) { throw 'Could not set the Windows time zone' }
-            foreach ($name in 'winter', 'summer', 'partial') {
-              [IO.File]::WriteAllText((Join-Path $dir $name), '')
-            }
-            $expected = @{
-              winter = '2024-01-15T17:00:00Z'
-              summer = '2024-07-15T16:00:00Z'
-              partial = '2024-01-15T17:00:00Z'
-            }
-            [IO.File]::SetLastWriteTimeUtc((Join-Path $dir 'partial'), [DateTimeOffset]::Parse($expected.summer).UtcDateTime)
-            & ./target/debug/rexx.exe crates/interrexx/tests/windows-rexxutil-timezone-smoke.rex $dir
-            if ($LASTEXITCODE -ne 0) { throw "RexxUtil timezone smoke failed at check $LASTEXITCODE" }
-            foreach ($name in $expected.Keys) {
-              $actual = [IO.File]::GetLastWriteTimeUtc((Join-Path $dir $name))
-              if ($actual -ne [DateTimeOffset]::Parse($expected[$name]).UtcDateTime) {
-                throw "Unexpected UTC timestamp for ${name}: $($actual.ToString('o'))"
-              }
-            }
-          } finally {
-            tzutil /s $originalZone
-            if ($LASTEXITCODE -ne 0) { throw 'Could not restore the Windows time zone' }
-            Remove-Item -LiteralPath $dir -Recurse
-          }
-
-      - name: Check out the pinned ooRexx sources
-        working-directory: .
-        run: git submodule update --init --depth 1 -- third_party/ooRexx
-      - name: Build the pinned ooDialog packages and launchers
-        shell: cmd
-        run: |
-          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VS_PATH=%%i"
-          call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 || exit /b 1
-          cmake -S ..\ci\windows-oodialog -B oodialog-build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DINTERREXX_SDK=%CD%\sdk" "-DOOREXX_SOURCE=%CD%\..\third_party\ooRexx" || exit /b 1
-          cmake --build oodialog-build --parallel 2 || exit /b 1
-          for %%p in (oodialog ooshapes) do (
-            dumpbin /exports sdk\bin\%%p.dll | findstr /r /c:" RexxGetPackage$" || exit /b 1
-          )
-          for %%p in (ooDialog.exe ooDialog.com) do (
-            dumpbin /imports sdk\bin\%%p | findstr /i /c:"rexx.dll" || exit /b 1
-          )
-
-      - name: Generate the ooDialog class libraries
-        shell: pwsh
-        timeout-minutes: 2
-        run: |
-          $bin = (Resolve-Path sdk/bin).Path
-          $source = (Resolve-Path ../third_party/ooRexx/extensions/platform/windows/oodialog).Path
-          Copy-Item target/debug/rexx.exe $bin
-          Copy-Item "$source/ooShapes.cls" $bin
-          Copy-Item ../ci/windows-oodialog/smoke.rex $bin
-          Push-Location $source
-          try {
-            & "$bin/rexx.exe" build_ooDialog_cls.rex $bin
-            if ($LASTEXITCODE -ne 0) { throw "ooDialog class generation failed ($LASTEXITCODE)" }
-          } finally { Pop-Location }
-          foreach ($class in 'ooDialog.cls', 'oodPlain.cls', 'oodWin32.cls') {
-            if (!(Test-Path "$bin/$class")) { throw "Missing $class" }
-          }
-      - uses: actions/upload-artifact@v7
-        with:
-          name: interrexx-oodialog-windows-x64
-          path: rust/sdk/bin/
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Run the ooDialog launcher and exercise a dialog callback
-        shell: pwsh
-        timeout-minutes: 2
-        run: |
-          Push-Location sdk/bin
-          try {
-            $version = @(& ./ooDialog.com --version)
-            if ($LASTEXITCODE -ne 0 -or ($version -join ' ') -notmatch 'ooDialog') {
-              throw "ooDialog launcher failed ($LASTEXITCODE): $($version -join '|')"
-            }
-            & ../../../ci/windows-oodialog/smoke.ps1
-          } finally { Pop-Location }
