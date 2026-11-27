@@ -200,7 +200,7 @@ impl Interp {
         let Some(subject) = self.invocation_subject() else {
             return;
         };
-        if !self.trace_mode().labels {
+        if !self.traced_mode().labels {
             return;
         }
         self.activation_mut().trace_entry = TraceEntry::Done;
@@ -217,7 +217,7 @@ impl Interp {
     /// `>I>` for a body whose package's `::OPTIONS TRACE` put a
     /// label-tracing setting in force before its first clause.
     pub(crate) fn trace_package_invocation_entry(&mut self) {
-        if !self.trace_mode().labels || self.activation().trace_entry != TraceEntry::Pending {
+        if !self.traced_mode().labels || self.activation().trace_entry != TraceEntry::Pending {
             return;
         }
         let Some(subject) = self.invocation_subject() else {
@@ -248,7 +248,7 @@ impl Interp {
         let Some(subject) = self.invocation_subject() else {
             return;
         };
-        if !self.trace_mode().labels {
+        if !self.traced_mode().labels {
             return;
         }
         let package = self

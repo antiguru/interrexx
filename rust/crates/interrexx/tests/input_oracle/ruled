@@ -288,8 +288,6 @@ err>        +++ "LINUX COMMAND <dir>/scope_debug_pause_routine.rex"
 err>      5 *-* x = 1
 err>        >>>   "1"
 err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
-err>        >I> Routine "S", package "<dir>/scope_debug_pause_routine.rex".
-err>        <I< Routine "S", package "<dir>/scope_debug_pause_routine.rex".
 err> T1
 err>      6 *-* say 'main'
 err>        >>>   "main"
