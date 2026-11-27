@@ -38,3 +38,10 @@ class.object.deviation.30
 class.stream.deviation.30
 cond.nostring.deviation.30
 class.commandcontext.deviation.30
+bif.beep.deviation.179
+bif.directory.deviation.179
+bif.filespec.deviation.179
+bif.index.call.native.deviation.179
+cond.errors.deviation.179
+cond.nostring.deviation.179
+env.security.call.deviation.179
