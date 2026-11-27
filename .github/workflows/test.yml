@@ -569,8 +569,9 @@ jobs:
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
 
-  # 32-bit x86: every target built and the architecture-sensitive standalone tests run with Rust's i686 Linux
-  # toolchain as the host, on a checkout without the submodule. The 32-bit compiler, build
+  # 32-bit x86: build every target with Rust's i686 Linux toolchain as the host, on a
+  # checkout without the submodule. Run selected tests on PRs and the full standalone
+  # suite on main and manual runs. The 32-bit compiler, build
   # scripts and test binaries run on the runner's kernel; the wrappers in `ci/m32` make the C and
   # C++ code they compile, link and load 32-bit too. With the host itself i686, no target triple
   # lengthens the paths under `target/`.
@@ -636,7 +637,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: >-
           cargo nextest run --locked --workspace --profile standalone
-          -E 'kind(lib) | package(interrexx-api) | package(interrexx-capi) | package(interrexx-capi-rxapi) | package(interrexx-rxapi) | binary(=native_entries) | binary(=classic_api) | binary(=attached_threads) | binary(=api_group_tests) | binary(=compiled) | binary(=numeric_model) | binary(=native_classes_wiring)'
+          -E 'kind(lib) | package(interrexx-api) | package(interrexx-capi) | package(interrexx-capi-rxapi) | package(interrexx-rxapi) | binary(=native_entries) | binary(=classic_api) | binary(=attached_threads) | binary(=api_group_tests) | binary(=compiled) | binary(=numeric_model) | binary(=native_classes_wiring) | binary(=buffer_growth_error_exit) | binary(=deadline) | binary(=instance_identity) | binary(=kept_local_reference) | binary(=rexxc) | (package(interrexx-parse) & binary(=errors))'
       - name: Cargo nextest (full standalone)
         if: github.event_name != 'pull_request'
         run: cargo nextest run --locked --workspace --profile standalone
