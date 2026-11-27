@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use super::group_runner::{
     GATE_ENV, Outcome, Run, SwitchMode, TestResult, VERBOSITY, excerpt, first_difference,
-    fresh_copy, gate_mode, group_file, masked, on_a_quiet_machine, reaching_rxapi,
-    rows_in_parallel, run_crate, run_tests, source_test_names, test_names,
+    fresh_copy, gate_mode, group_file, masked, on_a_quiet_machine, passes, reaching_rxapi,
+    read_bytes, rows_in_parallel, run_crate, run_tests, source_test_names, test_names,
 };
 use super::support::oracle;
 
@@ -429,6 +429,8 @@ fn inverted(run: &Run) -> bool {
 const TRACE_INTERLEAVES: &[&str] =
     &["base/keyword/TRACE_TraceObject.testGroup TEST_TRACEOBJECT_COLLECTOR"];
 
+const SLEEP_DURATION_ROW: &str = "base/rexxutil/SysSleep.testGroup TEST_SLEEP_DURATION";
+
 /// The rows whose outcome on this crate depends on a wall-clock boundary or
 /// a sleep's duration, each with the lines that make it so: a failing check
 /// on one is run again once, and only a second failure counts.
@@ -438,7 +440,7 @@ const WALL_CLOCK: &[&str] = &[
     // DateTime.testGroup:593-596
     "base/class/DateTime.testGroup TEST_ELAPSED1",
     // SysSleep.testGroup:83-84, :107-113
-    "base/rexxutil/SysSleep.testGroup TEST_SLEEP_DURATION",
+    SLEEP_DURATION_ROW,
     // SysSleep.testGroup:91-99
     "base/rexxutil/SysSleep.testGroup TEST_SLEEP_CONCURRENT",
     // EventSemaphore.testGroup:151-155, :162
@@ -790,6 +792,52 @@ fn rows_in_both_modes(
     );
 }
 
+/// The sequential sleep's duration assertion in `SysSleep.testGroup`, as
+/// [`loosen_upper_sleep_bound`] finds it.
+const SLEEP_BOUND_ASSERTION: &[u8] = b"self~assertTrue(min <= elapsed & elapsed <= max,";
+
+/// The slack, in seconds, that [`loosen_upper_sleep_bound`] adds to the
+/// sequential sleep's upper bound. The group allows 26 ms past each duration
+/// (up to 0.5 s), which a loaded host's wake-up latency can exceed in either
+/// mode. Half a second absorbs that latency while a sleep that wakes only at a
+/// later switch, seconds late, still fails.
+const SLEEP_BOUND_SLACK: &str = "0.5";
+
+/// Loosen the sequential sleep's upper bound in `source`, the copy used to
+/// compare scheduler modes, from `max` to `max + SLEEP_BOUND_SLACK`. The return
+/// value and the lower bound are asserted as before. The unmodified bound
+/// stays in the run against the oracle. Answers why when `source` does not
+/// hold [`SLEEP_BOUND_ASSERTION`] exactly once.
+fn loosen_upper_sleep_bound(source: &[u8]) -> Result<Vec<u8>, String> {
+    let assertion = SLEEP_BOUND_ASSERTION;
+    let starts: Vec<usize> = source
+        .windows(assertion.len())
+        .enumerate()
+        .filter(|&(_, window)| window == assertion)
+        .map(|(start, _)| start)
+        .collect();
+    let [start] = starts[..] else {
+        return Err(format!(
+            "expected `{}` once, found it {} times",
+            String::from_utf8_lossy(assertion),
+            starts.len()
+        ));
+    };
+    let comma = start + assertion.len() - 1;
+    let mut loosened = source[..comma].to_vec();
+    loosened.extend_from_slice(format!(" + {SLEEP_BOUND_SLACK}").as_bytes());
+    loosened.extend_from_slice(&source[comma..]);
+    Ok(loosened)
+}
+
+/// [`loosen_upper_sleep_bound`] applied to the group file `file` in place.
+fn loosen_upper_sleep_bound_in(file: &Path) -> Result<(), String> {
+    let loosened = loosen_upper_sleep_bound(&read_bytes(file))
+        .map_err(|why| format!("cannot loosen the sleep bound in {}: {why}", file.display()))?;
+    fs::write(file, loosened).expect("rewrite the copied sleep duration assertion");
+    Ok(())
+}
+
 /// One row of [`rows_in_both_modes`] in the copy `run`: its cell against
 /// the oracle, how the two modes compare and whether that is allowed, and
 /// the modes that hung or ended in an inverted wait.
@@ -809,8 +857,18 @@ fn row_in_both_modes(
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         run_tests(oracle, run, dir, group, one, SwitchMode::None, None)
     }));
+    // Whether the oracle's side of the unmodified run passed: where it did
+    // not, the sleep duration row is not held to a stricter rule than others.
+    let mut oracle_passed = false;
     let normal = match result {
-        Ok(results) => cell(&results[0].outcome),
+        Ok(results) => {
+            oracle_passed = match &results[0].outcome {
+                Outcome::Pass => true,
+                Outcome::Differ { oracle, .. } | Outcome::Refused { oracle, .. } => passes(oracle),
+                Outcome::FailsOnBoth | Outcome::NotRun => false,
+            };
+            cell(&results[0].outcome)
+        }
         Err(payload) => {
             let deadline = payload
                 .downcast_ref::<String>()
@@ -825,12 +883,25 @@ fn row_in_both_modes(
         return (normal, ("not run".to_string(), true), Vec::new());
     }
     let row = format!("{file} {test}");
+    let sleep_duration_row = row == SLEEP_DURATION_ROW;
+    let group_path = group_file(run, dir, group);
+    let prepare_mode = || -> Result<(), String> {
+        fresh_copy(run, dir);
+        if sleep_duration_row {
+            loosen_upper_sleep_bound_in(Path::new(&group_path))?;
+        }
+        Ok(())
+    };
     let judge = || {
-        let group_path = group_file(run, dir, group);
         let args = ["-f", group_path.as_str(), "-U", "-V", VERBOSITY, "-t", test];
-        fresh_copy(run, dir);
+        // A copy that cannot be prepared fails this row, not the whole table.
+        if let Err(why) = prepare_mode() {
+            return ((why, false), Vec::new());
+        }
         let shipped = run_crate(run, &args, SwitchMode::None);
-        fresh_copy(run, dir);
+        if let Err(why) = prepare_mode() {
+            return ((why, false), Vec::new());
+        }
         let every = run_crate(run, &args, SwitchMode::EveryOpportunity);
         let mut hung = Vec::new();
         for (name, ours) in [("normal", &shipped), ("every", &every)] {
@@ -838,13 +909,28 @@ fn row_in_both_modes(
                 hung.push(format!("{row}: {name}"));
             }
         }
-        (compare_modes(&row, &shipped, &every), hung)
+        let mut modes = compare_modes(&row, &shipped, &every);
+        if sleep_duration_row && oracle_passed && modes.1 && !passes(&shipped) {
+            modes = (
+                format!(
+                    "sleep duration row failed in both modes: status {:?}",
+                    shipped.status
+                ),
+                false,
+            );
+        }
+        (modes, hung)
     };
     let (mut judged, mut hung) = judge();
     if (!judged.1 || !hung.is_empty()) && WALL_CLOCK.contains(&row.as_str()) {
         eprintln!("wall-clock rerun: {row}: {} {hung:?}", judged.0);
         (judged, hung) = judge();
         judged.0.push_str(" (wall-clock rerun)");
+    }
+    if sleep_duration_row {
+        judged
+            .0
+            .push_str(&format!(" (upper sleep bound + {SLEEP_BOUND_SLACK} s)"));
     }
     (normal, judged, hung)
 }
@@ -886,6 +972,35 @@ fn the_outcome_table_of_the_trace_object_group() {
         .map(|row| row.test.as_str())
         .collect();
     assert_eq!(passing, TRACE_OBJECT_PASSING);
+}
+
+/// The copy's sleep duration assertion gains the slack on its upper bound
+/// and keeps its lower bound and the rest of the line.
+#[test]
+fn the_sleep_bound_is_loosened_not_removed() {
+    let mut source = b"  max = duration + 1\n  ".to_vec();
+    source.extend_from_slice(SLEEP_BOUND_ASSERTION);
+    source.extend_from_slice(b" \"took\" elapsed)\n");
+    let loosened = loosen_upper_sleep_bound(&source).expect("one assertion");
+    assert_eq!(
+        String::from_utf8(loosened).unwrap(),
+        format!(
+            "  max = duration + 1\n  self~assertTrue(min <= elapsed & elapsed <= max + {SLEEP_BOUND_SLACK}, \"took\" elapsed)\n"
+        )
+    );
+}
+
+/// A group file without the assertion, or with it twice, is reported, not
+/// rewritten and not a panic.
+#[test]
+fn a_missing_or_repeated_sleep_bound_is_reported() {
+    let none = loosen_upper_sleep_bound(b"say 'no assertion here'\n").unwrap_err();
+    assert!(none.contains("found it 0 times"), "{none}");
+    let mut twice = SLEEP_BOUND_ASSERTION.to_vec();
+    twice.push(b'\n');
+    twice.extend_from_slice(SLEEP_BOUND_ASSERTION);
+    let repeated = loosen_upper_sleep_bound(&twice).unwrap_err();
+    assert!(repeated.contains("found it 2 times"), "{repeated}");
 }
 
 /// Each group file of criterion 1's derived list in one run on the
