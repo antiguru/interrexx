@@ -457,8 +457,8 @@ fn the_builtin_exclusion_set_matches_the_committed_file() {
     let in_scope =
         names.len() - interrexx_inventory::builtins::wholly_excluded().len() - later.len();
     assert_eq!(
-        in_scope, 81,
-        "all 81 builtins of this crate's level are in scope"
+        in_scope, 84,
+        "every builtin of this crate's level is in scope"
     );
     assert_eq!(
         interrexx_inventory::builtins::in_scope().len(),

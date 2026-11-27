@@ -636,6 +636,29 @@ impl Raised {
         )
     }
 
+    /// 40.927: a builtin's argument is a whole number outside the range
+    /// that builtin takes. `minimum` and `maximum` are the bounds, and
+    /// `found` is the converted value.
+    pub(crate) fn argument_not_in_range(
+        routine: &[u8],
+        position: usize,
+        minimum: i64,
+        maximum: i64,
+        found: &[u8],
+    ) -> Raised {
+        Raised::syntax(
+            40,
+            927,
+            vec![
+                routine.to_vec(),
+                position.to_string().into_bytes(),
+                minimum.to_string().into_bytes(),
+                maximum.to_string().into_bytes(),
+                found.to_vec(),
+            ],
+        )
+    }
+
     /// 40.14: a builtin's argument converted to a whole number but is not
     /// strictly positive. Substituted as the same three slots -- routine,
     /// position, found -- as [`argument_not_whole`]'s.

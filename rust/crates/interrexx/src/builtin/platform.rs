@@ -6,7 +6,7 @@
 use interrexx_core::ObjRef;
 
 use super::rexxutil::{self, stems::MAX_WHOLENUMBER};
-use super::{Args, arg, required_string};
+use super::{Args, arg, optional_string, required_string, whole_number};
 use crate::environment::EnvScope;
 use crate::error::Raised;
 use crate::{Failure, Interp};
@@ -161,11 +161,9 @@ pub(crate) fn endlocal(
     Ok(crate::eval::logical(restored))
 }
 
-/// `DIRECTORY([new])`: a native routine of the `REXX` package, not a builtin
-/// which is why its arity errors are the
-/// 88.9xx family. With an argument it moves the interpreter's own current
-/// directory and answers the new one; a change it cannot make answers the null
-/// string and moves nothing. With none it answers where it is.
+/// `DIRECTORY([new])` as the `REXX` package's native routine, which is why its
+/// arity errors are the 88.9xx family (`r[bif.index.call.native]`) and an
+/// argument with no string value is 88.909.
 pub(crate) fn directory(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -174,24 +172,43 @@ pub(crate) fn directory(
     if args.len() > 1 {
         return Err(Raised::too_many_internal_arguments(1).into());
     }
-    let Some(text) = rexxutil::optional_text(interp, args, 1)? else {
+    let text = rexxutil::optional_text(interp, args, 1)?;
+    Ok(change_directory(interp, text))
+}
+
+/// `DIRECTORY([new])` as a builtin (`r[bif.directory.args]`).
+pub(crate) fn directory_builtin(
+    interp: &mut Interp,
+    _name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let text = optional_string(interp, args, 1);
+    Ok(change_directory(interp, text))
+}
+
+/// What `DIRECTORY` does with its argument once it is read: with a name it
+/// moves the interpreter's own current directory and answers the new one; a
+/// change it cannot make answers the null string and moves nothing. With none
+/// it answers where it is.
+fn change_directory(interp: &mut Interp, text: Option<Vec<u8>>) -> ObjRef {
+    let Some(text) = text else {
         let here = interp.cwd_bytes().to_vec();
-        return Ok(interp.text_built(here));
+        return interp.text_built(here);
     };
     if text.is_empty() {
-        return Ok(interp.text(b""));
+        return interp.text(b"");
     }
     let qualified = qualify_name(interp, &text);
     let candidate = crate::paths::os_path(&qualified);
     if !std::fs::metadata(candidate).is_ok_and(|meta| meta.is_dir()) || !can_enter(candidate) {
-        return Ok(interp.text(b""));
+        return interp.text(b"");
     }
     // `getcwd` answers the symlink-resolved path, so the answer is what the
     // filesystem calls the directory rather than the way it was named.
     let resolved = std::fs::canonicalize(candidate).unwrap_or_else(|_| candidate.to_path_buf());
     let answer = resolved.as_os_str().as_encoded_bytes().to_vec();
     interp.set_cwd(resolved);
-    Ok(interp.text_built(answer))
+    interp.text_built(answer)
 }
 
 /// Whether the process may make `directory` its current one, which is what
@@ -210,10 +227,9 @@ fn can_enter(directory: &std::path::Path) -> bool {
 /// The `FILESPEC` options, in the order the message lists them: `DELNP`.
 const FILESPEC_OPTIONS: &[u8] = b"DELNP";
 
-/// `FILESPEC(option, name)`: the piece of `name` that `option`'s first letter
-/// selects. Purely textual -- the file need
-/// not exist, and nothing here touches the file system. On unix the drive is
-/// always the null string.
+/// `FILESPEC(option, name)` as the `REXX` package's native routine: arity
+/// errors are the 88.9xx family and an argument with no string value is
+/// 88.909 (`r[bif.index.call.native]`).
 pub(crate) fn filespec(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -226,6 +242,27 @@ pub(crate) fn filespec(
     // first character only.
     let option = rexxutil::required_text(interp, args, 1)?;
     let spec = rexxutil::required_c_string(interp, args, 2)?;
+    filespec_piece(interp, &option, &spec)
+}
+
+/// `FILESPEC(option, name)` as a builtin (`r[bif.filespec.args]`).
+pub(crate) fn filespec_builtin(
+    interp: &mut Interp,
+    _name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let option = required_string(interp, args, 1);
+    let mut spec = required_string(interp, args, 2);
+    if let Some(end) = spec.iter().position(|byte| *byte == 0) {
+        spec.truncate(end);
+    }
+    filespec_piece(interp, &option, &spec)
+}
+
+/// The piece of `spec` that `option`'s first letter selects. Purely textual:
+/// the file need not exist, and nothing here touches the file system. On unix
+/// the drive is always the null string.
+fn filespec_piece(interp: &mut Interp, option: &[u8], spec: &[u8]) -> Result<ObjRef, Failure> {
     let option = &option[..option.first().map_or(0, |first| usize::from(*first != 0))];
     let letter = option.first().map(u8::to_ascii_uppercase);
     let Some(letter) = letter.filter(|byte| FILESPEC_OPTIONS.contains(byte)) else {
@@ -246,15 +283,15 @@ pub(crate) fn filespec(
             Some(at) => spec[..=at].to_vec(),
         },
         b'N' => match cut {
-            None => spec.clone(),
+            None => spec.to_vec(),
             Some(at) => spec[at + 1..].to_vec(),
         },
-        // What follows the last dot of the *name*, wherever that dot sits:
-        // measured, `filespec('E','/a/.hidden')` is `hidden`, not the null
-        // string. `.File~extension` has the leading-dot rule this does not.
+        // What follows the last dot of the name, wherever that dot sits, so
+        // a name that starts with a dot has the rest as its extension
+        // (`r[bif.filespec.extension]`).
         b'E' => {
             let name = match cut {
-                None => &spec[..],
+                None => spec,
                 Some(at) => &spec[at + 1..],
             };
             match name.iter().rposition(|byte| *byte == b'.') {
@@ -273,9 +310,9 @@ const MAX_FREQUENCY: i64 = 32767;
 const MIN_DURATION: i64 = 0;
 const MAX_DURATION: i64 = 60000;
 
-/// `BEEP(frequency, duration)`: writes one bell byte and answers the null
-/// string. On this platform that reaches the terminal as a single `0x07` on
-/// standard output: `beep(440,10)` writes it and answers `''`.
+/// `BEEP(frequency, duration)` as the `REXX` package's native routine: writes
+/// one bell byte and answers the null string. Arity errors are the 88.9xx
+/// family, and both arguments are converted before either range is checked.
 pub(crate) fn beep(
     interp: &mut Interp,
     _name: &'static [u8],
@@ -286,17 +323,47 @@ pub(crate) fn beep(
     }
     // Both conversions, then frequency's range before duration's, and all
     // before the bell: `beep(1,1)` raises on the frequency and sounds nothing.
-    let frequency = whole_number(interp, args, 1)?;
-    let duration = whole_number(interp, args, 2)?;
-    in_range(frequency, "frequency", MIN_FREQUENCY, MAX_FREQUENCY)?;
-    in_range(duration, "duration", MIN_DURATION, MAX_DURATION)?;
+    let frequency = native_whole_number(interp, args, 1)?;
+    let duration = native_whole_number(interp, args, 2)?;
+    native_in_range(frequency, "frequency", MIN_FREQUENCY, MAX_FREQUENCY)?;
+    native_in_range(duration, "duration", MIN_DURATION, MAX_DURATION)?;
+    interp.write_out(&[0x07]);
+    Ok(interp.text(b""))
+}
+
+/// `BEEP(frequency, duration)` as a builtin (`r[bif.beep.args]`). Each
+/// argument is converted and range-checked before the next is read, so a
+/// frequency out of range hides a duration that is not a number
+/// (`r[bif.beep.order]`).
+pub(crate) fn beep_builtin(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    for (position, minimum, maximum) in [
+        (1, MIN_FREQUENCY, MAX_FREQUENCY),
+        (2, MIN_DURATION, MAX_DURATION),
+    ] {
+        let number = whole_number(interp, name, args, position)?
+            .expect("the row's minimum makes both arguments present");
+        if !(minimum..=maximum).contains(&number) {
+            return Err(Raised::argument_not_in_range(
+                name,
+                position,
+                minimum,
+                maximum,
+                number.to_string().as_bytes(),
+            )
+            .into());
+        }
+    }
     interp.write_out(&[0x07]);
     Ok(interp.text(b""))
 }
 
 /// A required BEEP argument is 88.901 when omitted and 88.903 when
 /// it cannot be read as a native whole number.
-fn whole_number(
+fn native_whole_number(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
     position: usize,
@@ -313,8 +380,9 @@ fn whole_number(
     )))
 }
 
-/// `BEEP`'s own range check of a converted argument, which names it.
-fn in_range(number: i64, argument: &str, minimum: i64, maximum: i64) -> Result<(), Failure> {
+/// The package routine's own range check of a converted argument, which
+/// names it.
+fn native_in_range(number: i64, argument: &str, minimum: i64, maximum: i64) -> Result<(), Failure> {
     if (minimum..=maximum).contains(&number) {
         return Ok(());
     }

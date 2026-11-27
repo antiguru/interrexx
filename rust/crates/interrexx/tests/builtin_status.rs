@@ -435,8 +435,8 @@ fn the_status_file_matches_a_live_differential_run() {
     );
     assert_eq!(
         run.derived.len() - excluded - later,
-        81,
-        "all 81 builtins of this crate's level are in scope"
+        84,
+        "every builtin of this crate's level is in scope"
     );
 
     // The assertion a classifier that consults only name tables cannot pass.
@@ -451,7 +451,7 @@ fn the_status_file_matches_a_live_differential_run() {
     );
     // With the pair above: one probe per in-scope name.
     assert_eq!(
-        run.oracle_invocations, 81,
+        run.oracle_invocations, 84,
         "one oracle run per in-scope name"
     );
 

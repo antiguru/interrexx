@@ -131,11 +131,7 @@ pub mod builtins {
     /// a routine of the `REXX` package, so a call to one is resolved past the
     /// builtins and the running package's routines, and the name is neither
     /// in scope nor excluded.
-    pub const LATER_LEVEL: &[(&str, &str)] = &[
-        ("BEEP", "6.07"),
-        ("DIRECTORY", "6.07"),
-        ("FILESPEC", "6.07"),
-    ];
+    pub const LATER_LEVEL: &[(&str, &str)] = &[];
 
     /// Whether `name` is listed in [`LATER_LEVEL`].
     pub fn is_later_level(name: &str) -> bool {

@@ -128,3 +128,6 @@ LINEIN	s = .Stream~new('l1.txt'); zz = s~open('write replace'); zz = s~lineout('
 LINEOUT	s = .Stream~new('l2.txt'); zz = s~open('write replace'); zz = s~close; zz = lineout('l2.txt','beta'); zz = lineout('l2.txt'); t = .Stream~new('l2.txt'); say t~linein
 LINES	s = .Stream~new('l3.txt'); zz = s~open('write replace'); zz = s~lineout('one'); zz = s~lineout('two'); zz = s~close; say lines('l3.txt','C')
 STREAM	s = .Stream~new('s1.txt'); zz = s~open('write replace'); zz = s~lineout('one'); zz = s~close; say stream('s1.txt','C','query size')
+BEEP	say '<'beep(100, 0)'>'
+DIRECTORY	say directory('/')
+FILESPEC	say filespec('N', '/a/b.c')

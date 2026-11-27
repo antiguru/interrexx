@@ -105,6 +105,24 @@ const IMPLEMENTED: &[Builtin] = &[
         run: state::address,
     },
     Builtin {
+        name: b"BEEP",
+        min: 2,
+        max: Some(2),
+        run: platform::beep_builtin,
+    },
+    Builtin {
+        name: b"DIRECTORY",
+        min: 0,
+        max: Some(1),
+        run: platform::directory_builtin,
+    },
+    Builtin {
+        name: b"FILESPEC",
+        min: 2,
+        max: Some(2),
+        run: platform::filespec_builtin,
+    },
+    Builtin {
         // Measured: `endlocal()` with nothing outstanding answers 0, and
         // `endlocal(1)` is 40.4 naming a maximum of 0.
         name: b"ENDLOCAL",
