@@ -994,7 +994,7 @@ pub(crate) fn build_ended_frame(
 /// routine) was sent with `arguments`, with no line or invocation and its
 /// built-in method or routine line as its traceback. A routine's
 /// context is the calling activation's and a method's is `.nil`: `SysSleep`,
-/// `FILESPEC` and an `EXTERNAL` routine answer one, `SUBSTR` and an `EXTERNAL`
+/// `SysFileExists` and an `EXTERNAL` routine answer one, `SUBSTR` and an `EXTERNAL`
 /// method none. `caller` is `None` for a method, and for a routine the depth of
 /// the activation that called it.
 pub(crate) fn build_native_level_frame(

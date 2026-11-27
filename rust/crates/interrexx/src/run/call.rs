@@ -815,7 +815,7 @@ impl Interp {
         }
         if let Err(failure) = &outcome {
             // One of these is reported under its own routine line, whether the
-            // argument marshalling or the body raised: `filespec('D')` and
+            // argument marshalling or the body raised: `SysFileExists()` and
             // `SysSleep('abc')` both carry it.
             let values = &args[from..];
             match name {

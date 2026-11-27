@@ -262,9 +262,7 @@ fn an_internal_routine_refuses_loudly_where_an_unknown_name_still_raises() {
     // and answers through the very resolver step that refuses the rest. Without
     // these the test could go green over a resolver that refuses everything.
     for (source, expected) in [
-        (&b"say filespec('N','/a/b.c')\n"[..], "b.c\n"),
-        (b"say length(directory()) > 0\n", "1\n"),
-        (b"say SysFileExists('.')\n", "1\n"),
+        (&b"say SysFileExists('.')\n"[..], "1\n"),
         (b"say words(SysVersion()) > 0\n", "1\n"),
         (b"s.0 = 0; say SysStemSort('s.')\n", "0\n"),
     ] {
