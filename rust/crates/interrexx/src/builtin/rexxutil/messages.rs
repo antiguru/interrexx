@@ -166,11 +166,11 @@ impl Substitutions<'_> {
 /// substitution values from position `first` on, a reference past them
 /// replaced by nothing. 40.1 where there are more than nine values.
 ///
-/// Every value is converted before the message is read, an omitted one as the
-/// null string. A conversion that raises does not stop the others, and the last
-/// raise is the routine's answer. The reference run reads a raising value that
-/// the message refers to as a null pointer and dies (oracle defect,
-/// `corpus/oracle-crashes.txt` entry 41).
+/// Every value is converted, in order, before the message is read, an omitted
+/// one as the null string. A conversion that raises ends the call, and no later
+/// value is converted (r[util.sysformatmessage.substitutions]). The reference
+/// run reads a raising value that the message refers to as a null pointer and
+/// dies (oracle defect, `corpus/oracle-crashes.txt` entry 41).
 fn format_message(
     interp: &mut Interp,
     message: &[u8],
@@ -183,19 +183,11 @@ fn format_message(
         return Err(Raised::routine_failed(b"SysFormatMessage").into());
     }
     let mut values = Vec::with_capacity(count);
-    let mut raised = None;
     for index in first..=size {
-        let text = match substitutions.at(interp, index) {
-            None => Ok(Vec::new()),
-            Some(value) => substitution_text(interp, value),
-        };
-        values.push(text.unwrap_or_else(|failure| {
-            raised = Some(failure);
-            Vec::new()
-        }));
-    }
-    if let Some(failure) = raised {
-        return Err(failure);
+        values.push(match substitutions.at(interp, index) {
+            None => Vec::new(),
+            Some(value) => substitution_text(interp, value)?,
+        });
     }
     Ok(interp.text_built(substitute(message, &values)))
 }

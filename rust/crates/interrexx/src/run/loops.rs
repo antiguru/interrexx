@@ -822,8 +822,8 @@ impl Interp {
         if let Some(supplier) = answered {
             self.roots.activity_mut().push_temp(supplier);
             let class = self.class_of_value(supplier);
-            let wanted = self.classes().lookup("Supplier");
-            if let (Some(class), Some(wanted)) = (class, wanted)
+            let wanted = self.object_model().supplier;
+            if let Some(class) = class
                 && self.classes().is_a(class, wanted)
             {
                 return Ok(supplier);

@@ -574,7 +574,6 @@ lang/scope_setlocal_routine.rex
 lang/scope_propagate_routine.rex
 lang/scope_propagate_after_routine.rex
 lang/scope_internal_depth.rex
-lang/scope_debug_pause_routine.rex
 lang/do_counter_ctrl.rex
 lang/do_counter_rep.rex
 lang/do_counter_forever.rex
@@ -719,7 +718,6 @@ lang/debug_pause_loops.rex
 lang/debug_pause_commands.rex
 lang/debug_pause_command_error.rex
 lang/debug_pause_before_trap.rex
-lang/debug_call_return.rex
 lang/debug_call_pause_caller.rex
 lang/debug_reexecute.rex
 lang/debug_reexecute_command.rex
@@ -935,7 +933,6 @@ lang/address_with_stream.rex
 lang/condition_object_syntax.rex
 lang/executable_context.rex
 lang/external_search_order.rex
-lang/internal_routine_frame.rex
 lang/sys_file_functions.rex
 lang/trace_debug.rex
 lang/trace_debug_skip.rex
@@ -979,6 +976,9 @@ lang/directory_index_string_value.rex
 lang/local_stdque_removal.rex
 lang/directory_enumeration_runs_no_method.rex
 lang/environment_symbol_after_store_changes.rex
+lang/environment_symbol_entry_changes.rex
+lang/send_site_unknown_changes.rex
+lang/send_site_no_unknown.rex
 lang/directive_class_environment_raises.rex
 lang/library_routine_requires.rex
 lang/library_routine_load_library.rex
@@ -1296,7 +1296,6 @@ lang/stream_standard_open.rex
 lang/command_background_child.rex
 lang/stream_append_held.rex
 lang/trace_reference_value_rooted.rex
-lang/native_routine_argument_marshalling.rex
 lang/class_side_defaultname.rex
 lang/string_translate_empty_input_table.rex
 lang/array_sort_leading_items.rex
@@ -1346,3 +1345,5 @@ lang/hash_string_chain_mixed.rex
 lang/uninit_after_report_stackframes.rex
 lang/raise_nomethod_additional_objects.rex
 lang/inherited_condition_trap.rex
+lang/hash_index_own_methods.rex
+lang/hash_compare_request_level.rex

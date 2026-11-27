@@ -3653,7 +3653,9 @@ impl Interp {
     /// Raises the
     /// condition again from the level that is failing now, so
     /// `POSITION`, the program and the report's `line <n>` are that level's,
-    /// while every level already left keeps its traceback line.
+    /// while every level already left keeps its traceback line. A native
+    /// level that named its package for the major line
+    /// ([`FailureSite::Packaged`]) is one of those levels and names nothing.
     pub(crate) fn reraise_failure_levels(&mut self) {
         self.activity.failure_origin = None;
         self.activity.failure_propagated = true;
@@ -3664,7 +3666,11 @@ impl Interp {
             .iter_mut()
             .chain(self.activity.failure_site.as_mut())
         {
-            if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
+            if let FailureSite::Packaged { text, .. } = site {
+                *site = FailureSite::Rendered {
+                    text: std::mem::take(text),
+                };
+            } else if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
                 let mut text = Vec::new();
                 site.push_trace_line(&mut text);
                 *site = FailureSite::Rendered { text };

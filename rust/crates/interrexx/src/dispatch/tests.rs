@@ -340,6 +340,55 @@ fn a_pointer_comparison_needs_its_argument() {
     assert_eq!((raised.number, raised.sub), (93, 903));
 }
 
+/// A primitive that defers its level, run from the body of another whose
+/// level is still held aside, puts the outer level on first: Rexx code that
+/// starts under the inner one sees both, outer below inner, and both are gone
+/// when the outer body ends.
+#[test]
+fn a_nested_deferred_level_goes_on_above_the_outer_one() {
+    let mut interp = Interp::new();
+    let names = |interp: &Interp| -> Vec<Vec<u8>> {
+        let levels = &interp.activity.method_levels;
+        levels.iter().map(|level| level.name.to_vec()).collect()
+    };
+    let seen = interp
+        .deferred_level(ObjRef::NIL, b"OUTER", &[], |interp| {
+            interp.deferred_level(ObjRef::NIL, b"INNER", &[], |interp| {
+                interp.raise_deferred_level();
+                Ok(names(interp))
+            })
+        })
+        .expect("the bodies answer");
+    assert_eq!(seen, [b"OUTER".to_vec(), b"INNER".to_vec()]);
+    assert!(names(&interp).is_empty());
+    assert!(interp.activity.deferred_level.is_none());
+}
+
+/// A primitive that takes its level at once, run from the body of one whose
+/// level is still held aside, puts the outer level on first: Rexx code that
+/// starts under the inner one sees outer below inner, and the inner one's end
+/// pops its own level, leaving the outer one.
+#[test]
+fn an_eager_level_inside_a_deferred_one_goes_on_above_it() {
+    let mut interp = Interp::new();
+    let names = |interp: &Interp| -> Vec<Vec<u8>> {
+        let levels = &interp.activity.method_levels;
+        levels.iter().map(|level| level.name.to_vec()).collect()
+    };
+    let (inside, after) = interp
+        .deferred_level(ObjRef::NIL, b"OUTER", &[], |interp| {
+            let inside = interp.primitive_level(ObjRef::NIL, b"INNER", &[], |interp| {
+                interp.raise_deferred_level();
+                Ok(names(interp))
+            })?;
+            Ok((inside, names(interp)))
+        })
+        .expect("the bodies answer");
+    assert_eq!(inside, [b"OUTER".to_vec(), b"INNER".to_vec()]);
+    assert_eq!(after, [b"OUTER".to_vec()]);
+    assert!(names(&interp).is_empty());
+}
+
 /// Runs `source` and hands back `(exit code, stdout, stderr)`.
 fn run_source(source: &str) -> (i32, String, String) {
     let outcome = crate::run_program(
@@ -2367,4 +2416,167 @@ fn the_context_answers_a_setting_wider_than_an_address() {
             String::new()
         )
     );
+}
+
+/// A native class's instance behaviour is marked primitive exactly when it
+/// answers each of [`BASE_CLASS_MESSAGES`] with a primitive, and it still does
+/// once the library has run, which is what lets [`Interp::is_base_class`]
+/// stand in for sending them. A class the library declares is not marked.
+#[test]
+fn a_primitive_behaviour_answers_the_base_class_messages_with_primitives() {
+    let mut interp = Interp::new();
+    interp
+        .bootstrap_library()
+        .expect("the library bootstrap runs");
+    let native: Vec<(String, ObjRef)> = {
+        let classes = interp.classes();
+        classes
+            .registered()
+            .chain(classes.system_registered())
+            .map(|(name, id)| (name.to_string(), id))
+            .collect()
+    };
+    assert!(
+        native.iter().any(|(name, _)| name == "STRING")
+            && native.iter().any(|(name, _)| name == "DIRECTORY")
+            && native.iter().any(|(name, _)| name == "REXXINFO"),
+        "the native classes read here miss one of each directory's: {native:?}"
+    );
+    let object = interp.classes().lookup("Object").expect("Object is native");
+    let mut marked = Vec::new();
+    for (name, class) in &native {
+        let handle = interp.classes().instance_behaviour_handle(*class);
+        let primitive = BASE_CLASS_MESSAGES.iter().all(|message| {
+            interp
+                .classes()
+                .lookup_at(handle, message)
+                .is_some_and(|(_, method)| interp.object_model().natives.get(method).is_some())
+        });
+        assert_eq!(
+            interp.classes().is_primitive_behaviour(handle),
+            primitive,
+            "{name}'s instance behaviour is marked otherwise than its messages resolve"
+        );
+        if primitive {
+            // `hash_of`'s direct path computes what `Object~hashCode` answers.
+            // `Class`'s instances are class objects, which `is_base_class`
+            // answers false for.
+            let (definer, _) = interp
+                .classes()
+                .lookup_at(handle, "HASHCODE")
+                .expect("resolved above");
+            assert!(
+                definer == object || name == "CLASS",
+                "{name}~hashCode is not Object's"
+            );
+            marked.push(name.as_str());
+        }
+    }
+    // Anti-vacuity on both sides: the marked set holds the classes the hash
+    // and conversion paths meet most, and leaves out the classes that pass
+    // `==` on to another object.
+    for name in ["STRING", "DIRECTORY", "TABLE", "ARRAY", "OBJECT"] {
+        assert!(marked.contains(&name), "{name} is not marked: {marked:?}");
+    }
+    for name in ["STEM", "VARIABLEREFERENCE"] {
+        assert!(!marked.contains(&name), "{name} is marked");
+    }
+    let library_class = interp
+        .rexx_package_class(b"DATETIME")
+        .expect("the library declares DateTime");
+    let handle = interp.classes().instance_behaviour_handle(library_class);
+    assert!(
+        !interp.classes().is_primitive_behaviour(handle),
+        "a class the Rexx-coded library declares is marked primitive"
+    );
+}
+
+/// `is_base_class` holds for an instance of a native class itself and for a
+/// string, and fails for each object whose `HASHCODE` a method of the
+/// program's could answer: an instance of a subclass or of a program class
+/// named like a native one, an `enhanced` object, an object `setMethod` gave
+/// a method, and a class object.
+#[test]
+fn a_base_class_value_is_an_unchanged_instance_of_a_native_class() {
+    let mut interp = Interp::new();
+    interp
+        .bootstrap_library()
+        .expect("the library bootstrap runs");
+    let send = |interp: &mut Interp, receiver: ObjRef, name: &[u8], args: &[Option<ObjRef>]| {
+        let answer = interp
+            .send_message(receiver, name, None, args, no_caller())
+            .unwrap_or_else(|failure| panic!("{} failed: {failure:?}", name.escape_ascii()))
+            .unwrap_or(ObjRef::NIL);
+        interp.roots.activity_mut().push_temp(answer);
+        answer
+    };
+    let class = |interp: &mut Interp, name: &str| {
+        interp
+            .classes()
+            .lookup(name)
+            .unwrap_or_else(|| panic!("{name} is native"))
+    };
+    let directory = class(&mut interp, "Directory");
+    let string = class(&mut interp, "String");
+    let object = class(&mut interp, "Object");
+    let plain = send(&mut interp, directory, b"NEW", &[]);
+    let table_class = class(&mut interp, "Table");
+    let table = send(&mut interp, table_class, b"NEW", &[]);
+    let array_class = class(&mut interp, "Array");
+    let array = send(&mut interp, array_class, b"NEW", &[]);
+    let heap_text = interp.text_built(b"a string too long to sit in a handle".to_vec());
+    interp.roots.activity_mut().push_temp(heap_text);
+    for (what, value) in [
+        ("an inline string", interp.text(b"abc")),
+        ("a small integer", ObjRef::small_int(12).expect("in range")),
+        ("a heap string", heap_text),
+        ("a Directory", plain),
+        ("a Table", table),
+        ("an Array", array),
+    ] {
+        assert!(interp.is_base_class(value), "{what} is not of a base class");
+    }
+
+    let name = interp.text_built(b"Sub".to_vec());
+    let sub = send(&mut interp, directory, b"SUBCLASS", &[Some(name)]);
+    let sub_instance = send(&mut interp, sub, b"NEW", &[]);
+    let name = interp.text_built(b"String".to_vec());
+    let named = send(&mut interp, object, b"SUBCLASS", &[Some(name)]);
+    let named_instance = send(&mut interp, named, b"NEW", &[]);
+    let methods = send(&mut interp, directory, b"NEW", &[]);
+    let source = interp.text_built(b"return 1".to_vec());
+    let key = interp.text_built(b"HASHCODE".to_vec());
+    send(&mut interp, methods, b"PUT", &[Some(source), Some(key)]);
+    let enhanced_directory = send(&mut interp, directory, b"ENHANCED", &[Some(methods)]);
+    let text = interp.text_built(b"abc".to_vec());
+    let enhanced_string = send(
+        &mut interp,
+        string,
+        b"ENHANCED",
+        &[Some(methods), Some(text)],
+    );
+    // `Directory~setMethod` is an entry of its own; the method it installs
+    // runs with the directory as `SELF`, which may send `Object`'s.
+    let given = send(&mut interp, directory, b"NEW", &[]);
+    let poke = interp.text_built(b"POKE".to_vec());
+    let body = interp.text_built(b"self~setMethod:.object('HASHCODE', 'return 1')".to_vec());
+    send(&mut interp, given, b"SETMETHOD", &[Some(poke), Some(body)]);
+    send(&mut interp, given, b"POKE", &[]);
+    let stem_class = class(&mut interp, "Stem");
+    let stem = send(&mut interp, stem_class, b"NEW", &[]);
+    for (what, value) in [
+        ("an instance of a Directory subclass", sub_instance),
+        (
+            "an instance of a program class named String",
+            named_instance,
+        ),
+        ("an enhanced Directory", enhanced_directory),
+        ("an enhanced String", enhanced_string),
+        ("a Directory setMethod gave a HASHCODE", given),
+        ("a native class object", directory),
+        ("a program class object", sub),
+        ("a Stem, which passes `==` on to its value", stem),
+    ] {
+        assert!(!interp.is_base_class(value), "{what} is of a base class");
+    }
 }
