@@ -476,8 +476,7 @@ madestring
 r[class.object.string]
 `string` answers a string that shows the receiver, which is its `objectName`,
 as [the string rule](r:class.index.string) says, and takes no argument. `say`,
-the joining operators and the builtin functions other than those that follow
-[the native call rule](r:bif.index.call.native) use it for an object whose
+the joining operators and the builtin functions use it for an object whose
 `request` with the argument `STRING` answers no string, as the `request` of
 `Object` does for an object with no `MAKESTRING` method. A class that declares
 `string` shows its instances in

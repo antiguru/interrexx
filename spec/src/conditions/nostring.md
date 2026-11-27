@@ -2,7 +2,7 @@
 element: "NOSTRING"
 kind: concept
 rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
-deviations: [77, 179]
+deviations: [77]
 ---
 
 # NOSTRING
@@ -35,9 +35,9 @@ it include the three concatenation operators (the explicit `||`, the abuttal
 and the blank), the operand of SAY, the source of `PARSE VALUE`, the text that
 INTERPRET runs, an operand of an arithmetic or comparison operator whose left
 operand is a string, the tail of a compound variable, and an argument of a
-builtin function that is to be a string, except for the builtins that link
-[the native call rule](r:bif.index.call.native), which raise `SYNTAX 88.909`
-for it. Sending the message `STRING` to the object raises nothing, because the
+builtin function that is to be a string. A function of a library that follows
+[the native call rule](r:bif.index.call.native) raises `SYNTAX 88.909` for it
+instead. Sending the message `STRING` to the object raises nothing, because the
 object is then not converted. Which other positions convert, such as the
 arguments of method calls, is not specified. What a builtin does with such an
 argument when no trap answers is [the object rule of the
@@ -323,29 +323,6 @@ darr text
 ```
 
 ## Deviations
-
-r[cond.nostring.deviation.179]
-BEEP, DIRECTORY and FILESPEC are routines of the REXX package, as at language
-level 6.06 ([Deviation 179](../deviations.md)), and link [the native call
-rule](r:bif.index.call.native), so an argument of theirs that has no string
-value raises `SYNTAX 88.909` and no NOSTRING. ooRexx, at level 6.07, makes
-them builtins, and raises NOSTRING for such an argument as for one of any
-other builtin.
-
-```rexx
-signal on syntax name s
-signal on nostring name n
-x = filespec('n', .object~new)
-say 'nothing'
-exit
-n: say 'NOSTRING'
-exit
-s: say 'SYNTAX' condition('o')~code
-```
-
-```output
-SYNTAX 88.909
-```
 
 r[cond.nostring.deviation.77]
 The string value of a stem is its default value's, and NOSTRING is raised,

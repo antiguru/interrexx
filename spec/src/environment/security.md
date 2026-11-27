@@ -2,7 +2,6 @@
 element: "Security manager"
 kind: concept
 rexxref: "The Security Manager; The Security Manager > Calls to the Security Manager; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Package Class > setSecurityManager"
-deviations: [179]
 ---
 
 # Security manager
@@ -371,9 +370,8 @@ command 3 exit 12
 
 r[env.security.call]
 The `CALL` checkpoint is sent as [the class
-rule](r:class.routine.setsecuritymanager.call) says, and also for the built-in
-functions `BEEP`, `DIRECTORY` and `FILESPEC`, which are offered like external
-routines. No other built-in function is offered, and the stream functions have
+rule](r:class.routine.setsecuritymanager.call) says. No built-in function is
+offered, and the stream functions have
 [their own checkpoint](r:env.security.stream). A function of RexxUtil is
 offered like one of a library, and so is a program file that the search finds,
 at every call that finds it; the program that then runs is code of another
@@ -447,12 +445,12 @@ return envsecpass() => error 43.1
 ```
 
 ```rexx
-names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', -
+names = .array~of('abbrev', 'abs', 'address', 'arg', 'b2x', 'beep', -
   'bitand', 'bitor', 'bitxor', 'c2d', 'c2x', 'center', 'changestr', -
   'charin', 'charout', 'chars', 'compare', 'condition', 'copies', -
   'countstr', 'd2c', 'd2x', 'datatype', 'date', 'delstr', 'delword', -
-  'digits', -
-  'endlocal', 'errortext', 'format', 'form', -
+  'digits', 'directory', -
+  'endlocal', 'errortext', 'filespec', 'format', 'form', -
   'fuzz', 'gc', 'insert', 'lastpos', 'left', 'length', 'linein', 'lineout', -
   'lines', 'lower', 'max', 'min', 'overlay', 'pos', 'qualify', 'queued', -
   'random', 'reverse', 'right', 'rxfuncadd', 'rxfuncdrop', 'rxfuncquery', -
@@ -520,38 +518,6 @@ COMMAND exit 9
 5
 CALL SYSFILEEXISTS
 0
-```
-
-r[env.security.call.deviation.179]
-BEEP, DIRECTORY and FILESPEC are offered to the manager because they are
-routines of the REXX package, as at language level 6.06 ([Deviation
-179](../deviations.md)). ooRexx, at level 6.07, makes them builtins and offers
-none of them. In the example the manager notes the names it is sent and takes
-the calls over.
-
-```rexx
-m = .mgr~new
-do n over .array~of('beep', 'directory', 'filespec')
-  src = 'signal on syntax; x =' n || '(); syntax: return 0'
-  r = .routine~new('agent', src)
-  r~setSecurityManager(m)
-  r~call
-end
-say m~seen~allItems~sort~makearray~makestring('l', ' ')
-exit
-::class mgr
-::attribute seen
-::method init
-  self~seen = .list~new
-::method call
-  use arg info
-  self~seen~append(info~name)
-  info~result = 'R'
-  return 1
-```
-
-```output
-BEEP DIRECTORY FILESPEC
 ```
 
 r[env.security.command]

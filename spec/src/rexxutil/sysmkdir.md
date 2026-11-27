@@ -113,7 +113,7 @@ call SysFileDelete 'c1zqmkf'
 r[util.sysmkdir.mode]
 `mode` is a whole number in the [form](r:conv.whole.form) that the conventions
 give. Its value is its number rounded to 20 significant digits, whatever the
-NUMERIC DIGITS setting, as for [BEEP](r:bif.beep.range), and that value must
+NUMERIC DIGITS setting, as [the RexxUtil rule](r:util.index.whole) says, and that value must
 be from `-2147483648` to `2147483647`. A `mode` that is not in that form, the
 null string, a value with a fractional part other than zero, a value out of
 that range, and an object whose string fails these checks, `.nil` among them,

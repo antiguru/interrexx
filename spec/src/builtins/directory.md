@@ -3,7 +3,6 @@ element: DIRECTORY
 kind: builtin
 syntax: "DIRECTORY([newdirectory])"
 rexxref: "Functions > Built-in Functions > DIRECTORY"
-deviations: [179]
 ---
 
 # DIRECTORY
@@ -28,33 +27,35 @@ r[bif.directory.args]
 `newdirectory` is a [string](r:conv.string.null), and it is optional.
 DIRECTORY does not run as a [String method](r:class.string.builtins): sending
 the message `DIRECTORY` to a string raises `SYNTAX 97.1`. It follows [the
-native call rule](r:bif.index.call.native), both for the number of arguments,
+rules for the number of arguments](r:bif.index.call.count) of every builtin,
 so that `DIRECTORY(,)` is a call without an argument and `DIRECTORY(, 'x')`
-raises `SYNTAX 88.922`, and for an argument that is an object other than a
-string, such as `.nil` or `.object~new`.
+raises `SYNTAX 40.4`. An argument that is an object other than a string is
+[converted](r:conv.string.object) as for every builtin: `.nil` is read as its
+string value, which names no directory, and so is an argument that is not
+a name.
 
 ```rexx
 here = directory()
 signal on syntax name a
 say directory('/', 'x')
-a: say condition('c')
+a: say condition('o')~code
 signal on syntax name b
 say directory(, 'x')
-b: say condition('c')
+b: say condition('o')~code
 signal on syntax name d
 say '/'~directory
 d: say condition('o')~code
 signal off syntax
 say (directory(,) == here) (directory() == here)
-say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
+say '[' || directory(.nil) || ']' directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
 ```
 
 ```output
-SYNTAX
-SYNTAX
+40.4
+40.4
 97.1
 1 1
-/ /usr
+[] / /usr
 ```
 
 ## The result
@@ -260,48 +261,4 @@ say out.1
 /x /y/z
 1
 /
-```
-
-## Deviations
-
-r[bif.directory.deviation.179]
-DIRECTORY is a routine of the REXX package, as at language level 6.06
-([Deviation 179](../deviations.md)). Its argument errors are those of [the
-native call rule](r:bif.index.call.native), of the 88.9xx family, and an
-argument that is an object whose `request` answers no string, such as `.nil`
-or `.object~new`, raises `SYNTAX 88.909`. ooRexx, at level 6.07, makes DIRECTORY
-a builtin: it raises `SYNTAX 40.4` for an argument too many, and reads such an
-object by its `STRING` method, so the call tries to make a directory of that
-name the current one.
-
-```rexx
-here = directory()
-signal on syntax name a
-say directory('/', 'x')
-a: say condition('o')~code
-signal on syntax name b
-say directory(, 'x')
-b: say condition('o')~code
-signal on syntax name c
-say directory(.nil)
-c: say condition('o')~code
-signal on syntax name d
-say '/'~directory
-d: say condition('o')~code
-signal on syntax name e
-say directory(.object~new)
-e: say condition('o')~code
-signal off syntax
-say (directory(,) == here) (directory() == here)
-say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
-```
-
-```output
-88.922
-88.922
-88.909
-97.1
-88.909
-1 1
-/ /usr
 ```

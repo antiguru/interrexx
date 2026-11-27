@@ -3,19 +3,16 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [4, 98, 99, 179]
+deviations: [4, 98, 99]
 ---
 
 # Built-in functions
 
 This chapter has a page for each builtin function, and each page specifies the
-function call. The rules here hold for every builtin call, except that a
-builtin whose page links [the native call rule](r:bif.index.call.native)
-follows that rule in place of the rules for the number of arguments, and
-also for the [conversion](r:conv.string.object) of an object that is not a
-string, which has no fallback to `STRING` there. The pages link to these
-rules, and to the [conventions](../conventions.md), instead of restating
-them.
+function call. The rules here hold for every builtin call. The pages link to
+these rules, and to the [conventions](../conventions.md), instead of restating
+them. [The native call rule](r:bif.index.call.native) below is the rule of the
+functions of the libraries, which are not builtins.
 
 A page's syntax line names the arguments in order. A name in square
 brackets is an optional argument; every other argument is required. The
@@ -154,8 +151,8 @@ b: say condition('o')~code
 > after it, and makes the range checks only once every argument is present.
 
 r[bif.index.call.native]
-A builtin whose page links this rule does not follow the rules above for the
-number of arguments, from [too few](r:bif.index.call.too-few) to [the order of
+A function of a library whose page links this rule does not follow the rules
+above for the number of arguments, from [too few](r:bif.index.call.too-few) to [the order of
 their errors](r:bif.index.call.order.missing-before-values); its errors for
 them are of the 88.9xx family. A required argument that is omitted, whether the
 call stops short of it or leaves its place empty, raises `SYNTAX 88.901`. An
@@ -180,7 +177,7 @@ call try "SysFileExists()"
 call try "SysFileExists(, )"
 call try "SysTempFileName('envzq???', , 'x')"
 call try "SysFileExists(.told~new)"
-call try "filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))"
+call try "SysFileExists('/', , ) SysFileExists(.mutablebuffer~new('/'))"
 exit
 try:
   signal on syntax name e
@@ -198,43 +195,7 @@ e: say condition('o')~code
 88.901
 88.922
 88.909
-z q
-```
-
-r[bif.index.call.native.deviation.179]
-BEEP, DIRECTORY and FILESPEC, the builtins that link this rule, are routines
-of the REXX package, as at language level 6.06 ([Deviation
-179](../deviations.md)). ooRexx, at level 6.07, makes them builtins that
-follow the rules above for the number of arguments, with errors of the 40.xxx
-family, and reads an object argument by its `STRING` method when `request`
-answers no string.
-
-```rexx
-signal on syntax name a
-say filespec('N')
-a: say condition('o')~code
-signal on syntax name b
-say filespec('N', , )
-b: say condition('o')~code
-signal on syntax name c
-say directory(, 'x')
-c: say condition('o')~code
-signal on syntax name d
-say filespec('N', .told~new)
-d: say condition('o')~code
-signal off syntax
-say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
-::class told
-::method string
-  return 'a/b'
-```
-
-```output
-88.901
-88.901
-88.922
-88.909
-z q
+1 1
 ```
 
 r[bif.index.call.convert]

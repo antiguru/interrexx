@@ -1,8 +1,6 @@
-count 15
-/* The security manager's CALL checkpoint names FILESPEC, a routine of the
-   REXX package at language level 6.06 (Deviation 179,
-   r[env.security.call.deviation.179]), on every call from one expression call
-   site. */
+count 13
+/* The security manager's CALL checkpoint is not sent for FILESPEC, a builtin,
+   at any call from one expression call site (r[env.security.call]). */
 src = .array~of("do a over .array~of('N', 'E')",,
   "  say 'internal' filespec(a, '/a/b.c')",,
   "end")

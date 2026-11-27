@@ -174,8 +174,8 @@ say datatype('1234567890', '9') datatype('1234567890', 'W')
 
 r[bif.datatype.internal]
 Type `I` answers `1` when the string is acceptable as a whole-number argument,
-as [the conventions' rule](r:conv.whole.digits) gives it (stream positions and
-BEEP have their own rules). The caller's NUMERIC DIGITS setting plays no part
+as [the conventions' rule](r:conv.whole.digits) gives it (stream positions have
+their own rules). The caller's NUMERIC DIGITS setting plays no part
 in that rule, so `I` can answer `1` for a number that `W` finds too large for
 the current setting, and `0` for a number that `W` finds whole because of
 rounding to a short setting.

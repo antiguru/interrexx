@@ -3,7 +3,6 @@ element: "Error numbers"
 kind: concept
 ansi: "8.2.1, 8.4, 8.4.1"
 rexxref: "Conditions and Condition Traps > Condition Information > The Special Variable RC; Error Numbers and Messages"
-deviations: [179]
 ---
 
 # Error numbers
@@ -586,23 +585,4 @@ e2: say condition('o')~code
 ```output
 91.999
 97.2
-```
-
-## Deviations
-
-r[cond.errors.deviation.179]
-BEEP, DIRECTORY and FILESPEC are routines of the REXX package, as at language
-level 6.06 ([Deviation 179](../deviations.md)), so the errors of their
-arguments are numbered 88, as [the native call rule](r:bif.index.call.native)
-says. ooRexx, at level 6.07, makes them builtins, and numbers the same faults
-40.
-
-```rexx
-signal on syntax name e
-x = filespec('N')
-e: say condition('o')~code
-```
-
-```output
-88.901
 ```

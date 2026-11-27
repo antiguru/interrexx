@@ -220,12 +220,13 @@ e: say condition('o')~code
 ```
 
 r[util.index.whole]
-A whole-number argument of a RexxUtil function is read as [BEEP reads its
-arguments](r:bif.beep.range): its number is rounded to 20 significant digits,
+A whole-number argument of a RexxUtil function is read in the [form](r:conv.whole.form)
+that the conventions give, but not with [their digits](r:conv.whole.digits):
+its number is rounded to 20 significant digits,
 half up, whatever the NUMERIC DIGITS of the caller, and the value after that
 rounding must have no fractional part. So `1.0000000000000000001` (20 digits)
-has a fraction and `1.00000000000000000001` (21 digits) is `1`. BEEP's limit
-of 10\*\*18 is not part of this rule: the range that a function allows is
+has a fraction and `1.00000000000000000001` (21 digits) is `1`. The limit of
+10\*\*18 of [the conventions' rule](r:conv.whole.digits) is not part of this rule: the range that a function allows is
 checked on the rounded value and is stated on its page, and for a semaphore
 handle it reaches 18446744073709551615.
 

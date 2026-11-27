@@ -893,8 +893,7 @@ GENERIC => ran
 
 r[class.routine.setsecuritymanager.call]
 The `CALL` checkpoint is offered for the call of an external routine: one that
-is not a label in the code, not a built-in function other than `BEEP`,
-`DIRECTORY` and `FILESPEC`, which [are offered](r:env.security.call), and not
+is not a label in the code, not a built-in function, and not
 a routine that the
 routine's package or its context package finds, its own and those it imports;
 a function of a native library is offered. The directory holds `NAME`, the

@@ -1,7 +1,6 @@
--- A condition trapped after a call to FILESPEC, a routine of the REXX package
--- at language level 6.06 (Deviation 179, r[cond.errors.deviation.179]): the
--- context of the native level the argument error comes from, and POSITION and
--- PROGRAM from the caller, the first frame with a package.
+-- A condition trapped after a call to FILESPEC, a builtin: the context of the
+-- builtin level the argument error comes from, and POSITION and PROGRAM from
+-- the caller, the first frame with a package.
 call t3
 exit
 

@@ -1349,3 +1349,9 @@ lang/raise_nomethod_additional_objects.rex
 lang/inherited_condition_trap.rex
 lang/hash_index_own_methods.rex
 lang/hash_compare_request_level.rex
+lang/builtin_beep_filespec_directory_arguments.rex
+lang/builtin_argument_error_frame.rex
+lang/library_routine_site_add_routine_filespec.rex
+lang/library_routine_site_after_add_package_filespec.rex
+lang/library_routine_site_twice_security_filespec.rex
+lang/trapped_condition_native_levels_filespec.rex

@@ -1,9 +1,8 @@
-count 10
+count 9
 /* A call site that found a library routine finds a public routine of the
    same name that addPackage made callable in front of it, on its next pass. A
-   routine of the REXX package is
-   library_routine_site_after_add_package_filespec's: FILESPEC is one only at
-   language level 6.06 (Deviation 179). */
+   builtin is not found that way: library_routine_site_after_add_package_filespec
+   has FILESPEC. */
 x = .context~package~loadLibrary('rxmath')
 do i = 1 to 2
   say 'library' i RxCalcSqrt(16)

@@ -3,7 +3,6 @@ element: BEEP
 kind: builtin
 syntax: "BEEP(frequency, duration)"
 rexxref: "Functions > Built-in Functions > BEEP"
-deviations: [179]
 ---
 
 # BEEP
@@ -26,18 +25,24 @@ standard output when no tone can be sounded.
 r[bif.beep.args]
 Both arguments are required. BEEP does not run as a [String
 method](r:class.string.builtins): sending the message `BEEP` to a string
-raises `SYNTAX 97.1`. For the number of arguments it follows [the native call
-rule](r:bif.index.call.native), so `BEEP(100, 0, )` is a call with two
-arguments. The null string is not an omitted argument; it is a value that
-[fails the checks below](r:bif.beep.range).
+raises `SYNTAX 97.1`. For the number of arguments it follows [the rules for
+every builtin](r:bif.index.call.count), so `BEEP(100, 0, )` is a call with two
+arguments and `BEEP(100, )` a call with one. The null string is not an omitted
+argument; it is a value that [fails the checks below](r:bif.beep.range).
 
 ```rexx
 signal on syntax name a
 say beep()
-a: say condition('c')
+a: say condition('o')~code
 signal on syntax name b
+say beep(100)
+b: say condition('o')~code
+signal on syntax name c
+say beep(, 0)
+c: say condition('o')~code
+signal on syntax name d
 say beep(100, 0, 1)
-b: say condition('c')
+d: say condition('o')~code
 signal on syntax name e
 say '100'~beep(0)
 e: say condition('o')~code
@@ -46,25 +51,22 @@ say 'done'
 ```
 
 ```output
-SYNTAX
-SYNTAX
+40.3
+40.3
+40.5
+40.4
 97.1
 done
 ```
 
 r[bif.beep.range]
-`frequency` and `duration` are whole numbers in the [form](r:conv.whole.form)
-that rule gives. The value of each is its number rounded to 20 significant
-digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is 5
-or more, the magnitude rounds up, otherwise down. This is not the rule of [the
-conventions](r:conv.whole.digits), which rounds to 18 digits and raises
-`SYNTAX 40.12`. The frequency must be from 37 to 32767 and the duration from 0
-to 60000. An argument that is not in that form, whose rounded value has a
-fractional part other than zero, or that is the null string raises `SYNTAX 88.903`,
-as does an object whose string value fails these checks, such as `.nil`.
-A rounded value whose magnitude is 10\*\*18 or more also fails the whole-number
-check. A whole number outside the frequency or duration range raises
-`SYNTAX 88.907`.
+`frequency` and `duration` are [whole numbers](r:conv.whole.digits): each is
+read in the form [that rule](r:conv.whole.form) gives, rounded to 18
+significant digits whatever the NUMERIC DIGITS setting, and an argument that
+is not a whole number in that sense, the null string and `.nil` included,
+raises `SYNTAX 40.12`. The frequency must then be from 37 to 32767 and the
+duration from 0 to 60000; a whole number outside its range raises `SYNTAX
+40.927`.
 
 ```rexx
 call try 36, 0
@@ -74,50 +76,53 @@ call try 100, -1
 call try 1.5, 0
 call try 100, ''
 call try .nil, 0
-call try 36, 'x'
+call try 'x', 0
+call try '36.9999999999999999994', 0
+call try 100, '60000.000000000000001'
 exit
 try:
   signal on syntax name e
   call beep arg(1), arg(2)
   say 'accepted'
   return
-e: say condition('c')
+e: say condition('o')~code
   return
 ```
 
-```output
-SYNTAX
-SYNTAX
-SYNTAX
-SYNTAX
-SYNTAX
-SYNTAX
-SYNTAX
-SYNTAX
+```output escaped
+40.927
+40.927
+40.927
+40.927
+40.12
+40.12
+40.12
+40.12
+\aaccepted
+\aaccepted
 ```
 
 r[bif.beep.order]
-A call with more than one fault, such as a third argument together with a
-frequency out of range, or a frequency that is not a whole number together
-with a missing duration, raises the error of one of them, as [the precedence
-rule](r:conv.error.precedence) says.
+A call with more than one fault, such as a frequency that is out of range
+together with a duration that is not a number, raises the error of one of them,
+as [the precedence rule](r:conv.error.precedence) says.
 
 ```rexx
 signal on syntax name d
 x = beep(100, 0, 1)
-d: say condition('c')
+d: say condition('o')~code
 signal on syntax name e
-x = beep(36, 0, 1)
-e: say condition('c')
+x = beep(36, 'x')
+e: say wordpos(condition('o')~code, '40.927 40.12') > 0
 signal on syntax name f
 x = beep('x', )
-f: say condition('c')
+f: say wordpos(condition('o')~code, '40.3 40.12') > 0
 ```
 
 ```output
-SYNTAX
-SYNTAX
-SYNTAX
+40.4
+1
+1
 ```
 
 ## The result
@@ -125,10 +130,19 @@ SYNTAX
 r[bif.beep.answer]
 BEEP answers the null string, which is a string of length 0, for every
 accepted pair of arguments. A call as a subroutine therefore sets `RESULT` to
-the null string rather than dropping it. The test that cites this rule checks
-it on interrexx; the example under [the deviation](r:bif.beep.deviation.179)
-shows it with interrexx's bells.
+the null string rather than dropping it. The example has the bells of [the
+rule below](r:bif.beep.bell) in its output.
 
+```rexx
+say '[' || beep(100, 0) || ']' length(beep(37, 0))
+call beep 32767, 0
+say symbol('RESULT') length(result)
+```
+
+```output escaped
+\a\a[] 0
+\aVAR 0
+```
 
 r[bif.beep.bell]
 When no tone can be sounded, as when the output of the program is not a
@@ -147,171 +161,4 @@ a: say 'after' condition('c')
 
 ```output
 after SYNTAX
-```
-
-## Deviations
-
-r[bif.beep.deviation.179]
-BEEP is a routine of the REXX package, as at language level 6.06
-([Deviation 179](../deviations.md)). Its argument errors are those of [the
-native call rule](r:bif.index.call.native) and of [the range
-rule](r:bif.beep.range), of the 88.9xx family, and when no tone can be sounded
-an accepted call writes a bell character to standard output, as [the bell
-rule](r:bif.beep.bell) says. ooRexx, at level 6.07, makes BEEP a builtin: it
-raises errors of the 40.xxx family for the same faults, accepts some values
-that interrexx refuses, such as `36.9999999999999999994` and
-`60000.000000000000001`, and writes no bell. The examples are those of the
-rules above with the codes and the bells of interrexx.
-
-```rexx
-signal on syntax name a
-say beep()
-a: say condition('o')~code
-signal on syntax name b
-say beep(, 0)
-b: say condition('o')~code
-signal on syntax name c
-say beep(100, )
-c: say condition('o')~code
-signal on syntax name d
-say beep(100, 0, 1)
-d: say condition('o')~code
-signal on syntax name e
-say '100'~beep(0)
-e: say condition('o')~code
-signal off syntax
-say 'done'
-```
-
-```output
-88.901
-88.901
-88.901
-88.922
-97.1
-done
-```
-
-```rexx
-signal on syntax name a
-call beep 36, 0
-a: say condition('o')~code
-signal on syntax name b
-call beep 32768, 0
-b: say condition('o')~code
-signal on syntax name c
-call beep 100, 60001
-c: say condition('o')~code
-signal on syntax name d
-call beep 100, -1
-d: say condition('o')~code
-signal on syntax name e
-call beep 1.5, 0
-e: say condition('o')~code
-signal on syntax name f
-call beep 100, ''
-f: say condition('o')~code
-signal on syntax name g
-call beep .nil, 0
-g: say condition('o')~code
-signal on syntax name h
-call beep 36, 'x'
-h: say condition('o')~code
-signal on syntax name l
-call beep '*', 1
-l: say condition('o')~code
-signal on syntax name i
-call beep '37.000000000000000001', 0
-i: say condition('o')~code
-signal on syntax name j
-call beep 100, '60000.000000000000001'
-j: say condition('o')~code
-signal on syntax name k
-call beep '36.9999999999999999994', 0
-k: say condition('o')~code
-signal off syntax
-numeric digits 3
-call beep ' + 100 ', '-0'
-call beep '1e+2', '0.0e1'
-call beep 99.99999999999999999999, 60000.0000000000000000001
-call beep '37.0000000000000000001', '60000.0000000000000001'
-call beep '36.9999999999999999995', 0
-call beep 37, 0
-call beep 32767, 0
-call beep .mutablebuffer~new('12345'), 0
-say 'done'
-```
-
-```output escaped
-88.907
-88.907
-88.907
-88.907
-88.903
-88.903
-88.903
-88.903
-88.903
-88.903
-88.903
-88.903
-\a\a\a\a\a\a\a\adone
-```
-
-```rexx
-signal on syntax name d
-x = beep(100, 0, 1)
-d: say condition('o')~code
-signal on syntax name e
-x = beep(36, 0, 1)
-e: say wordpos(condition('o')~code, '88.922 88.907') > 0
-signal on syntax name f
-x = beep('x', )
-f: say wordpos(condition('o')~code, '88.903 88.901') > 0
-```
-
-```output
-88.922
-1
-1
-```
-
-```rexx
-call beep 100, 0
-say 'after'
-signal on syntax name a
-call beep 100, 60001
-a: say condition('o')~code
-sink = .counter~new
-.output~destination(sink)
-say 'hidden'
-call beep 100, 0
-.output~destination
-say 'shown' sink~count
-exit
-::class counter
-::attribute count
-::method init
-  expose count
-  count = 0
-::method say
-  expose count
-  count += 1
-```
-
-```output escaped
-\aafter
-88.907
-\ashown 1
-```
-
-```rexx
-say '[' || beep(100, 0) || ']' length(beep(37, 0))
-call beep 32767, 0
-say symbol('RESULT') length(result)
-```
-
-```output escaped
-\a\a[] 0
-\aVAR 0
 ```

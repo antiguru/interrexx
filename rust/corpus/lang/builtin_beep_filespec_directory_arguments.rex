@@ -1,5 +1,4 @@
-count 43
-/* BEEP, FILESPEC and DIRECTORY convert their arguments as the native routines they are. */
+/* BEEP, FILESPEC and DIRECTORY read their arguments as builtins do. */
 o = .object~new
 call try "beep(.object~new)"
 call try "beep('abc')"

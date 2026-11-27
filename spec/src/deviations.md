@@ -1516,14 +1516,8 @@ tracks doing the same.
 
 ## 179. Language level 6.06
 
-interrexx implements language level 6.06. BEEP, DIRECTORY and FILESPEC are
-routines of the REXX package, as at that level, not builtins: their argument
-errors are those of a native routine, of the 88.9xx family, a `::ROUTINE` of
-the same name or an RXFNC exit can replace them, the security manager is sent
-`CALL` for them, and an argument with no string value raises `SYNTAX 88.909`
-rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
-character to standard output. `.RexxInfo~languageLevel`, and the level in
-`PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
+interrexx implements language level 6.06. `.RexxInfo~languageLevel`, and the
+level in `PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
 argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
 interrexx. Neither is the THROW instruction of level 6.07: a clause that starts
 with THROW is a command, a condition object has no `THROWN` entry, and the
@@ -1531,12 +1525,10 @@ native interface's interface versions are those of level 6.06. Its function
 tables have the `Throw` and `ThrowObject` members, so that code written for
 level 6.07 builds, but a call of one ends the process with a message naming
 the member. ooRexx is at level
-6.07: the three are builtins there, with argument errors of the 40.xxx family,
-BEEP writes no bell, ERRORTEXT takes a second argument of values for an error
-code's message, THROW raises a condition that goes from caller to caller until
-it is caught, every condition object has a `THROWN` entry, and the level reads
-6.07. Ruled by the owner on 2026-11-17 (#796), and for THROW on 2026-11-24
-(#804).
+6.07: ERRORTEXT takes a second argument of values for an error code's message,
+THROW raises a condition that goes from caller to caller until it is caught,
+every condition object has a `THROWN` entry, and the level reads 6.07. Ruled by
+the owner on 2026-11-17 (#796), and for THROW on 2026-11-24 (#804).
 
 The same difference applies to the [required language level in compiled
 images](r:env.invocation.rexxc.required-level). ooRexx records 6.07 when a

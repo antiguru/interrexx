@@ -1,0 +1,10 @@
+count 9
+/* What a builtin contributes to a traceback.
+
+   FILESPEC is a builtin, so its argument error is 40.3 and the traceback has
+   no line of its own for it: the error report names the program and the
+   calling line. Left untrapped: trapping hides the report being pinned. */
+
+say 'before   ' filespec('N', 'dir/leaf.txt')
+say 'still    ' directory()  \== ''
+say filespec('D')

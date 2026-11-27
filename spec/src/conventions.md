@@ -73,9 +73,9 @@ builtin that reads several such arguments reads them from left to right, before
 it checks any of them, when the call has no fault ([the conversion
 rule](r:bif.index.call.convert)). An argument that a builtin reads
 as a whole number or as a number is read this way too, and the replacement must
-then be a number. A builtin whose page links [the native call
-rule](r:bif.index.call.native) has no fallback to `STRING`, as that rule says,
-and the same holds for the string arguments of methods ([the method argument
+then be a number. A function of a library
+that follows [the native call rule](r:bif.index.call.native) has no fallback to
+`STRING`, as that rule says, and the same holds for the string arguments of methods ([the method argument
 rule](r:class.index.string)). A `REQUEST`, `MAKESTRING` or `STRING` method that
 is private and would be sent is not one the replacement can use: the call
 raises `SYNTAX 97.2`. A comparison operator converts its right operand once, as
