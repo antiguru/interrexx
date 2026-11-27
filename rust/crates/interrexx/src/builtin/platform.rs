@@ -1,7 +1,13 @@
 //! The builtins that read or move the interpreter's own platform state:
-//! `QUALIFY`, `USERID`, `SETLOCAL`, `ENDLOCAL`, and the external-pool halves of
-//! `VALUE`. Every one of them goes through `Interp`'s environment and current
-//! directory rather than the process's -- see `tests/no_process_state.rs`.
+//! `QUALIFY`, `USERID`, `SETLOCAL`, `ENDLOCAL`, `DIRECTORY`, and the
+//! external-pool halves of `VALUE`; and `BEEP` and `FILESPEC`, which are
+//! platform builtins of the same row shape. Every one of them goes through
+//! `Interp`'s environment and current directory rather than the process's --
+//! see `tests/no_process_state.rs`. `BEEP`, `DIRECTORY` and `FILESPEC` also
+//! have a body as a routine of the `REXX` package, which a `::ROUTINE ...
+//! EXTERNAL 'LIBRARY REXX ...'` reaches with the 88.9xx argument errors of
+//! a native routine; the two bodies of `DIRECTORY` and of `FILESPEC` share what
+//! they do once their arguments are read, and those of `BEEP` its bounds.
 
 use interrexx_core::ObjRef;
 

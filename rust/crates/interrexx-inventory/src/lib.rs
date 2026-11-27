@@ -130,7 +130,8 @@ pub mod builtins {
     /// language level), each with that level. At this crate's level each is
     /// a routine of the `REXX` package, so a call to one is resolved past the
     /// builtins and the running package's routines, and the name is neither
-    /// in scope nor excluded.
+    /// in scope nor excluded. Empty while this crate implements the level
+    /// of the pinned ooRexx.
     pub const LATER_LEVEL: &[(&str, &str)] = &[];
 
     /// Whether `name` is listed in [`LATER_LEVEL`].

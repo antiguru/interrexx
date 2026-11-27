@@ -5,9 +5,5 @@ lang/sys_semaphores_unnamed.rex
 lang/sys_semaphores_across_activities.rex
 lang/requires_manager_rename.rex
 lang/security_manager_requires_replacement.rex
-lang/native_routine_argument_marshalling.rex
-lang/internal_routine_frame.rex
-lang/library_routine_site_add_routine_filespec.rex
-lang/library_routine_site_after_add_package_filespec.rex
 lang/debug_call_return.rex
 lang/scope_debug_pause_routine.rex
