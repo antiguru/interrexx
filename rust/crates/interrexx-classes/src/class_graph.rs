@@ -75,6 +75,12 @@ enum Side {
 struct Behaviour {
     dict: MethodDict,
     version: u64,
+    /// Set by [`ClassGraph::set_primitive_instances`] on the instance
+    /// behaviour of a class whose instances answer from primitives. An object
+    /// that holds it is an instance of that class itself: a subclass and
+    /// `enhanced` give their objects a behaviour that
+    /// [`ClassGraph::alloc_behaviour`] allocates, which starts unset.
+    primitive: bool,
 }
 
 struct ClassDef {
@@ -259,12 +265,14 @@ impl ClassGraph {
 
     fn alloc_behaviour(&mut self) -> BehaviourHandle {
         if let Some(handle) = self.free_behaviours.pop() {
+            self.behaviours[handle.index()].primitive = false;
             return handle;
         }
         let handle = BehaviourHandle::new(self.behaviours.len());
         self.behaviours.push(Behaviour {
             dict: MethodDict::new(),
             version: 0,
+            primitive: false,
         });
         handle
     }
@@ -1589,6 +1597,18 @@ impl ClassGraph {
     /// Whether the class is Rexx-defined; see [`ClassDef::rexx_defined`].
     pub fn is_rexx_defined(&self, class: ObjRef) -> bool {
         self.classes[&class].rexx_defined
+    }
+
+    /// Marks `class`'s instance behaviour as primitive (see [`Behaviour::primitive`]). There is no
+    /// clearing counterpart, and a class keeps its instance behaviour's handle for its lifetime.
+    pub fn set_primitive_instances(&mut self, class: ObjRef) {
+        let handle = self.classes[&class].instance_behaviour;
+        self.behaviours[handle.index()].primitive = true;
+    }
+
+    /// Whether [`Self::set_primitive_instances`] marked `handle`.
+    pub fn is_primitive_behaviour(&self, handle: BehaviourHandle) -> bool {
+        self.behaviours[handle.index()].primitive
     }
 
     /// The marking of a class as Rexx-defined, which image preparation applies to every class it

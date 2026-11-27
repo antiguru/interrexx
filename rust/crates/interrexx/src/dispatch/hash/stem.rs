@@ -144,7 +144,7 @@ impl Interp {
     /// keeps the test free of a name comparison on the string-value path.
     pub(crate) fn stem_store_in(&self, pools: &interrexx_core::ScopePools) -> Option<ObjRef> {
         let scope = self.object_model.as_ref()?.stem;
-        pools.entries(scope).first().map(|(_, store)| *store)
+        pools.entries(scope).first().map(|entry| entry.value)
     }
 
     /// Drops `tail` where the stem holds it, and leaves a tail it never held

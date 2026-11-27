@@ -126,8 +126,10 @@ and `PROGRAM` its name. `POSITION` is the number of the line on which the
 clause that raised the condition starts, in that code, and a NOTREADY that the
 interpreter raised has none. `PROPAGATED` is `1` when the condition left the
 level that raised it and `0` otherwise, as
-[the propagated rule](r:cond.information.propagated) specifies. `STACKFRAMES`
-and `TRACEBACK` are lists with one item for each active level of Rexx code at
+[the propagated rule](r:cond.information.propagated) specifies, which leaves
+it unspecified for a condition that a built-in function or method, or a method
+of the class library, raised itself.
+`STACKFRAMES` and `TRACEBACK` are lists with one item for each active level of Rexx code at
 that time, the main program's included. Whether a built-in method has a level
 is not specified ([the built-in rule](r:class.stackframe.builtin)), and the text
 of a traceback line is not specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
@@ -272,7 +274,9 @@ between the level that sent the message and the level that raised the
 condition is not specified either, so the number of items of `STACKFRAMES` and
 `TRACEBACK` is not specified where library levels are among them, nor where a
 built-in method may have a level ([the built-in
-rule](r:class.stackframe.builtin)). The code
+rule](r:class.stackframe.builtin)). Whether a condition that such a level
+raised is `PROPAGATED` is not specified, as [the propagated
+rule](r:cond.information.propagated) says. The code
 and subcode of an error that a library method raises are specified, as the
 page of the class says; its text is not, as [the object
 rule](r:cond.information.object) says for every message.
@@ -561,7 +565,21 @@ The `PROPAGATED` entry of the object that the trap sees is `1` when the
 condition left the level that raised it, which is the case for a SYNTAX that
 reached a caller from a `::ROUTINE`, from a method or from an internal
 routine, and after a RAISE with PROPAGATE. It is `0` for a condition that the
-level which raised it answers, a SYNTAX or a user condition alike.
+level which raised it answers, a SYNTAX or a user condition alike. What
+decides is the level where the condition was raised. Whether it is `1` for a
+condition that a built-in function or method, or a method of the class
+library, raised itself is not specified, as whether such code has levels, and
+how many, is not ([the built-in rule](r:class.stackframe.builtin), [the
+library rule](r:cond.information.library)): the value would otherwise say
+which of them a build writes in Rexx. A NOTREADY that a stream builtin or a
+method of a stream raises is such a condition. A condition raised in code of
+the program keeps this rule when a built-in function or method, or a method
+of the class library, carries it on to the trap: one that a comparator of
+`sortWith`, a `compareTo` that `sort` sends or a `makeString` that a builtin
+requests raises, by a clause or by a RAISE with PROPAGATE, has left the level
+that raised it, and the trap sees `1`. An error that an operator of an
+expression raises over its operands is raised at the level of the clause that
+holds the expression, so a trap of that level sees `0`.
 
 ```rexx
 signal on syntax name t
@@ -585,6 +603,29 @@ exit
 routine 1
 method 1
 same level 0
+```
+
+```rexx
+signal on syntax name t
+.array~of(2, 1)~sortWith(.c~new)
+t: say 'comparator' condition('o')~propagated
+signal on syntax name u
+n = length(.s~new)
+u: say 'makeString' condition('o')~propagated
+exit
+::class c
+::method compare
+  x = 1 % 0
+::class s
+::method makeString
+  signal on syntax name h
+  x = 1 % 0
+h: raise propagate
+```
+
+```output
+comparator 1
+makeString 1
 ```
 
 r[cond.information.propagated.internal]

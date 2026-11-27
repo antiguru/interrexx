@@ -1,5 +1,7 @@
-/* The security manager's CALL checkpoint names a library routine and an
-   internal routine on every call from one expression call site. */
+/* The security manager's CALL checkpoint names a library routine on every
+   call from one expression call site. That it names FILESPEC, a routine of
+   the REXX package only at language level 6.06 (Deviation 179), is
+   r[env.security.call.deviation.179]'s example. */
 say 'load' .context~package~loadLibrary('rxmathc')
 g = .Routine~newFile('global.rex')
 say 'declined' g~setSecurityManager(.Audit~new)

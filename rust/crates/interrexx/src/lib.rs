@@ -4803,14 +4803,25 @@ fn execute_kept(
     // A propagated SYNTAX condition shows its object's `TRACEBACK`, every line
     // by its string value (`r[instr.raise.propagate.traceback]`).
     // Read while the activity still holds the object, which roots it: the
-    // read allocates.
+    // read allocates. The echo lines are replaced and the position is not:
+    // the major line still names the clause the condition was raised again
+    // in (`r[instr.raise.propagate]`).
     if let Some(object) = interp.activity.traceback_object
         && matches!(&result, Err(Failure::Raised(raised)) if raised.condition == "SYNTAX")
         && let Ok(lines) = interp.traceback_lines(object)
     {
+        let position = failure_sites
+            .iter()
+            .find(|site| site.positions())
+            .and_then(|site| {
+                let line = site.line()?;
+                let name = site.reported_name().map(<[u8]>::to_vec);
+                Some(FailureSite::Reraised { line, name })
+            });
         failure_sites = lines
             .into_iter()
             .map(|text| FailureSite::Rendered { text })
+            .chain(position)
             .collect();
     }
     interp.activity.traceback_object = None;

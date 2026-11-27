@@ -6,6 +6,8 @@
 #[path = "support/ruled_corpus.rs"]
 mod ruled_corpus;
 mod support;
+#[path = "support/unfiled.rs"]
+mod unfiled;
 mod watchdog;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -22,8 +24,10 @@ use support::oracle::{
     wrapped_exit_code,
 };
 use support::sidecar::{
-    self, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment, sidecar_for,
+    self, Half, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment,
+    sidecar_for,
 };
+use unfiled::{RULED_RUNNER, UNFILED_FILE, read_unfiled};
 
 /// Env var that flips this test from a progress report into the gate.
 /// See the module doc's "REPORT vs STRICT" section.
@@ -248,12 +252,25 @@ const CONCURRENTLY_TRACED: &[&str] = &["lang/directive_options_trace_reply.rex"]
 /// order, which here is insertion order and on the oracle its storage order.
 const HASH_ORDERED_STDOUT: &[&str] = &["lang/package_writes.rex"];
 
-/// The `stdout` comparison one corpus entry gets.
+/// Corpus programs whose `stdout` is compared with the text of each trace
+/// announcement cut, as `stderr` is: a trace line that its destination fails
+/// to take is written to standard output, and an announcement's text is not
+/// specified (`r[instr.trace.tags]`).
+const TRACED_STDOUT: &[&str] = &["lang/trace_output_invalid_destination.rex"];
+
+/// The `stdout` comparison one corpus entry gets, and no entry may ask for two.
 fn stdout_mode(rel_path: &str) -> StdoutComparison {
-    if HASH_ORDERED_STDOUT.contains(&rel_path) {
-        StdoutComparison::Multiset
-    } else {
-        StdoutComparison::Raw
+    match (
+        HASH_ORDERED_STDOUT.contains(&rel_path),
+        TRACED_STDOUT.contains(&rel_path),
+    ) {
+        (true, true) => panic!(
+            "{rel_path} is on both HASH_ORDERED_STDOUT and TRACED_STDOUT, which ask for two \
+             comparisons of the same channel"
+        ),
+        (true, false) => StdoutComparison::Multiset,
+        (false, true) => StdoutComparison::TraceCut,
+        (false, false) => StdoutComparison::Raw,
     }
 }
 
@@ -273,8 +290,9 @@ fn stderr_mode(rel_path: &str) -> StderrComparison {
     }
 }
 
-/// Every entry in [`RAW_STDERR_COMPARISON`], [`CONCURRENTLY_TRACED`] and
-/// [`HASH_ORDERED_STDOUT`] is a line the corpus list actually names.
+/// Every entry in [`RAW_STDERR_COMPARISON`], [`CONCURRENTLY_TRACED`],
+/// [`HASH_ORDERED_STDOUT`] and [`TRACED_STDOUT`] is a line the corpus list
+/// actually names.
 #[test]
 fn every_opted_in_comparison_names_a_program_the_subset_runs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -287,6 +305,7 @@ fn every_opted_in_comparison_names_a_program_the_subset_runs() {
         (RAW_STDERR_COMPARISON, "raw"),
         (CONCURRENTLY_TRACED, "multiset"),
         (HASH_ORDERED_STDOUT, "multiset stdout"),
+        (TRACED_STDOUT, "trace-cut stdout"),
     ] {
         for listed in list {
             assert!(
@@ -299,28 +318,41 @@ fn every_opted_in_comparison_names_a_program_the_subset_runs() {
     }
 }
 
-/// [`stdout_mode`] answers the multiset mode for exactly the listed programs.
+/// [`stdout_mode`] answers the multiset mode and the trace-cut mode for
+/// exactly the programs of their lists.
 #[test]
-fn the_multiset_stdout_mode_is_selected_for_exactly_the_listed_programs() {
+fn each_stdout_mode_is_selected_for_exactly_its_listed_programs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
     let paths: Vec<PathBuf> = SUBSET_FILES
         .iter()
         .map(|name| corpus_dir.join(name))
         .collect();
     let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
-    assert!(
-        !HASH_ORDERED_STDOUT.is_empty() && HASH_ORDERED_STDOUT.len() < subset.len(),
-        "the list is empty or is the whole subset, so this control separates nothing"
-    );
-    for entry in &subset {
-        let listed = HASH_ORDERED_STDOUT.contains(&entry.as_str());
-        let mode = stdout_mode(entry);
-        assert_eq!(
-            mode == StdoutComparison::Multiset,
-            listed,
-            "{entry} is compared as {mode:?} and is {} on HASH_ORDERED_STDOUT",
-            if listed { "" } else { "not" }
+    let lists = [
+        (
+            HASH_ORDERED_STDOUT,
+            "HASH_ORDERED_STDOUT",
+            StdoutComparison::Multiset,
+        ),
+        (TRACED_STDOUT, "TRACED_STDOUT", StdoutComparison::TraceCut),
+    ];
+    for (list, name, _) in lists {
+        assert!(
+            !list.is_empty() && list.len() < subset.len(),
+            "{name} is empty or is the whole subset, so this control separates nothing"
         );
+    }
+    for entry in &subset {
+        let mode = stdout_mode(entry);
+        for (list, name, selected) in lists {
+            let listed = list.contains(&entry.as_str());
+            assert_eq!(
+                mode == selected,
+                listed,
+                "{entry} is compared as {mode:?} and is {} on {name}",
+                if listed { "" } else { "not" }
+            );
+        }
     }
 }
 
@@ -606,33 +638,9 @@ fn every_concurrency_program_is_run_by_the_differential_or_a_ruled_fixture() {
 /// accounts for.
 const LANG_SUBDIR: &str = "lang";
 
-/// The companion file naming the ones it does not run, and why.
-const UNFILED_FILE: &str = "unfiled.txt";
-
-/// Every `path<TAB>reason` in `corpus/unfiled.txt`.
-fn read_unfiled(corpus_dir: &Path) -> Vec<(String, String)> {
-    let path = corpus_dir.join(UNFILED_FILE);
-    let text =
-        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-    text.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| {
-            let (entry, reason) = line.split_once('\t').unwrap_or_else(|| {
-                panic!("{}: {line:?} is not a `path<TAB>reason`", path.display())
-            });
-            assert!(
-                !reason.trim().is_empty(),
-                "{}: {entry} is named with no reason",
-                path.display()
-            );
-            (entry.to_string(), reason.to_string())
-        })
-        .collect()
-}
-
-/// Every `<name>.env` and `<name>.d/` beside a corpus program names a program
-/// the corpus list runs, so a sidecar cannot sit unread.
+/// Every `<name>.env`, `<name>.d/` and `<name>.stdin` beside a corpus program
+/// names a program the corpus list runs, or, for a `.stdin` alone, one the
+/// ruled runner runs, so a sidecar cannot sit unread.
 #[test]
 fn every_sidecar_names_a_program_the_subset_runs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -652,15 +660,23 @@ fn every_sidecar_names_a_program_the_subset_runs() {
         read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
             .into_iter()
             .collect();
+    let ruled: BTreeSet<String> = read_unfiled(&corpus_dir)
+        .into_iter()
+        .filter(|(_, reason)| reason.contains(RULED_RUNNER))
+        .map(|(entry, _)| entry)
+        .collect();
 
     for stem in &stems {
         let program = format!("{LANG_SUBDIR}/{stem}.rex");
+        let sidecar = sidecar_for(&corpus_dir, &program);
+        let stdin_only = sidecar.halves() == [Half::Stdin];
         assert!(
-            filed.contains(&program),
-            "{stem} has a sidecar and the corpus list does not name {program}, so nothing reads it"
+            filed.contains(&program) || (stdin_only && ruled.contains(&program)),
+            "{stem} has a sidecar and neither the corpus list nor, for a `.stdin` alone, \
+             {RULED_RUNNER} runs {program}, so nothing reads it"
         );
         assert!(
-            sidecar_for(&corpus_dir, &program).present(),
+            sidecar.present(),
             "{program}'s sidecar parsed to nothing, so the run would not differ from one without it"
         );
     }
