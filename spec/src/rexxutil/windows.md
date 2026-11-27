@@ -214,8 +214,12 @@ window by title and asks Windows to bring it forward.
 `SysWaitNamedPipe(name[, timeout])` waits for an available server
 instance. It uses the server's default timeout for zero and waits
 without a deadline for minus one. It answers zero for an available
-pipe or the Windows system error code. `SysGetKey` reads one character
-from the Windows keyboard with optional echo. A keyboard, pipe or
+pipe or the Windows system error code. `SysGetKey` answers one byte
+at a time using the console input code page, with optional character echo.
+An unmodified extended navigation or function key answers a prefix byte
+(`00`x or `E0`x) followed by its key code on the next call.
+For example, an enhanced Up key answers `E0`x then `48`x.
+A keyboard, pipe or
 message-box wait parks its calling Rexx activity. Halting the activity
 waiting for a message box closes that dialog.
 

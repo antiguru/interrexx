@@ -7,7 +7,8 @@
  * interactive input and the fixture leaves the runner's console untouched. */
 int wmain(int argc, wchar_t **argv)
 {
-    if (argc != 3) {
+    BOOL key_bytes = argc == 4;
+    if (argc != 3 && !key_bytes) {
         return 1;
     }
     FreeConsole();
@@ -39,8 +40,40 @@ int wmain(int argc, wchar_t **argv)
         return 4;
     }
 
+    if (key_bytes) {
+        UINT page = (UINT)wcstoul(argv[3], NULL, 10);
+        if (!SetConsoleCP(page) || !SetConsoleOutputCP(page) ||
+            !FlushConsoleInputBuffer(input)) {
+            return 22;
+        }
+
+        /* Enhanced Up, F1, an accented letter, and ASCII sentinels. */
+        INPUT_RECORD records[7] = {key, key, key, key, key, key, key};
+        records[0].Event.KeyEvent.wVirtualKeyCode = VK_UP;
+        records[0].Event.KeyEvent.wVirtualScanCode = 0x48;
+        records[0].Event.KeyEvent.uChar.UnicodeChar = 0;
+        records[0].Event.KeyEvent.dwControlKeyState = ENHANCED_KEY;
+        records[1].Event.KeyEvent.wVirtualKeyCode = VK_F1;
+        records[1].Event.KeyEvent.wVirtualScanCode = 0x3b;
+        records[1].Event.KeyEvent.uChar.UnicodeChar = 0;
+        records[2].Event.KeyEvent.wVirtualKeyCode = 'E';
+        records[2].Event.KeyEvent.wVirtualScanCode = 0x12;
+        records[2].Event.KeyEvent.uChar.UnicodeChar = L'\u00e9';
+        for (int i = 3; i < 7; ++i) {
+            records[i].Event.KeyEvent.wVirtualKeyCode = (WORD)('A' + i - 3);
+            records[i].Event.KeyEvent.uChar.UnicodeChar = (wchar_t)('A' + i - 3);
+        }
+        if (!WriteConsoleInputW(input, records, _countof(records), &written) ||
+            written != _countof(records)) {
+            return 23;
+        }
+    }
+
     wchar_t command[32768];
-    if (swprintf_s(command, _countof(command), L"\"%ls\" \"%ls\"", argv[1], argv[2]) < 0) {
+    int length = key_bytes
+        ? swprintf_s(command, _countof(command), L"\"%ls\" \"%ls\" \"%ls\"", argv[1], argv[2], argv[3])
+        : swprintf_s(command, _countof(command), L"\"%ls\" \"%ls\"", argv[1], argv[2]);
+    if (length < 0) {
         return 5;
     }
     STARTUPINFOW startup = {0};
@@ -50,10 +83,32 @@ int wmain(int argc, wchar_t **argv)
     startup.hStdOutput = output;
     startup.hStdError = output;
     PROCESS_INFORMATION child = {0};
-    if (!CreateProcessW(argv[1], command, NULL, NULL, TRUE, 0, NULL, NULL, &startup, &child)) {
+    HANDLE job = CreateJobObjectW(NULL, NULL);
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limit = {0};
+    limit.BasicLimitInformation.LimitFlags =
+        JOB_OBJECT_LIMIT_JOB_MEMORY | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    limit.JobMemoryLimit = (SIZE_T)8 * 1024 * 1024 * 1024;
+    if (job == NULL || !SetInformationJobObject(job, JobObjectExtendedLimitInformation,
+                                               &limit, (DWORD)sizeof(limit))) {
+        return 24;
+    }
+    if (!CreateProcessW(argv[1], command, NULL, NULL, TRUE, CREATE_SUSPENDED,
+                        NULL, NULL, &startup, &child)) {
         return 6;
     }
+    if (!AssignProcessToJobObject(job, child.hProcess) || ResumeThread(child.hThread) == (DWORD)-1) {
+        TerminateProcess(child.hProcess, 25);
+        return 25;
+    }
     CloseHandle(child.hThread);
+    if (key_bytes) {
+        DWORD status = 0;
+        BOOL finished = WaitForSingleObject(child.hProcess, 15000) == WAIT_OBJECT_0;
+        BOOL ok = finished && GetExitCodeProcess(child.hProcess, &status);
+        CloseHandle(child.hProcess);
+        CloseHandle(job);
+        return ok ? (int)status : 26;
+    }
 
     /* The script waits for a second key while the modal box is visible.
      * Send it only after seeing that window, then verify that halting the
@@ -92,6 +147,7 @@ int wmain(int argc, wchar_t **argv)
     DWORD status = 0;
     BOOL ok = GetExitCodeProcess(child.hProcess, &status);
     CloseHandle(child.hProcess);
+    CloseHandle(job);
     CloseHandle(output);
     CloseHandle(input);
     FreeConsole();

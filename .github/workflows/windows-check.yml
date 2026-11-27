@@ -111,6 +111,9 @@ jobs:
             exit /b 1
           )
           echo RexxUtil console input, cursor, screen, and dialog cancellation passed.
+          for %%p in (1252 437) do (
+            target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-sysgetkey-bytes.rex" %%p || exit /b 1
+          )
 
       - uses: actions/upload-artifact@v7
         with:
