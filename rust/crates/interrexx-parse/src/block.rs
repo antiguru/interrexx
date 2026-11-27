@@ -653,10 +653,10 @@ impl<'a> Block<'a> {
             InstructionKind::Signal(signal) => !matches!(**signal, Signal::Trap(_)),
             InstructionKind::Raise(raise) => raise.result.is_some(),
             InstructionKind::Forward(forward) => !forward.continue_,
-            InstructionKind::Leave { name } | InstructionKind::Iterate { name } => !self.control
-                [at + 1..]
-                .iter()
-                .any(|frame| self.selects(*frame, *name)),
+            InstructionKind::Leave { name } | InstructionKind::Iterate { name } => {
+                let inside = &self.control[at + 1..];
+                !inside.iter().any(|frame| self.selects(*frame, *name))
+            }
             _ => false,
         };
         if !leaves {
