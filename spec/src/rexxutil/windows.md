@@ -185,8 +185,9 @@ position and moves the cursor when the new position is in the buffer. `SysCurSta
 `SysTextScreenRead(row, column[, length])` reads screen characters
 starting at the specified cell. With no length, it reads to the end of
 the screen buffer. A read outside the buffer or with a nonpositive length
-answers the null string. The result is UTF-8, so its byte length can
-differ from the number of cells read.
+answers the null string. The length counts cells: a full-width
+character fills two cells and is read once. The result is UTF-8, so its
+byte length can differ from the number of cells read.
 
 ## Windows printers
 
