@@ -4,6 +4,7 @@
 use std::cell::{Cell, RefCell};
 use std::ops::Range;
 
+use crate::exprs::{ExprId, Exprs, NodeKind};
 use crate::scanner::ResourceBody;
 use crate::selector::SelectorTable;
 use crate::{ProgramSource, RequiredLanguageLevel};
@@ -23,8 +24,12 @@ pub(crate) struct ParseCtx<'a> {
     /// label's spelling when `Program::labels` is built.
     pub(crate) symbols: &'a SymbolTable,
     /// The message names this parse has interned, which is what
-    /// `ExprKind::Message` holds one of.
+    /// `NodeKind::Message` holds one of.
     pub(crate) selectors: &'a RefCell<SelectorTable>,
+    /// The arena of the code body being parsed, which the body takes when it
+    /// is finished. Every borrow of it lasts one statement, so no parse path
+    /// holds one across a call that takes another.
+    pub(crate) exprs: &'a RefCell<Exprs>,
     /// Every reserved *spelling* this parser recognises, pre-interned by `scan`
     /// before it reads any source, so their ids are fixed and every keyword
     /// test is an integer comparison. Keywords are NOT reserved words, so this
@@ -38,6 +43,17 @@ pub(crate) struct ParseCtx<'a> {
 }
 
 impl ParseCtx<'_> {
+    /// Pushes a node over the children pushed just before it (see
+    /// [`Exprs::push`]).
+    pub(crate) fn push(&self, kind: NodeKind, extent: Range<usize>) -> ExprId {
+        self.exprs.borrow_mut().push(kind, extent)
+    }
+
+    /// Takes the arena built so far, leaving an empty one for the next body.
+    pub(crate) fn take_exprs(&self) -> Exprs {
+        std::mem::take(&mut *self.exprs.borrow_mut())
+    }
+
     pub(crate) fn note_symbol_call(&self, id: SymbolId) {
         if let Some(required_level) = self.required_level
             && self.symbols.name(id) == "GC"

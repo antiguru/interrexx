@@ -4,7 +4,7 @@
 
 use std::collections::HashSet;
 
-use interrexx_parse::{ExprKind, InstructionKind, LoopKind, Operator, PrefixOp, Trace};
+use interrexx_parse::{InstructionKind, LoopKind, NodeKind, Operator, PrefixOp, Trace};
 
 /// Whether a program can construct a variant this file enumerates.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -91,22 +91,23 @@ split InstructionKind::Call(c) in (&**c) {
 },
 );
 
-tags!(expr_tag, EXPR_TAGS, ExprKind, {
-    ExprKind::Literal(_) => ("Literal", Reach::Implemented),
-    ExprKind::Constant(_) => ("Constant", Reach::Implemented),
-    ExprKind::Variable(_) => ("Variable", Reach::Implemented),
-    ExprKind::Stem(_) => ("Stem", Reach::Implemented),
-    ExprKind::Compound(_) => ("Compound", Reach::Implemented),
-    ExprKind::DotVariable(_) => ("DotVariable", Reach::Implemented),
-    ExprKind::Prefix { .. } => ("Prefix", Reach::Implemented),
-    ExprKind::Binary { .. } => ("Binary", Reach::Implemented),
-    ExprKind::Logical(_) => ("Logical", Reach::Implemented),
-    ExprKind::Call { .. } => ("Call", Reach::Implemented),
-    ExprKind::VariableReference(_) => ("VariableReference", Reach::Implemented),
-    ExprKind::Message { .. } => ("Message", Reach::Implemented),
-    ExprKind::List(_) => ("List", Reach::Implemented),
-    ExprKind::QualifiedCall { .. } => ("QualifiedCall", Reach::Implemented),
-    ExprKind::ClassResolver { .. } => ("ClassResolver", Reach::Implemented),
+tags!(node_tag, NODE_TAGS, NodeKind, {
+    NodeKind::Literal(_) => ("Literal", Reach::Implemented),
+    NodeKind::Constant(_) => ("Constant", Reach::Implemented),
+    NodeKind::Variable(_) => ("Variable", Reach::Implemented),
+    NodeKind::Stem(_) => ("Stem", Reach::Implemented),
+    NodeKind::Compound(_) => ("Compound", Reach::Implemented),
+    NodeKind::DotVariable(_) => ("DotVariable", Reach::Implemented),
+    NodeKind::Prefix { .. } => ("Prefix", Reach::Implemented),
+    NodeKind::Binary { .. } => ("Binary", Reach::Implemented),
+    NodeKind::Logical(_) => ("Logical", Reach::Implemented),
+    NodeKind::Call { .. } => ("Call", Reach::Implemented),
+    NodeKind::VariableReference { .. } => ("VariableReference", Reach::Implemented),
+    NodeKind::Message { .. } => ("Message", Reach::Implemented),
+    NodeKind::List(_) => ("List", Reach::Implemented),
+    NodeKind::QualifiedCall { .. } => ("QualifiedCall", Reach::Implemented),
+    NodeKind::ClassResolver { .. } => ("ClassResolver", Reach::Implemented),
+    NodeKind::Omitted => ("Omitted", Reach::Implemented),
 });
 
 tags!(loop_tag, LOOP_TAGS, LoopKind, {
@@ -206,7 +207,7 @@ impl Coverage {
 fn only_backslash_is_unreachable() {
     for (category, all) in [
         ("InstructionKind", INSTRUCTION_TAGS),
-        ("ExprKind", EXPR_TAGS),
+        ("NodeKind", NODE_TAGS),
         ("LoopKind", LOOP_TAGS),
         ("PrefixOp", PREFIX_OP_TAGS),
         ("EndStyle", END_STYLE_TAGS),

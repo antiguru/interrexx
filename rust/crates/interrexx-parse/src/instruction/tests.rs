@@ -3,9 +3,10 @@
 
 use std::cell::RefCell;
 
-use crate::ast::{ExprKind, Instruction, InstructionKind};
+use crate::ast::{CodeBody, Instruction, InstructionKind};
 use crate::block::translate_block;
 use crate::clause::{ClauseCursor, split_clauses};
+use crate::exprs::{Bounds, ExprId, ExprView, Exprs};
 use crate::selector::SelectorTable;
 use crate::token::{Keywords, ParseCtx, ParseError, SymbolTable};
 use crate::{ProgramSource, SourceKind, scan};
@@ -26,18 +27,36 @@ use super::{
     SUB_STRICT, SUB_TO, SUB_UNTIL, SUB_USING, SUB_VALUE, SUB_WHEN, SUB_WHILE, SUB_WITH,
 };
 
-/// Parses `text` as a whole program and returns every instruction, with the
-/// symbol table its ids belong to.
-fn parse_kind(text: &str, kind: SourceKind) -> Result<(Vec<Instruction>, SymbolTable), ParseError> {
+/// The symbol table and the arena a parsed body's ids belong to.
+struct Names {
+    symbols: SymbolTable,
+    exprs: Exprs,
+}
+
+impl Names {
+    fn name(&self, id: crate::token::SymbolId) -> &str {
+        self.symbols.name(id)
+    }
+
+    /// The canonical rendering of the expression at `id`.
+    fn shape(&self, id: &ExprId) -> String {
+        self.exprs.shape(*id, &self.symbols)
+    }
+}
+
+/// Parses `text` as one code body.
+fn parse_body(text: &str, kind: SourceKind) -> Result<(CodeBody, SymbolTable), ParseError> {
     let source = ProgramSource::new(text.as_bytes().to_vec(), kind);
     let scanned = scan(&source).expect("the test input scans");
     let result = {
         let selectors = RefCell::new(SelectorTable::new());
+        let exprs = RefCell::new(Exprs::default());
         let ctx = ParseCtx {
             source: &source,
             tokens: &scanned.tokens,
             symbols: &scanned.symbols,
             selectors: &selectors,
+            exprs: &exprs,
             keywords: scanned.keywords,
             resources: &scanned.resources,
             required_level: None,
@@ -48,9 +67,31 @@ fn parse_kind(text: &str, kind: SourceKind) -> Result<(Vec<Instruction>, SymbolT
         // wrap their clause in a `DO` or a `SELECT`: an instruction that is only
         // legal inside a block has to be presented inside one.
         let mut cursor = ClauseCursor::new(split_clauses(ctx.tokens).expect("split never fails"));
-        translate_block(&ctx, &mut cursor).map(|body| body.instructions)
+        translate_block(&ctx, &mut cursor)
     };
-    result.map(|instructions| (instructions, scanned.symbols))
+    let body = result?;
+    assert_eq!(
+        body.check(Bounds {
+            text: source.parts().0.len(),
+            symbols: scanned.symbols.len(),
+        }),
+        Ok(()),
+        "{text:?} leaves a consistent arena"
+    );
+    Ok((body, scanned.symbols))
+}
+
+/// Parses `text` as a whole program and returns every instruction, with the
+/// names its ids belong to.
+fn parse_kind(text: &str, kind: SourceKind) -> Result<(Vec<Instruction>, Names), ParseError> {
+    let (body, symbols) = parse_body(text, kind)?;
+    Ok((
+        body.instructions,
+        Names {
+            symbols,
+            exprs: body.exprs,
+        },
+    ))
 }
 
 fn parse(text: &str) -> Result<Vec<Instruction>, ParseError> {
@@ -865,7 +906,7 @@ fn parse_shape(text: &str) -> String {
         crate::ast::ParseSource::Version => "version".to_string(),
         crate::ast::ParseSource::Var(id) => format!("var:{}", symbols.name(*id)),
         crate::ast::ParseSource::Value(None) => "value:-".to_string(),
-        crate::ast::ParseSource::Value(Some(e)) => format!("value:{}", e.shape(&symbols)),
+        crate::ast::ParseSource::Value(Some(e)) => format!("value:{}", symbols.shape(e)),
     };
     let mut flags = String::new();
     if body.upper {
@@ -895,11 +936,11 @@ fn parse_shape(text: &str) -> String {
         };
         out.push_str(&format!(" {kind}"));
         if let Some(value) = &trigger.value {
-            out.push_str(&format!("({})", value.shape(&symbols)));
+            out.push_str(&format!("({})", symbols.shape(value)));
         }
         for target in &trigger.targets {
             match target {
-                Some(e) => out.push_str(&format!(" ->{}", e.shape(&symbols))),
+                Some(e) => out.push_str(&format!(" ->{}", symbols.shape(e))),
                 None => out.push_str(" ->."),
             }
         }
@@ -1057,7 +1098,7 @@ fn call_shape(text: &str) -> String {
                 args.len()
             ),
             crate::ast::Call::Dynamic { target, args } => {
-                format!("call-dyn {}({})", target.shape(&symbols), args.len())
+                format!("call-dyn {}({})", symbols.shape(target), args.len())
             }
             crate::ast::Call::Qualified {
                 namespace,
@@ -1073,7 +1114,7 @@ fn call_shape(text: &str) -> String {
         },
         InstructionKind::Signal(signal) => match &**signal {
             crate::ast::Signal::Label(name) => format!("signal {}", bytes(name)),
-            crate::ast::Signal::Value(e) => format!("signal-value {}", e.shape(&symbols)),
+            crate::ast::Signal::Value(e) => format!("signal-value {}", symbols.shape(e)),
             crate::ast::Signal::Trap(t) => format!("signal-trap {}", trap(t)),
         },
         other => panic!("{text:?} is not a CALL or SIGNAL: {other:?}"),
@@ -1265,6 +1306,25 @@ fn guard_takes_on_or_off_and_an_optional_when() {
     assert_eq!(err("guard on 1"), (25, 912));
 }
 
+/// `GUARD ... WHEN` watches each exposed variable its condition names, once,
+/// in the order the names are written (`r[instr.guard.when.exposed]`).
+#[test]
+fn guard_watches_its_exposed_names_once_in_written_order() {
+    let instructions = ok("expose a b. c d\nguard on when f(d, b.c, e) & a~m(>c) & d");
+    let InstructionKind::Guard(guard) = &instructions[1].kind else {
+        panic!("not a GUARD: {:?}", names(&instructions));
+    };
+    let watched: Vec<&[u8]> = guard.watched.iter().map(|name| &**name).collect();
+    assert_eq!(watched, [&b"D"[..], b"B.", b"C", b"A"]);
+}
+
+#[test]
+fn a_reference_in_a_guard_condition_names_an_exposed_variable() {
+    // `r[instr.guard.when.exposed]`: `>a` names `a`, so the condition watches it.
+    assert_eq!(names(&ok("expose a\nguard on when check(>a)"))[1], "GUARD");
+    assert_eq!(err("guard on when check(>a)"), (99, 913));
+}
+
 #[test]
 fn every_forward_option_is_accepted_once() {
     // Measured with rexxc inside a method, all rc 0.
@@ -1353,9 +1413,9 @@ fn use_shape(text: &str) -> String {
                             if t.alias {
                                 out.push('>');
                             }
-                            out.push_str(&t.target.shape(&symbols));
+                            out.push_str(&symbols.shape(&t.target));
                             if let Some(d) = &t.default {
-                                out.push_str(&format!("={}", d.shape(&symbols)));
+                                out.push_str(&format!("={}", symbols.shape(d)));
                             }
                         }
                     }
@@ -1436,7 +1496,7 @@ fn setting_shape(text: &str) -> String {
                 crate::ast::NumericSetting::FormValue => "form-value",
             };
             match expression {
-                Some(e) => format!("{what} {}", e.shape(&symbols)),
+                Some(e) => format!("{what} {}", symbols.shape(e)),
                 None => what.to_string(),
             }
         }
@@ -1446,7 +1506,7 @@ fn setting_shape(text: &str) -> String {
                 format!("setting {}", String::from_utf8_lossy(s))
             }
             crate::ast::Trace::Skip(n) => format!("skip {n}"),
-            crate::ast::Trace::Value(e) => format!("value {}", e.shape(&symbols)),
+            crate::ast::Trace::Value(e) => format!("value {}", symbols.shape(e)),
         },
         other => panic!("{text:?} is not a NUMERIC or TRACE: {other:?}"),
     }
@@ -1582,18 +1642,18 @@ fn address_shape(text: &str) -> String {
         None => out.push_str("env:-"),
     }
     if let Some(dynamic) = &address.dynamic {
-        out.push_str(&format!(" dyn:{}", dynamic.shape(&symbols)));
+        out.push_str(&format!(" dyn:{}", symbols.shape(dynamic)));
     }
     if let Some(command) = &address.command {
-        out.push_str(&format!(" cmd:{}", command.shape(&symbols)));
+        out.push_str(&format!(" cmd:{}", symbols.shape(command)));
     }
     if let Some(io) = &address.io {
         let show = |r: &crate::ast::Redirection| match r {
             crate::ast::Redirection::Default => "-".to_string(),
             crate::ast::Redirection::Normal => "normal".to_string(),
             crate::ast::Redirection::Stem(id) => format!("stem:{}", symbols.name(*id)),
-            crate::ast::Redirection::Stream(e) => format!("stream:{}", e.shape(&symbols)),
-            crate::ast::Redirection::Using(e) => format!("using:{}", e.shape(&symbols)),
+            crate::ast::Redirection::Stream(e) => format!("stream:{}", symbols.shape(e)),
+            crate::ast::Redirection::Using(e) => format!("using:{}", symbols.shape(e)),
         };
         let option = |o: &crate::ast::OutputOption| match o {
             crate::ast::OutputOption::Default => "",
@@ -2071,19 +2131,32 @@ fn a_when_inside_select_case_builds_a_value_list_not_an_and() {
     }
     // The plain spelling, whose two-element form is one AND expression and
     // whose one-element form is that element bare.
-    let plain = ok("select\nwhen 1, 2 then nop\nend");
-    match &plain[1].kind {
-        InstructionKind::When { condition, .. } => match &condition.kind {
-            ExprKind::Logical(parts) => assert_eq!(parts.len(), 2),
+    let (plain, _) =
+        parse_body("select\nwhen 1, 2 then nop\nend", SourceKind::Program).expect("parses");
+    match &plain.instructions[1].kind {
+        InstructionKind::When { condition, .. } => match plain.expr(*condition).kind() {
+            ExprView::Logical(parts) => assert_eq!(parts.len(), 2),
             other => panic!("expected a logical list, got {other:?}"),
         },
         other => panic!("expected a plain WHEN, got {other:?}"),
     }
-    let plain_one = ok("select\nwhen 1 then nop\nend");
-    match &plain_one[1].kind {
+    let (plain_one, _) =
+        parse_body("select\nwhen 1 then nop\nend", SourceKind::Program).expect("parses");
+    match &plain_one.instructions[1].kind {
         InstructionKind::When { condition, .. } => {
-            assert!(!matches!(condition.kind, ExprKind::Logical(_)));
+            assert!(!matches!(
+                plain_one.expr(*condition).kind(),
+                ExprView::Logical(_)
+            ));
         }
         other => panic!("expected a plain WHEN, got {other:?}"),
     }
+}
+
+#[test]
+fn a_reference_cascade_reads_its_names_under_the_clause_terminators() {
+    // `parse_kind` assembles a body, so each `DO` needs its `END`.
+    assert_eq!(err("do i = 1 to >a~for\nend"), (19, 909));
+    assert_eq!(err("do i = 1 to - >a~for\nend"), (19, 909));
+    assert_eq!(names(&ok("do i = 1 to b~for\nend")), ["DO", "END"]);
 }

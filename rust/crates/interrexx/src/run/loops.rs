@@ -1,8 +1,8 @@
 //! `DO`/`LOOP`: the header, each kind of repetition, and the flat-loop path the op driver takes.
 
 use super::{
-    ArithError, BehaviourId, Body, ClauseOutcome, Code, CompareOp, ConditionTrace, ControlExpr,
-    Cow, Decoded, Expr, ExprKind, Failure, Flow, Instruction, InstructionKind, Interp, Loop,
+    ArithError, BehaviourId, Body, ClauseOutcome, Code, CodeBody, CompareOp, ConditionTrace,
+    ControlExpr, Cow, Decoded, ExprRef, Failure, Flow, Instruction, InstructionKind, Interp, Loop,
     LoopConditional, LoopKind, Loud, NameShape, Novalue, Number, ObjRef, ProgramSource, Raised,
     RegFrame, SymbolId, compare_decoded, exact_small_int, raised_available_not_logical,
     raised_for_count_not_whole, raised_iterate_wrong_kind, raised_repetition_count_not_whole,
@@ -627,8 +627,12 @@ pub(crate) fn loop_header_plan(body: &Loop) -> HeaderPlan {
 
 /// The expression `role` names in `kind`, or `None` when that kind has no
 /// expression for it.
-fn header_expr_for(kind: &LoopKind, role: HeaderRole) -> Option<&Expr> {
-    match (kind, role) {
+fn header_expr_for<'a>(
+    body: &'a CodeBody,
+    kind: &'a LoopKind,
+    role: HeaderRole,
+) -> Option<ExprRef<'a>> {
+    let expr = match (kind, role) {
         (LoopKind::Count(expr), HeaderRole::Count) => expr.as_ref(),
         (LoopKind::Controlled(ctrl), HeaderRole::Initial) => Some(&ctrl.initial),
         (LoopKind::Controlled(ctrl), HeaderRole::To) => ctrl.to.as_ref(),
@@ -639,15 +643,20 @@ fn header_expr_for(kind: &LoopKind, role: HeaderRole) -> Option<&Expr> {
         (LoopKind::With { target, .. }, HeaderRole::With) => Some(target),
         (LoopKind::With { for_count, .. }, HeaderRole::OverFor) => for_count.as_ref(),
         _ => None,
-    }
+    };
+    expr.map(|expr| body.expr(*expr))
 }
 
 /// The expression of `body`'s header at `slot` -- the compiled stream's own
 /// addressing, where a slot is a position in [`HeaderPlan::roles`].
-pub(crate) fn loop_header_slot(body: &Loop, slot: u32) -> Option<&Expr> {
-    let plan = loop_header_plan(body);
+pub(crate) fn loop_header_slot<'a>(
+    code: &'a CodeBody,
+    header: &'a Loop,
+    slot: u32,
+) -> Option<ExprRef<'a>> {
+    let plan = loop_header_plan(header);
     let role = *plan.roles().get(usize::cast_from(slot))?;
-    header_expr_for(&body.kind, role)
+    header_expr_for(code, &header.kind, role)
 }
 
 /// One `DO`/`LOOP` header's evaluated and validated values.
@@ -1800,7 +1809,7 @@ impl Interp {
                     chunk,
                     registers,
                     flat.do_index,
-                    &cond.condition,
+                    code.body.expr(cond.condition),
                     ConditionTrace::Keyword(loop_indent, "UNTIL"),
                     raised_until_not_logical,
                 )
@@ -2270,7 +2279,7 @@ impl Interp {
                         chunk,
                         registers,
                         do_index,
-                        &cond.condition,
+                        code.body.expr(cond.condition),
                         ConditionTrace::Keyword(loop_indent, "WHILE"),
                         raised_while_not_logical,
                     )
@@ -2852,7 +2861,7 @@ impl Interp {
                 (value, novalue, None)
             }
             // A bare stem never raises `NOVALUE` on read (`eval_
-            // node`'s own `ExprKind::Stem` arm has the citation),
+            // node`'s own `NodeKind::Stem` arm has the citation),
             // so there is no fallible read to thread through.
             // The slot comes off the entry rather than from the
             // loop's kept `at`, which is the same source the write
@@ -3188,26 +3197,18 @@ impl Interp {
                 Ok(())
             }
             NameShape::Stem => {
-                let target = Expr {
-                    kind: ExprKind::Stem(control),
-                    span: 0..0,
-                };
                 // `None`, and a literal one rather than the loop's kept
-                // slot: `assign_expr_target`'s `Stem` arm finds this stem's
+                // slot: `assign_name_target`'s `Stem` arm finds this stem's
                 // slot on its own entry, and a value here in place of the
                 // constant costs every controlled loop 2 instructions a pass
                 // (`control_slot`'s doc has the measurement).
-                self.assign_expr_target(code, &target, value, indent, None)
+                self.assign_name_target(code, NameShape::Stem, control, value, indent, None)
             }
             NameShape::Compound => {
-                let target = Expr {
-                    kind: ExprKind::Compound(control),
-                    span: 0..0,
-                };
                 // `None` because a compound writes one tail through a key
                 // resolved on this pass, so the symbol's own slot is not what
                 // is written and there is none to carry.
-                self.assign_expr_target(code, &target, value, indent, None)
+                self.assign_name_target(code, NameShape::Compound, control, value, indent, None)
             }
         }
     }

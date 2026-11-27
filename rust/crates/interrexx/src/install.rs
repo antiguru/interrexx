@@ -21,8 +21,7 @@ use interrexx_classes::{ClassKind, InheritRefusal, MethodId};
 use interrexx_core::{ObjRef, SlotFrame};
 use interrexx_parse::{
     Access, AttributeDirective, ClassDirective, ClassRef, CodeBody, ConstantDirective,
-    ConstantValue, Directive, DirectiveKind, Expr, GuardOption, MethodDirective, Program,
-    Protection,
+    ConstantValue, Directive, DirectiveKind, GuardOption, MethodDirective, Program, Protection,
 };
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
@@ -1111,7 +1110,7 @@ impl Interp {
             let value = match &constant.value {
                 ConstantValue::Name => self.literal(&constant.name),
                 ConstantValue::Text(text) => self.literal(text),
-                ConstantValue::Expression(_) => continue,
+                ConstantValue::Expression { .. } => continue,
             };
             self.record_constant_value(id, index, value);
         }
@@ -1132,7 +1131,7 @@ impl Interp {
             let DirectiveKind::Constant(constant) = &directive.kind else {
                 continue;
             };
-            let ConstantValue::Expression(expr) = &constant.value else {
+            let Some(expr) = constant.value.expression() else {
                 continue;
             };
             let level = last_class.and_then(|class| {
@@ -2846,7 +2845,7 @@ impl Interp {
         else {
             return Err(Loud::missing_body().into());
         };
-        let ConstantValue::Expression(expr) = &constant.value else {
+        let Some(expr) = constant.value.expression() else {
             return Err(Loud::missing_body().into());
         };
         let executable = self.executable_objects.get(resolution.method).copied();

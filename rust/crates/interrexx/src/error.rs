@@ -226,22 +226,22 @@ impl Raised {
     }
 
     /// 34.6: one element of a comma-separated logical list
-    /// (`ExprKind::Logical`, `if a, b then` and friends) is not a logical
+    /// (`NodeKind::Logical`, `if a, b then` and friends) is not a logical
     /// value. A distinct sub-number from `not_logical`'s 34.901, and
     /// deliberately not shared with it even though the underlying check is
     /// identical (exactly `0` or `1`, text not numeric) -- measured, `if 1,
     /// 'x' then` gives 34.6, a different message
     /// from `&`'s 34.901 for the identical bad value. `IF`/`WHEN`/`WHILE`/
     /// `UNTIL`'s own 34.1/34.2/34.3/34.4 are for when the *whole* condition
-    /// is a single expression, not a list, and are Tasks 9-11's to raise
-    /// when they exist; this crate has no instruction context yet to
-    /// prefer one of those over 34.6, so 34.6 is `ExprKind::Logical`'s own
-    /// answer regardless of which keyword built the list.
+    /// is a single expression, not a list; a list has no instruction
+    /// context to prefer one of those over 34.6, so 34.6 is
+    /// `NodeKind::Logical`'s own answer regardless of which keyword built the
+    /// list.
     pub(crate) fn logical_list_element(found: &[u8]) -> Raised {
         Raised::syntax(34, 6, vec![found.to_vec()])
     }
 
-    /// 44.1: an internal routine reached through `ExprKind::Call`'s expression
+    /// 44.1: an internal routine reached through `NodeKind::Call`'s expression
     /// form (`f(...)`, `eval.rs`'s `eval_call`) ran to completion without a
     /// value to hand back -- a bare `RETURN`: `say f(1)` into `f: return` gives
     /// rc 212 and
@@ -2009,7 +2009,7 @@ pub(crate) enum Failure {
     Loud(Box<Loud>),
     Raised(Box<Raised>),
     /// **Not a failure at all** -- `EXIT` inside a routine reached through
-    /// `ExprKind::Call`'s expression form, or that routine falling
+    /// `NodeKind::Call`'s expression form, or that routine falling
     /// off its own end, either of which ends the whole program exactly as
     /// the same event does when reached through `CALL` (`resolve_and_run_
     /// call`'s own doc, `run/call.rs`). `CALL`'s own instruction form carries

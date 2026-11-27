@@ -1,0 +1,1102 @@
+//! The arena's builder and validator. Spans are byte offsets into the text in
+//! each test's comment.
+
+use crate::ast::PrefixOp;
+use crate::selector::SelectorTable;
+use crate::token::{Operator, SymbolId};
+
+use super::{Bounds, CallTarget, ExprId, Exprs, Inconsistent, NodeKind};
+
+/// Bounds no node of a hand-built arena reaches, for the tests that are not
+/// about them.
+const ANY: Bounds = Bounds {
+    text: usize::MAX,
+    symbols: usize::MAX,
+};
+
+fn literal(exprs: &mut Exprs, text: &[u8], at: usize) -> ExprId {
+    let bytes = exprs.push_bytes(text);
+    exprs.push(NodeKind::Literal(bytes), at..at + text.len())
+}
+
+fn symbol(index: usize) -> SymbolId {
+    SymbolId::from_index(index).expect("a small index is a symbol id")
+}
+
+/// `1 + 2`, answering the three ids in push order.
+fn sum(exprs: &mut Exprs) -> (ExprId, ExprId, ExprId) {
+    let one = literal(exprs, b"1", 0);
+    let two = literal(exprs, b"2", 4);
+    let sum = exprs.push(
+        NodeKind::Binary {
+            op: Operator::Plus,
+            left: one,
+            right: two,
+        },
+        2..3,
+    );
+    (one, two, sum)
+}
+
+#[test]
+fn a_binary_node_follows_its_operands_and_links_them() {
+    // `1 + 2`
+    let mut exprs = Exprs::default();
+    let (one, two, sum) = sum(&mut exprs);
+    assert_eq!(exprs.range(sum).len(), 3);
+    assert_eq!(exprs.node(sum).first(), one);
+    assert_eq!(exprs.node(sum).span(), 0..5);
+    assert_eq!(
+        (exprs.node(one).parent(), exprs.node(one).position()),
+        (Some(sum), 0)
+    );
+    assert_eq!(
+        (exprs.node(two).parent(), exprs.node(two).position()),
+        (Some(sum), 1)
+    );
+    assert_eq!(exprs.check(ANY, [sum]), Ok(()));
+}
+
+/// A span is read as a slice of the source text, so one that runs backwards
+/// or past the end of the text is refused, and one that ends at the end of the
+/// text is not.
+#[test]
+fn a_span_backwards_or_past_the_text_is_refused() {
+    // `1 + 2`
+    let mut exprs = Exprs::default();
+    let (one, two, sum) = sum(&mut exprs);
+    let text = |text| Bounds { text, ..ANY };
+    assert_eq!(exprs.check(text(5), [sum]), Ok(()));
+    assert_eq!(
+        exprs.check(text(4), [sum]),
+        Err(Inconsistent::Span { node: two.index() })
+    );
+    let mut reversed = exprs.clone();
+    let node = reversed.node_mut(one);
+    (node.start, node.end) = (1, 0);
+    assert_eq!(
+        reversed.check(text(5), [sum]),
+        Err(Inconsistent::Span { node: one.index() })
+    );
+}
+
+/// A symbol id is read as an index into the symbol table, so a node naming
+/// one past its end is refused, in each place a node holds one.
+#[test]
+fn a_symbol_id_past_the_table_is_refused() {
+    let symbols = |symbols| Bounds { symbols, ..ANY };
+    let kinds = [
+        NodeKind::Variable(symbol(3)),
+        NodeKind::Constant(symbol(3)),
+        NodeKind::Stem(symbol(3)),
+        NodeKind::Compound(symbol(3)),
+        NodeKind::DotVariable(symbol(3)),
+        NodeKind::VariableReference {
+            symbol: symbol(3),
+            stem: false,
+        },
+        NodeKind::ClassResolver {
+            namespace: symbol(3),
+            name: symbol(0),
+        },
+        NodeKind::ClassResolver {
+            namespace: symbol(0),
+            name: symbol(3),
+        },
+    ];
+    for kind in kinds {
+        let mut exprs = Exprs::default();
+        let leaf = exprs.push(kind.clone(), 0..1);
+        assert_eq!(exprs.check(symbols(4), [leaf]), Ok(()), "{kind:?}");
+        assert_eq!(
+            exprs.check(symbols(3), [leaf]),
+            Err(Inconsistent::Symbol { node: leaf.index() }),
+            "{kind:?}"
+        );
+    }
+    for (namespace, name) in [(3, 0), (0, 3)] {
+        let mut exprs = Exprs::default();
+        let args = exprs.push_edges(&[]);
+        let call = exprs.push(
+            NodeKind::QualifiedCall {
+                namespace: symbol(namespace),
+                name: symbol(name),
+                args,
+            },
+            0..1,
+        );
+        assert_eq!(exprs.check(symbols(4), [call]), Ok(()));
+        assert_eq!(
+            exprs.check(symbols(3), [call]),
+            Err(Inconsistent::Symbol { node: call.index() })
+        );
+    }
+    let mut exprs = Exprs::default();
+    let args = exprs.push_edges(&[]);
+    let call = exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Symbol(symbol(3)),
+            args,
+        },
+        0..1,
+    );
+    assert_eq!(exprs.check(symbols(4), [call]), Ok(()));
+    assert_eq!(
+        exprs.check(symbols(3), [call]),
+        Err(Inconsistent::Symbol { node: call.index() })
+    );
+}
+
+#[test]
+fn a_prefix_node_is_widened_to_its_operand() {
+    // `- 12`
+    let mut exprs = Exprs::default();
+    let twelve = literal(&mut exprs, b"12", 2);
+    let negated = exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: twelve,
+        },
+        0..1,
+    );
+    assert_eq!(exprs.node(negated).span(), 0..4);
+    assert_eq!(exprs.node(negated).first(), twelve);
+    assert_eq!(exprs.node(twelve).parent(), Some(negated));
+    assert_eq!(exprs.check(ANY, [negated]), Ok(()));
+}
+
+#[test]
+fn an_omitted_argument_is_a_node_that_widens_nothing() {
+    // `f(,2)`
+    let mut exprs = Exprs::default();
+    let omitted = exprs.push(NodeKind::Omitted, 2..2);
+    let two = literal(&mut exprs, b"2", 3);
+    let args = exprs.push_edges(&[omitted, two]);
+    let call = exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Symbol(symbol(0)),
+            args,
+        },
+        0..1,
+    );
+    assert_eq!(exprs.node(call).span(), 0..4);
+    assert_eq!(exprs.edges(args), &[omitted, two]);
+    assert_eq!(exprs.node(call).first(), omitted);
+    assert_eq!(
+        (exprs.node(omitted).parent(), exprs.node(omitted).position()),
+        (Some(call), 0)
+    );
+    assert_eq!(exprs.check(ANY, [call]), Ok(()));
+
+    // An omitted node far outside the extent leaves it alone: only a present
+    // child widens its parent.
+    let mut exprs = Exprs::default();
+    let omitted = exprs.push(NodeKind::Omitted, 40..40);
+    let args = exprs.push_edges(&[omitted]);
+    let call = exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Symbol(symbol(0)),
+            args,
+        },
+        0..1,
+    );
+    assert_eq!(exprs.node(call).span(), 0..1);
+}
+
+/// The first `children` of `a~m:s(1)`'s receiver, scope and argument, under
+/// a message with `scoped` as given, answering the message's id.
+fn scoped_message(exprs: &mut Exprs, scoped: bool, children: usize) -> ExprId {
+    let mut ids = Vec::new();
+    if children > 0 {
+        ids.push(exprs.push(NodeKind::Variable(symbol(0)), 0..1));
+    }
+    if children > 1 {
+        ids.push(exprs.push(NodeKind::Variable(symbol(1)), 4..5));
+    }
+    if children > 2 {
+        ids.push(literal(exprs, b"1", 6));
+    }
+    let edges = exprs.push_edges(&ids);
+    exprs.push(
+        NodeKind::Message {
+            name: SelectorTable::new().intern(b"M"),
+            cascade: false,
+            scoped,
+            children: edges,
+        },
+        1..3,
+    )
+}
+
+#[test]
+fn a_message_lists_its_receiver_then_its_scope_then_its_arguments() {
+    // `a~m:s(1)`
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 3);
+    let NodeKind::Message { children, .. } = exprs.node(message).kind().clone() else {
+        panic!("a message");
+    };
+    let children = exprs.edges(children).to_vec();
+    let positions: Vec<_> = children
+        .iter()
+        .map(|&child| (exprs.node(child).parent(), exprs.node(child).position()))
+        .collect();
+    assert_eq!(
+        positions,
+        [(Some(message), 0), (Some(message), 1), (Some(message), 2)]
+    );
+    assert_eq!(exprs.node(message).span(), 0..7);
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
+
+    // Scoped, but with the receiver alone.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 1);
+    assert_eq!(
+        exprs.check(ANY, [message]),
+        Err(Inconsistent::Arity {
+            node: message.index()
+        })
+    );
+
+    // Scoped with a receiver and a scope and no arguments is whole.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 2);
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
+
+    // Unscoped, the receiver alone is a whole message.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, false, 1);
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
+
+    // Any message needs its receiver.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, false, 0);
+    assert_eq!(
+        exprs.check(ANY, [message]),
+        Err(Inconsistent::Arity {
+            node: message.index()
+        })
+    );
+}
+
+#[test]
+fn rewinding_drops_what_was_pushed_after_the_mark() {
+    // `1 + 2`, then `f('x')` discarded
+    let mut exprs = Exprs::default();
+    let (_, _, sum) = sum(&mut exprs);
+    let (nodes, edges, bytes) = (exprs.len(), exprs.edges.len(), exprs.bytes.len());
+    let mark = exprs.mark();
+    let x = literal(&mut exprs, b"x", 8);
+    let args = exprs.push_edges(&[x]);
+    let target = exprs.push_bytes(b"f");
+    exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Literal(target),
+            args,
+        },
+        6..7,
+    );
+    exprs.rewind(mark);
+    assert_eq!(
+        (exprs.len(), exprs.edges.len(), exprs.bytes.len()),
+        (nodes, edges, bytes)
+    );
+    assert_eq!(exprs.check(ANY, [sum]), Ok(()));
+}
+
+#[test]
+fn a_copy_is_the_subtree_pushed_again_with_its_ids_rebased() {
+    // `f(1, 'x')`
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 2);
+    let x = literal(&mut exprs, b"x", 5);
+    let args = exprs.push_edges(&[one, x]);
+    let target = exprs.push_bytes(b"F");
+    let original = exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Literal(target),
+            args,
+        },
+        0..1,
+    );
+    let length = exprs.len();
+    let (edges, bytes) = (exprs.edges.len(), exprs.bytes.len());
+
+    let copy = exprs.copy(original);
+
+    assert_eq!(exprs.len(), 2 * length);
+    assert_eq!(copy.index(), original.index() + length);
+    assert_eq!(exprs.node(copy).parent(), None);
+    assert_eq!(exprs.node(copy).span(), exprs.node(original).span());
+    let copied_one = ExprId::from_index(one.index() + length);
+    let copied_x = ExprId::from_index(x.index() + length);
+    let NodeKind::Call {
+        target: copied_target,
+        args: copied_args,
+    } = exprs.node(copy).kind().clone()
+    else {
+        panic!("a call");
+    };
+    assert_eq!(copied_target, CallTarget::Literal(target));
+    assert_ne!(copied_args, args);
+    assert_eq!(exprs.edges(copied_args), &[copied_one, copied_x]);
+    assert_eq!(exprs.edges(args), &[one, x]);
+    assert_eq!(exprs.edges.len(), edges + 2);
+    assert_eq!(exprs.bytes.len(), bytes);
+    let NodeKind::Literal(read) = *exprs.node(copied_x).kind() else {
+        panic!("a literal");
+    };
+    assert_eq!(exprs.bytes(read), b"x");
+    assert_eq!(exprs.node(copy).first(), copied_one);
+    assert_eq!(
+        (
+            exprs.node(copied_x).parent(),
+            exprs.node(copied_x).position()
+        ),
+        (Some(copy), 1)
+    );
+    assert_eq!(exprs.check(ANY, [original, copy]), Ok(()));
+
+    // A binary copy rebases its operands, which live in the node itself.
+    let mut exprs = Exprs::default();
+    let (_, _, sum) = sum(&mut exprs);
+    let copy = exprs.copy(sum);
+    assert_eq!(
+        *exprs.node(copy).kind(),
+        NodeKind::Binary {
+            op: Operator::Plus,
+            left: ExprId::from_index(3),
+            right: ExprId::from_index(4),
+        }
+    );
+    assert_eq!(exprs.check(ANY, [sum, copy]), Ok(()));
+}
+
+#[test]
+fn a_child_past_the_end_is_out_of_range() {
+    let mut exprs = Exprs::default();
+    let (one, _, sum) = sum(&mut exprs);
+    exprs.node_mut(sum).kind = NodeKind::Binary {
+        op: Operator::Plus,
+        left: one,
+        right: ExprId::from_index(7),
+    };
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::OutOfRange { node: sum.index() })
+    );
+}
+
+#[test]
+fn an_edge_or_byte_range_past_the_end_is_out_of_range() {
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 2);
+    let args = exprs.push_edges(&[one]);
+    let call = exprs.push(
+        NodeKind::Call {
+            target: CallTarget::Symbol(symbol(0)),
+            args,
+        },
+        0..1,
+    );
+    let valid = exprs.clone();
+
+    exprs.edges.clear();
+    assert_eq!(
+        exprs.check(ANY, [call]),
+        Err(Inconsistent::OutOfRange { node: call.index() })
+    );
+
+    let mut exprs = valid.clone();
+    exprs.bytes.clear();
+    assert_eq!(
+        exprs.check(ANY, [call]),
+        Err(Inconsistent::OutOfRange { node: one.index() })
+    );
+
+    let mut exprs = valid;
+    exprs.node_mut(call).kind = NodeKind::Call {
+        target: CallTarget::Literal(super::BytesRange { start: 0, end: 9 }),
+        args,
+    };
+    assert_eq!(
+        exprs.check(ANY, [call]),
+        Err(Inconsistent::OutOfRange { node: call.index() })
+    );
+}
+
+#[test]
+fn a_root_past_the_end_is_out_of_range() {
+    let mut exprs = Exprs::default();
+    let (_, _, sum) = sum(&mut exprs);
+    assert_eq!(
+        exprs.check(ANY, [sum, ExprId::from_index(5)]),
+        Err(Inconsistent::OutOfRange { node: 5 })
+    );
+}
+
+#[test]
+fn a_child_at_its_parent_is_after_its_parent() {
+    let mut exprs = Exprs::default();
+    let (_, two, sum) = sum(&mut exprs);
+    exprs.node_mut(sum).kind = NodeKind::Binary {
+        op: Operator::Plus,
+        left: sum,
+        right: two,
+    };
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::ChildAfterParent { node: sum.index() })
+    );
+}
+
+#[test]
+fn a_moved_first_is_not_contiguous() {
+    let mut exprs = Exprs::default();
+    let (_, two, sum) = sum(&mut exprs);
+    exprs.node_mut(sum).first = two;
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::NotContiguous { node: sum.index() })
+    );
+}
+
+#[test]
+fn a_leaf_whose_first_is_not_itself_is_not_contiguous() {
+    let mut exprs = Exprs::default();
+    let (one, two, sum) = sum(&mut exprs);
+    exprs.node_mut(two).first = one;
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::NotContiguous { node: two.index() })
+    );
+}
+
+#[test]
+fn a_gap_between_children_is_not_contiguous() {
+    // `1 + 2` with a stray `3` between the operands.
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 0);
+    let three = literal(&mut exprs, b"3", 2);
+    let two = literal(&mut exprs, b"2", 4);
+    let sum = exprs.push(
+        NodeKind::Binary {
+            op: Operator::Plus,
+            left: three,
+            right: two,
+        },
+        2..3,
+    );
+    exprs.node_mut(sum).kind = NodeKind::Binary {
+        op: Operator::Plus,
+        left: one,
+        right: two,
+    };
+    exprs.node_mut(sum).first = one;
+    exprs.node_mut(one).parent = Some(sum);
+    exprs.node_mut(three).parent = None;
+    assert_eq!(
+        exprs.check(ANY, [sum, three]),
+        Err(Inconsistent::NotContiguous { node: sum.index() })
+    );
+}
+
+#[test]
+fn a_last_child_short_of_its_parent_is_not_contiguous() {
+    // `1 + 2` with a stray `3` after the right operand.
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 0);
+    let two = literal(&mut exprs, b"2", 4);
+    let three = literal(&mut exprs, b"3", 6);
+    let pair = exprs.push_edges(&[two, three]);
+    let list = exprs.push(NodeKind::List(pair), 3..7);
+    exprs.node_mut(list).kind = NodeKind::Binary {
+        op: Operator::Plus,
+        left: one,
+        right: two,
+    };
+    exprs.node_mut(list).first = one;
+    exprs.node_mut(one).parent = Some(list);
+    exprs.node_mut(two).position = 1;
+    exprs.node_mut(three).parent = None;
+    assert_eq!(
+        exprs.check(ANY, [list, three]),
+        Err(Inconsistent::NotContiguous { node: list.index() })
+    );
+}
+
+#[test]
+fn a_root_left_out_is_reached_no_times() {
+    let mut exprs = Exprs::default();
+    let (_, _, sum) = sum(&mut exprs);
+    assert_eq!(
+        exprs.check(ANY, []),
+        Err(Inconsistent::Reached {
+            node: sum.index(),
+            times: 0
+        })
+    );
+}
+
+#[test]
+fn a_root_passed_twice_is_reached_twice() {
+    let mut exprs = Exprs::default();
+    let (_, _, sum) = sum(&mut exprs);
+    assert_eq!(
+        exprs.check(ANY, [sum, sum]),
+        Err(Inconsistent::Reached {
+            node: sum.index(),
+            times: 2
+        })
+    );
+}
+
+#[test]
+fn a_child_whose_parent_points_elsewhere_breaks_the_link() {
+    let mut exprs = Exprs::default();
+    let (one, two, sum) = sum(&mut exprs);
+    exprs.node_mut(one).parent = Some(two);
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::Link { node: one.index() })
+    );
+}
+
+#[test]
+fn a_child_whose_position_is_wrong_breaks_the_link() {
+    let mut exprs = Exprs::default();
+    let (_, two, sum) = sum(&mut exprs);
+    exprs.node_mut(two).position = 0;
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::Link { node: two.index() })
+    );
+}
+
+#[test]
+fn a_root_with_a_parent_breaks_the_link() {
+    let mut exprs = Exprs::default();
+    let (one, _, sum) = sum(&mut exprs);
+    exprs.node_mut(sum).parent = Some(one);
+    assert_eq!(
+        exprs.check(ANY, [sum]),
+        Err(Inconsistent::Link { node: sum.index() })
+    );
+}
+
+/// An `Omitted` node is read through an argument list, so it sits only at an
+/// argument or list-item position, and is never a root.
+#[test]
+fn an_omitted_node_outside_an_argument_position_is_misplaced() {
+    let misplaced = |node: ExprId| Err(Inconsistent::Misplaced { node: node.index() });
+
+    // An operand of a binary operator.
+    let mut exprs = Exprs::default();
+    let (one, _, sum) = sum(&mut exprs);
+    exprs.node_mut(one).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check(ANY, [sum]), misplaced(one));
+
+    // An operand of a prefix operator.
+    let mut exprs = Exprs::default();
+    let twelve = literal(&mut exprs, b"12", 1);
+    let negated = exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: twelve,
+        },
+        0..1,
+    );
+    exprs.node_mut(twelve).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check(ANY, [negated]), misplaced(twelve));
+
+    // A message's receiver, and the scope of a scoped one.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, false, 1);
+    exprs.node_mut(ExprId::from_index(0)).kind = NodeKind::Omitted;
+    assert_eq!(
+        exprs.check(ANY, [message]),
+        misplaced(ExprId::from_index(0))
+    );
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 2);
+    exprs.node_mut(ExprId::from_index(1)).kind = NodeKind::Omitted;
+    assert_eq!(
+        exprs.check(ANY, [message]),
+        misplaced(ExprId::from_index(1))
+    );
+
+    // An item of a logical list.
+    let mut exprs = Exprs::default();
+    let item = exprs.push(NodeKind::Variable(symbol(0)), 0..1);
+    let items = exprs.push_edges(&[item]);
+    let logical = exprs.push(NodeKind::Logical(items), 0..1);
+    assert_eq!(exprs.check(ANY, [logical]), Ok(()));
+    exprs.node_mut(item).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check(ANY, [logical]), misplaced(item));
+
+    // A root.
+    let mut exprs = Exprs::default();
+    let root = exprs.push(NodeKind::Omitted, 0..0);
+    assert_eq!(exprs.check(ANY, [root]), misplaced(root));
+
+    // An argument of a message is a place for one.
+    let mut exprs = Exprs::default();
+    let message = scoped_message(&mut exprs, true, 3);
+    exprs.node_mut(ExprId::from_index(2)).kind = NodeKind::Omitted;
+    assert_eq!(exprs.check(ANY, [message]), Ok(()));
+}
+
+/// A `CATCH` variable is a root of its instruction.
+#[test]
+fn a_catch_variable_is_a_root() {
+    crate::with_parser_stack(|| {
+        let program = crate::parse_program(b"do\n  nop\ncatch err = syntax\n  nop\nend\n".to_vec())
+            .expect("a CATCH with a variable parses");
+        let mut found = Vec::new();
+        for instruction in &program.main.instructions {
+            if matches!(instruction.kind, crate::InstructionKind::Catch(_)) {
+                instruction
+                    .kind
+                    .for_each_root(&mut |expr| found.push(program.main.expr(expr).span()));
+            }
+        }
+        assert_eq!(found.len(), 1, "the CATCH variable is the one root");
+    })
+    .expect("the parser thread spawns");
+}
+
+#[test]
+fn leaves_of_every_kind_pass() {
+    // `a b. c.d .e >f g:h` as separate roots.
+    let mut exprs = Exprs::default();
+    let roots = [
+        exprs.push(NodeKind::Constant(symbol(0)), 0..1),
+        exprs.push(NodeKind::Variable(symbol(1)), 2..3),
+        exprs.push(NodeKind::Stem(symbol(2)), 4..6),
+        exprs.push(NodeKind::Compound(symbol(3)), 7..10),
+        exprs.push(NodeKind::DotVariable(symbol(4)), 11..13),
+        exprs.push(
+            NodeKind::VariableReference {
+                symbol: symbol(5),
+                stem: false,
+            },
+            14..16,
+        ),
+        exprs.push(
+            NodeKind::ClassResolver {
+                namespace: symbol(6),
+                name: symbol(7),
+            },
+            17..20,
+        ),
+    ];
+    let items = exprs.push_edges(&roots);
+    let logical = exprs.push(NodeKind::Logical(items), 0..20);
+    let qualified_args = exprs.push_edges(&[]);
+    let qualified = exprs.push(
+        NodeKind::QualifiedCall {
+            namespace: symbol(6),
+            name: symbol(7),
+            args: qualified_args,
+        },
+        21..26,
+    );
+    assert_eq!(exprs.node(logical).first(), roots[0]);
+    assert_eq!(exprs.node(qualified).first(), qualified);
+    assert_eq!(exprs.check(ANY, [logical, qualified]), Ok(()));
+}
+
+#[test]
+fn a_long_chain_clones_compares_formats_and_drops_on_a_small_thread() {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024)
+        .spawn(|| {
+            // `1 + 1 + ...`
+            let mut exprs = Exprs::default();
+            let mut chain = literal(&mut exprs, b"1", 0);
+            for term in 1..1_000_000 {
+                let at = 4 * term;
+                let one = literal(&mut exprs, b"1", at);
+                chain = exprs.push(
+                    NodeKind::Binary {
+                        op: Operator::Plus,
+                        left: chain,
+                        right: one,
+                    },
+                    at - 2..at - 1,
+                );
+            }
+            assert_eq!(exprs.check(ANY, [chain]), Ok(()));
+            let copy = exprs.clone();
+            assert!(copy == exprs);
+            assert!(!format!("{copy:?}").is_empty());
+            drop(copy);
+            drop(exprs);
+        })
+        .expect("a thread spawns")
+        .join()
+        .expect("the chain thread finishes");
+}
+
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "a node's children tile the nodes before it")]
+fn pushing_over_children_with_a_gap_between_them_is_a_bug() {
+    // `1 + 2` with a stray `3` between the operands.
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 0);
+    literal(&mut exprs, b"3", 2);
+    let two = literal(&mut exprs, b"2", 4);
+    exprs.push(
+        NodeKind::Binary {
+            op: Operator::Plus,
+            left: one,
+            right: two,
+        },
+        2..3,
+    );
+}
+
+#[test]
+#[cfg(debug_assertions)]
+#[should_panic(expected = "a node's last child is the node pushed before it")]
+fn pushing_over_children_short_of_the_last_node_is_a_bug() {
+    // `- 1` with a stray `2` after the operand.
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 2);
+    literal(&mut exprs, b"2", 4);
+    exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: one,
+        },
+        0..1,
+    );
+}
+
+#[test]
+fn a_copy_of_an_operand_is_a_root() {
+    // `1 + - 2`, copying `- 2`
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 0);
+    let two = literal(&mut exprs, b"2", 6);
+    let negated = exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: two,
+        },
+        4..5,
+    );
+    let sum = exprs.push(
+        NodeKind::Binary {
+            op: Operator::Plus,
+            left: one,
+            right: negated,
+        },
+        2..3,
+    );
+    let copy = exprs.copy(negated);
+    assert_eq!(copy, ExprId::from_index(5));
+    assert_eq!(
+        (exprs.node(copy).parent(), exprs.node(copy).position()),
+        (None, 0)
+    );
+    assert_eq!(
+        *exprs.node(copy).kind(),
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: ExprId::from_index(4),
+        }
+    );
+    assert_eq!(exprs.node(copy).span(), 4..7);
+    assert_eq!(exprs.check(ANY, [sum, copy]), Ok(()));
+}
+
+#[cfg(debug_assertions)]
+#[test]
+#[should_panic(expected = "adopted by one parent only")]
+fn a_node_is_adopted_by_one_parent_only() {
+    let mut exprs = Exprs::default();
+    let one = literal(&mut exprs, b"1", 0);
+    exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: one,
+        },
+        0..1,
+    );
+    exprs.push(
+        NodeKind::Prefix {
+            op: PrefixOp::Minus,
+            operand: one,
+        },
+        0..1,
+    );
+}
+
+#[test]
+fn a_long_chain_and_a_deep_nesting_render_on_a_small_thread() {
+    std::thread::Builder::new()
+        .stack_size(64 * 1024)
+        .spawn(|| {
+            let n = 200_000;
+            let symbols = crate::token::SymbolTable::default();
+            let plus = |left, right| NodeKind::Binary {
+                op: Operator::Plus,
+                left,
+                right,
+            };
+
+            // `1 + 1 + ...`
+            let mut exprs = Exprs::default();
+            let mut chain = literal(&mut exprs, b"1", 0);
+            for term in 1..n {
+                let at = 4 * term;
+                let one = literal(&mut exprs, b"1", at);
+                chain = exprs.push(plus(chain, one), at - 2..at - 1);
+            }
+            assert_eq!(
+                exprs.shape(chain, &symbols),
+                "(+ ".repeat(n - 1) + "\"1\"" + &" \"1\")".repeat(n - 1)
+            );
+
+            // `1 + (1 + (...))`: the leaves, then the operators innermost
+            // first, which is the post-order of a right nesting.
+            let mut exprs = Exprs::default();
+            let leaves: Vec<ExprId> = (0..n)
+                .map(|term| literal(&mut exprs, b"1", 6 * term))
+                .collect();
+            let mut nest = leaves[n - 1];
+            for term in (0..n - 1).rev() {
+                let at = 6 * term + 2;
+                nest = exprs.push(plus(leaves[term], nest), at..at + 1);
+            }
+            assert_eq!(
+                exprs.shape(nest, &symbols),
+                "(+ \"1\" ".repeat(n - 1) + "\"1\"" + &")".repeat(n - 1)
+            );
+        })
+        .expect("a thread spawns")
+        .join()
+        .expect("the render thread finishes");
+}
+
+/// The right-hand side of the program's first assignment.
+fn assigned(program: &crate::Program) -> ExprId {
+    program
+        .main
+        .instructions
+        .iter()
+        .find_map(|instruction| match instruction.kind {
+            crate::ast::InstructionKind::Assignment { value, .. } => Some(value),
+            _ => None,
+        })
+        .expect("the program assigns")
+}
+
+/// Asserts that `args` is `f(1,,3)`'s argument list.
+fn assert_one_omitted_three(args: super::Args<'_>) {
+    assert_eq!(args.len(), 3);
+    assert!(!args.is_empty());
+    assert!(matches!(args.get(0), Some(Some(_))));
+    assert!(matches!(args.get(1), Some(None)));
+    assert!(matches!(args.get(2), Some(Some(_))));
+    assert!(args.get(3).is_none());
+    let present: Vec<bool> = args.iter().map(|item| item.is_some()).collect();
+    assert_eq!(present, [true, false, true]);
+    let spans: Vec<_> = args.iter().flatten().map(|item| item.span()).collect();
+    assert_eq!(spans, [6..7, 9..10]);
+}
+
+#[test]
+fn an_argument_list_view_keeps_its_omitted_positions() {
+    use super::{Args, ExprView};
+
+    let program = crate::parse_program(b"x = f(1,,3)".to_vec()).expect("the program parses");
+    let value = assigned(&program);
+    let ExprView::Call { args, .. } = program.main.expr(value).kind() else {
+        panic!("a call");
+    };
+    assert_one_omitted_three(args);
+
+    // An instruction's own list, where the omitted position has no node.
+    let exprs = &program.main.exprs;
+    let NodeKind::Call { args, .. } = *exprs.node(value).kind() else {
+        panic!("a call in the arena");
+    };
+    let ids: Vec<Option<ExprId>> = exprs
+        .edges(args)
+        .iter()
+        .map(|&id| (!matches!(exprs.node(id).kind(), NodeKind::Omitted)).then_some(id))
+        .collect();
+    assert_one_omitted_three(Args::slots(exprs, &ids));
+}
+
+/// Every `*.rex` file under `dir`, recursively, in a stable order.
+fn rex_files_under(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut files = Vec::new();
+    let mut directories = vec![dir.to_path_buf()];
+    while let Some(directory) = directories.pop() {
+        for entry in std::fs::read_dir(&directory).expect("a readable corpus directory") {
+            let path = entry.expect("a readable directory entry").path();
+            if path.is_dir() {
+                directories.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rex") {
+                files.push(path);
+            }
+        }
+    }
+    files.sort();
+    files
+}
+
+/// Checks every body of `program` and each `::CONSTANT` value, answering
+/// how many nodes the checked arenas hold.
+fn check_program(program: &crate::Program) -> usize {
+    use crate::ast::{CodeBody, DirectiveKind};
+
+    let bounds = Bounds {
+        text: program.source.parts().0.len(),
+        symbols: program.symbols.len(),
+    };
+    let body = |body: &CodeBody| {
+        assert_eq!(body.check(bounds), Ok(()));
+        body.exprs.len()
+    };
+    let mut nodes = body(&program.main);
+    for directive in &program.directives {
+        nodes += match &directive.kind {
+            DirectiveKind::Method(method) => method.body.as_deref().map_or(0, body),
+            DirectiveKind::Attribute(attribute) => attribute.body.as_deref().map_or(0, body),
+            DirectiveKind::Routine(routine) => routine.body.as_deref().map_or(0, body),
+            DirectiveKind::Constant(constant) => {
+                assert_eq!(constant.value.check(bounds), Ok(()));
+                match &constant.value {
+                    crate::ast::ConstantValue::Expression { exprs, .. } => exprs.len(),
+                    crate::ast::ConstantValue::Name | crate::ast::ConstantValue::Text(_) => 0,
+                }
+            }
+            DirectiveKind::Annotate(_)
+            | DirectiveKind::Class(_)
+            | DirectiveKind::Options(_)
+            | DirectiveKind::Requires(_)
+            | DirectiveKind::Resource(_) => 0,
+        };
+    }
+    nodes
+}
+
+#[test]
+fn every_body_of_the_corpus_and_the_library_passes_the_validator() {
+    crate::with_parser_stack(|| {
+        let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+        let mut nodes = 0;
+        for path in rex_files_under(&corpus) {
+            let text = std::fs::read(&path).expect("a readable corpus file");
+            let Ok(program) = crate::parse_program(text) else {
+                continue;
+            };
+            nodes += check_program(&program);
+        }
+        let library = crate::parse_known_program(interrexx_lib::LIBRARY.source.to_vec())
+            .expect("the library parses");
+        let library_nodes = check_program(&library);
+        assert!(library_nodes > 0, "the library holds expressions");
+        nodes += library_nodes;
+        assert!(nodes > 100_000, "checked only {nodes} nodes");
+    })
+    .expect("the parser thread spawns");
+}
+
+/// The name of `kind`'s variant.
+fn tag(kind: &NodeKind) -> &'static str {
+    match kind {
+        NodeKind::Literal(_) => "Literal",
+        NodeKind::Constant(_) => "Constant",
+        NodeKind::Variable(_) => "Variable",
+        NodeKind::Stem(_) => "Stem",
+        NodeKind::Compound(_) => "Compound",
+        NodeKind::DotVariable(_) => "DotVariable",
+        NodeKind::VariableReference { .. } => "VariableReference",
+        NodeKind::ClassResolver { .. } => "ClassResolver",
+        NodeKind::Omitted => "Omitted",
+        NodeKind::Prefix { .. } => "Prefix",
+        NodeKind::Binary { .. } => "Binary",
+        NodeKind::Call { .. } => "Call",
+        NodeKind::QualifiedCall { .. } => "QualifiedCall",
+        NodeKind::Message { .. } => "Message",
+        NodeKind::List(_) => "List",
+        NodeKind::Logical(_) => "Logical",
+    }
+}
+
+#[test]
+fn an_operator_assignment_reads_its_target_before_its_value() {
+    use crate::ast::InstructionKind;
+
+    let program = crate::parse_program(b"a += b * 2".to_vec()).expect("parses");
+    let InstructionKind::Assignment { target, value } = &program.main.instructions[0].kind else {
+        panic!("an assignment");
+    };
+    let exprs = &program.main.exprs;
+    let order: Vec<&str> = exprs
+        .range(*value)
+        .iter()
+        .map(|node| tag(node.kind()))
+        .collect();
+    assert_eq!(
+        order,
+        ["Variable", "Variable", "Constant", "Binary", "Binary"]
+    );
+    assert!(target.index() < exprs.node(*value).first().index());
+    assert_eq!(exprs.shape(*value, &program.symbols), "(+ A (* B 2))");
+}
+
+#[test]
+fn a_message_operator_assignment_copies_its_term_before_its_value() {
+    use crate::ast::InstructionKind;
+
+    let program = crate::parse_program(b"q[1] += 2".to_vec()).expect("parses");
+    let InstructionKind::Message {
+        term,
+        value: Some(value),
+    } = &program.main.instructions[0].kind
+    else {
+        panic!("a message assignment");
+    };
+    let exprs = &program.main.exprs;
+    assert!(term.index() < exprs.node(*value).first().index());
+    // The copy is the value's first subtree and `2` follows it.
+    let order: Vec<&str> = exprs
+        .range(*value)
+        .iter()
+        .map(|node| tag(node.kind()))
+        .collect();
+    assert_eq!(
+        order,
+        ["Variable", "Constant", "Message", "Constant", "Binary"]
+    );
+    assert_eq!(
+        exprs.shape(*value, &program.symbols),
+        "(+ (msg~ Q \"[]\" 1) 2)"
+    );
+    assert_eq!(program.check(), Ok(()));
+}
+
+#[test]
+fn a_discarded_message_trial_leaves_no_node_behind() {
+    use crate::ast::InstructionKind;
+
+    // `x~y z` is tried as a message instruction, then falls back to a command.
+    let program = crate::parse_program(b"x~y z".to_vec()).expect("parses");
+    let InstructionKind::Command {
+        expression: Some(expression),
+    } = &program.main.instructions[0].kind
+    else {
+        panic!("a command");
+    };
+    assert_eq!(
+        program.main.exprs.len(),
+        program.main.exprs.range(*expression).len()
+    );
+}

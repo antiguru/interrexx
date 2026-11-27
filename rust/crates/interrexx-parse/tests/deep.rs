@@ -1,7 +1,7 @@
 //! A deep `1 + 1 + ... + 1` chain must parse and drop on a normal,
 //! default-stack test thread, not just on the wide thread `rexx` uses.
 
-use interrexx_parse::{Expr, ExprKind, MAX_EXPR_DEPTH, Operator, parse_program, with_parser_stack};
+use interrexx_parse::{MAX_EXPR_DEPTH, parse_program, with_parser_stack};
 
 /// Builds `say (((...('a')...)))` with `depth` levels of parenthesis
 /// nesting.
@@ -117,16 +117,56 @@ fn parens_and_calls_share_one_budget_rather_than_one_each() {
     assert_eq!((err.code(), err.sub()), (11, 1));
 }
 
-/// These traits exhaust the default stack on a chain of this length.
+/// #69: the traits of a long chain's body use no stack per term, on a thread
+/// with the default 2 MiB, sized by nothing in this crate.
 #[test]
-fn recursive_expression_traits_run_on_the_parser_stack() {
-    let leaf = || Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-    let expr = (0..5_000).fold(leaf(), |left, _| Expr::binary(Operator::Plus, left, leaf()));
+fn a_long_chains_body_clones_compares_formats_and_drops_on_a_default_thread() {
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(|| {
+            let program = parse_program(deep_sum_program(200_000)).expect("parses");
+            let copy = program.main.clone();
+            assert!(copy == program.main);
+            assert!(!format!("{:?}", program.main).is_empty());
+            drop(copy);
+            drop(program);
+        })
+        .expect("spawns")
+        .join()
+        .expect("runs");
+}
 
-    with_parser_stack(|| {
-        let clone = expr.clone();
-        assert!(expr == clone);
-        assert!(format!("{expr:?}").starts_with("Expr { kind: Binary"));
-    })
-    .expect("spawns");
+/// A run of prefix operators is read in a loop, so its length costs no
+/// native stack.
+#[test]
+fn a_long_prefix_chain_parses_on_a_default_stack_thread() {
+    let mut src = String::from("say ");
+    src.push_str(&"- ".repeat(100_000));
+    src.push_str("1\n");
+    // An explicit 2 MiB, so an environment's RUST_MIN_STACK cannot hide a
+    // recursion per operator.
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || drop(parse_program(src.into_bytes()).expect("parses")))
+        .expect("spawns")
+        .join()
+        .expect("parses without overflowing");
+}
+
+/// The variables a `GUARD ... WHEN` watches are collected in a loop over the
+/// condition's nodes (`r[instr.guard.when.exposed]`), so a long condition
+/// costs no native stack. The chain nests to the left, where a recursion
+/// over it cannot be a tail call.
+#[test]
+fn a_long_guard_condition_parses_on_a_default_stack_thread() {
+    let mut src = String::from("expose x\nguard on when x");
+    src.push_str(&" + x".repeat(100_000));
+    src.push_str(" = 0\n");
+    // An explicit 2 MiB, as in the prefix chain above.
+    std::thread::Builder::new()
+        .stack_size(2 * 1024 * 1024)
+        .spawn(move || drop(parse_program(src.into_bytes()).expect("parses")))
+        .expect("spawns")
+        .join()
+        .expect("parses without overflowing");
 }

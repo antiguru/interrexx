@@ -1,6 +1,6 @@
 use super::*;
 use crate::{Novalue, planned_code};
-use interrexx_parse::{Program, parse_interpret, parse_program};
+use interrexx_parse::{ExprView, Program, parse_interpret, parse_program};
 
 /// `indent_of` answers what `static_indent` answers, for every index.
 #[test]
@@ -291,7 +291,12 @@ fn build_registers_every_name_a_stem_or_compound_touches() {
 /// extra entries, only on missing ones.
 #[test]
 fn build_registers_exactly_the_expected_set_not_merely_a_superset() {
-    let cases: &[(&[u8], &[&str])] = &[(b"leave lbl", &[]), (b"say .nil", &[])];
+    let cases: &[(&[u8], &[&str])] = &[
+        (b"leave lbl", &[]),
+        (b"say .nil", &[]),
+        (b"say >zz", &["ZZ"]),
+        (b"say <qq.", &["QQ."]),
+    ];
     for (source, expected_names) in cases {
         let program = parse_program(source.to_vec()).expect("test program parses");
         let plan = Plan::build(
@@ -428,8 +433,11 @@ fn build_records_a_compounds_split_under_the_compounds_own_id() {
             InstructionKind::Say {
                 expression: Some(expr),
             } => {
-                let ExprKind::Compound(id) = expr.kind else {
-                    panic!("expected a compound expression, got {:?}", expr.kind);
+                let ExprView::Compound(id) = program.main.expr(*expr).kind() else {
+                    panic!(
+                        "expected a compound expression, got {:?}",
+                        program.main.expr(*expr)
+                    );
                 };
                 found.push((symbols_name(&program, id), expect_entry(&plan, id)));
             }
@@ -518,8 +526,11 @@ fn a_control_variable_does_not_take_the_slots_off_a_compound_already_seen() {
             program.main.instructions[0].kind
         );
     };
-    let ExprKind::Compound(id) = expr.kind else {
-        panic!("expected a compound expression, got {:?}", expr.kind);
+    let ExprView::Compound(id) = program.main.expr(*expr).kind() else {
+        panic!(
+            "expected a compound expression, got {:?}",
+            program.main.expr(*expr)
+        );
     };
     // The same id in both positions is the whole premise, so it is
     // checked rather than assumed: `bind` addresses `compounds` by the
@@ -580,8 +591,11 @@ fn a_compound_seen_after_the_control_variable_still_gets_its_slots() {
     else {
         panic!("expected a SAY last, got {:?}", last.kind);
     };
-    let ExprKind::Compound(say_id) = expr.kind else {
-        panic!("expected a compound expression, got {:?}", expr.kind);
+    let ExprView::Compound(say_id) = program.main.expr(*expr).kind() else {
+        panic!(
+            "expected a compound expression, got {:?}",
+            program.main.expr(*expr)
+        );
     };
     assert_eq!(say_id, id);
 
@@ -744,9 +758,9 @@ fn bind_keeps_a_stem_shaped_names_own_slot_as_its_stems() {
     let mut found: Vec<(&str, Option<usize>)> = Vec::new();
     for instruction in &program.main.instructions {
         let id = match &instruction.kind {
-            InstructionKind::Assignment { target, .. } => match target.kind {
-                ExprKind::Stem(id) => id,
-                ref other => panic!("expected a stem target, got {other:?}"),
+            InstructionKind::Assignment { target, .. } => match program.main.expr(*target).kind() {
+                ExprView::Stem(id) => id,
+                other => panic!("expected a stem target, got {other:?}"),
             },
             InstructionKind::Do(loop_) | InstructionKind::Loop(loop_) => {
                 let LoopKind::Controlled(controlled) = &loop_.kind else {
@@ -774,9 +788,9 @@ fn a_tail_piece_and_a_plain_variable_share_one_slot() {
     let id = match &program.main.instructions[0].kind {
         InstructionKind::Say {
             expression: Some(expr),
-        } => match expr.kind {
-            ExprKind::Compound(id) => id,
-            ref other => panic!("expected a compound expression, got {other:?}"),
+        } => match program.main.expr(*expr).kind() {
+            ExprView::Compound(id) => id,
+            other => panic!("expected a compound expression, got {other:?}"),
         },
         other => panic!("expected a SAY with an expression, got {other:?}"),
     };
@@ -875,9 +889,9 @@ fn names_are_keyed_upcased_but_tail_values_are_not() {
     let id = match &program.main.instructions[0].kind {
         InstructionKind::Say {
             expression: Some(expr),
-        } => match expr.kind {
-            ExprKind::Compound(id) => id,
-            ref other => panic!("expected a compound expression, got {other:?}"),
+        } => match program.main.expr(*expr).kind() {
+            ExprView::Compound(id) => id,
+            other => panic!("expected a compound expression, got {other:?}"),
         },
         other => panic!("expected a SAY with an expression, got {other:?}"),
     };
@@ -1006,9 +1020,9 @@ fn a_keyword_spelling_used_as_a_variable_moves_the_tables_first_id_down() {
         .instructions
         .iter()
         .map(|instruction| match &instruction.kind {
-            InstructionKind::Assignment { target, .. } => match target.kind {
-                ExprKind::Variable(id) | ExprKind::Compound(id) => id,
-                ref other => panic!("unexpected target {other:?}"),
+            InstructionKind::Assignment { target, .. } => match program.main.expr(*target).kind() {
+                ExprView::Variable(id) | ExprView::Compound(id) => id,
+                other => panic!("unexpected target {other:?}"),
             },
             other => panic!("not an assignment: {other:?}"),
         })

@@ -1,7 +1,7 @@
 use super::*;
 use crate::Loud;
 use interrexx_core::RegFrame;
-use interrexx_parse::{Expr, Instruction, InstructionKind};
+use interrexx_parse::{CodeBody, ExprRef, Instruction, InstructionKind};
 
 /// One step of a compiled `RAISE` ([`crate::ir::Op::RaisePart`]): what the
 /// instruction does with one of its expressions once it is evaluated and
@@ -48,7 +48,7 @@ impl RaiseLayout {
             || raise.description.is_some()
             || raise.additional.is_some()
             || items.iter().any(Option::is_some)
-            || raise_result_expr(raise).is_some();
+            || raise_has_result(raise);
         if !any {
             return None;
         }
@@ -66,15 +66,23 @@ impl RaiseLayout {
             description: take(raise.description.is_some(), 2)?,
             additional: take(raise.additional.is_some(), 1)?,
             array: take(raise.array.is_some(), items.len().checked_add(1)?)?,
-            result: take(raise_result_expr(raise).is_some(), 1)?,
+            result: take(raise_has_result(raise), 1)?,
             len,
         })
     }
 }
 
+/// Whether `raise` has a `RETURN` or `EXIT` expression.
+fn raise_has_result(raise: &Raise) -> bool {
+    raise
+        .result
+        .as_ref()
+        .is_some_and(|result| result.value.is_some())
+}
+
 /// The `RETURN` or `EXIT` expression of `raise`, if it has one.
-fn raise_result_expr(raise: &Raise) -> Option<&Expr> {
-    raise.result.as_ref()?.value.as_ref()
+fn raise_result_expr<'a>(body: &'a CodeBody, raise: &'a Raise) -> Option<ExprRef<'a>> {
+    raise.result.as_ref()?.value.as_ref().map(|e| body.expr(*e))
 }
 
 /// Expression `slot` of `raise`, as a compiled `RAISE` addresses them: `0`
@@ -83,14 +91,19 @@ fn raise_result_expr(raise: &Raise) -> Option<&Expr> {
 /// so that the lookup of every other instruction's slots does not carry it.
 #[cold]
 #[inline(never)]
-pub(crate) fn raise_slot(raise: &Raise, slot: u16) -> Option<&Expr> {
-    match slot {
+pub(crate) fn raise_slot<'a>(
+    code: &'a CodeBody,
+    raise: &'a Raise,
+    slot: u16,
+) -> Option<ExprRef<'a>> {
+    let expr = match slot {
         0 => raise.rc.as_ref(),
         1 => raise.description.as_ref(),
         2 => raise.additional.as_ref(),
-        3 => raise_result_expr(raise),
+        3 => return raise_result_expr(code, raise),
         item => raise.array.as_deref()?.get(usize::from(item - 4))?.as_ref(),
-    }
+    };
+    expr.map(|expr| code.expr(*expr))
 }
 
 /// What a `RAISE` keeps of each expression once its part has run: the
@@ -128,15 +141,15 @@ impl Interp {
     ) -> Result<Flow, Failure> {
         let mut held = RaiseHeld::default();
         if let Some(expr) = &raise.rc {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(*expr))?;
             held.code = Some(self.raise_code(raise, value)?);
         }
         if let Some(expr) = &raise.description {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(*expr))?;
             held.description = Some(self.raise_description(raise, value)?);
         }
         if let Some(expr) = &raise.additional {
-            let value = self.eval(code, expr)?;
+            let value = self.eval(code, code.body.expr(*expr))?;
             self.raise_additional_operand(raise, value)?;
             held.additional = Some(value);
         }
@@ -144,7 +157,7 @@ impl Interp {
             let mut values = Vec::with_capacity(items.len());
             for item in items {
                 let value = match item {
-                    Some(expr) => Some(self.eval(code, expr)?),
+                    Some(expr) => Some(self.eval(code, code.body.expr(*expr))?),
                     None => None,
                 };
                 self.raise_item(value)?;
@@ -152,7 +165,7 @@ impl Interp {
             }
             held.array = Some(self.raise_array(raise, &values));
         }
-        if let Some(expr) = raise_result_expr(raise) {
+        if let Some(expr) = raise_result_expr(code.body, raise) {
             let value = self.eval(code, expr)?;
             self.raise_result(value)?;
             held.result = Some(value);

@@ -16,12 +16,13 @@ use crate::Body;
 use crate::ast::{
     Access, Annotate, Annotation, AnnotationTarget, AttributeDirective, AttributeStyle,
     ClassDirective, ClassRef, ConditionOption, ConstantDirective, ConstantValue, Directive,
-    DirectiveKind, Expr, ExternalSpec, GuardOption, MethodDirective, OptionsForm, PackageOption,
+    DirectiveKind, ExternalSpec, GuardOption, MethodDirective, OptionsForm, PackageOption,
     Protection, Requires, Resource, RoutineDirective,
 };
 use crate::clause::{Clause, ClauseCursor};
 use crate::convert::{ARGUMENT_DIGITS, check_trace_setting, is_number, whole_number};
 use crate::expr::{Terminators, display_value, parse_expr};
+use crate::exprs::{Bounds, ExprId};
 use crate::scanner::{MAX_SYMBOL_LENGTH, is_symbol_char};
 use crate::token::{
     Operator, ParseCtx, ParseError, SymbolClass, SymbolId, Tag, Token, TokenCursor, TokenKind,
@@ -950,7 +951,22 @@ impl<'a, 'd> Dir<'a, 'd> {
             None => ConstantValue::Name,
             Some(token) if token.kind.tag() == Tag::LeftParen => {
                 self.next_real();
-                ConstantValue::Expression(self.constant_expression(token)?)
+                let root = self.constant_expression(token)?;
+                // The one expression outside any code body takes the arena
+                // its parse built, as a body does.
+                let value = ConstantValue::Expression {
+                    exprs: self.ctx.take_exprs(),
+                    root,
+                };
+                debug_assert_eq!(
+                    value.check(Bounds {
+                        text: self.ctx.source.parts().0.len(),
+                        symbols: self.ctx.symbols.len(),
+                    }),
+                    Ok(()),
+                    "a ::CONSTANT arena is consistent"
+                );
+                value
             }
             Some(token) if matches!(token.kind.tag(), Tag::Symbol | Tag::Literal) => {
                 self.next_real();
@@ -975,7 +991,7 @@ impl<'a, 'd> Dir<'a, 'd> {
         self.claim(upper.clone(), false, false, member, E99_932)?;
         if self.declared.in_class {
             self.claim(upper, false, true, member, E99_932)?;
-        } else if matches!(value, ConstantValue::Expression(_)) {
+        } else if matches!(value, ConstantValue::Expression { .. }) {
             return Err(self.error(E99_906, [name.to_ascii_uppercase()]));
         }
         Ok(DirectiveKind::Constant(Box::new(ConstantDirective {
@@ -986,7 +1002,7 @@ impl<'a, 'd> Dir<'a, 'd> {
 
     /// The constant expression parse, entered with the `(` `opener` already
     /// consumed.
-    fn constant_expression(&mut self, opener: &Token) -> Result<Expr, ParseError> {
+    fn constant_expression(&mut self, opener: &Token) -> Result<ExprId, ParseError> {
         // Measured: `::constant c ()` is 35.936.
         let expr = parse_expr(self.ctx, &mut self.cursor, Terminators::RIGHT, E35_936)?;
         // Measured: `::constant c (1+2` is 36.901. No blank can sit before a

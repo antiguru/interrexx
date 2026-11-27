@@ -1,8 +1,8 @@
 //! This file stays `mod.rs`, not `gate_walk.rs`, because `tests/` is Cargo's
 //! integration-test root: a bare `tests/gate_walk.rs` would be auto-discovered
 //! as its own test binary in addition to being pulled in as a module by
-//! `tiling.rs` and `variants.rs`, compiling this walk standalone for no
-//! reason. Renaming it to `gate_walk.rs` would add that extra binary back.
+//! `tiling.rs` and `variants.rs`, compiling this walk standalone
+//! for no reason. Renaming it to `gate_walk.rs` would add that extra binary back.
 
 // Each test binary compiles its own copy of this module, and neither binary
 // uses every item: `tiling.rs` never lists the samples, `variants.rs` never
@@ -15,32 +15,34 @@
 use std::path::{Path, PathBuf};
 
 use interrexx_parse::{
-    Call, CodeBody, ConstantValue, Directive, DirectiveKind, Expr, ExprKind, Forward, Guard,
-    Instruction, InstructionKind, Loop, LoopKind, Parse, ParseSource, Program, Raise, Redirection,
-    Signal, Trace, Use,
+    Args, CodeBody, ConstantValue, Directive, DirectiveKind, ExprRef, ExprView, Instruction, Node,
+    Program,
 };
 
-/// Calls `f` on each direct child expression of `expr`, in source order.
-pub fn children_of<'a>(expr: &'a Expr, f: &mut impl FnMut(&'a Expr)) {
-    match &expr.kind {
-        ExprKind::Literal(_)
-        | ExprKind::Constant(_)
-        | ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_)
-        | ExprKind::ClassResolver { .. } => {}
-        ExprKind::Prefix { operand, .. } => f(operand),
-        ExprKind::Binary { left, right, .. } => {
+/// Calls `f` on each direct child expression of `expr`, in source order. A
+/// variable reference is a leaf: the variable it names is not a child.
+pub fn children_of<'a>(expr: ExprRef<'a>, f: &mut impl FnMut(ExprRef<'a>)) {
+    let each = |args: Args<'a>, f: &mut dyn FnMut(ExprRef<'a>)| {
+        for arg in args.iter().flatten() {
+            f(arg);
+        }
+    };
+    match expr.kind() {
+        ExprView::Literal(_)
+        | ExprView::Constant(_)
+        | ExprView::Variable(_)
+        | ExprView::Stem(_)
+        | ExprView::Compound(_)
+        | ExprView::DotVariable(_)
+        | ExprView::ClassResolver { .. }
+        | ExprView::VariableReference { .. } => {}
+        ExprView::Prefix { operand, .. } => f(operand),
+        ExprView::Binary { left, right, .. } => {
             f(left);
             f(right);
         }
-        ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
-            for arg in args.iter().flatten() {
-                f(arg);
-            }
-        }
-        ExprKind::Message {
+        ExprView::Call { args, .. } | ExprView::QualifiedCall { args, .. } => each(args, f),
+        ExprView::Message {
             target,
             super_class,
             args,
@@ -50,217 +52,9 @@ pub fn children_of<'a>(expr: &'a Expr, f: &mut impl FnMut(&'a Expr)) {
             if let Some(super_class) = super_class {
                 f(super_class);
             }
-            for arg in args.iter().flatten() {
-                f(arg);
-            }
+            each(args, f);
         }
-        ExprKind::List(items) => {
-            for item in items.iter().flatten() {
-                f(item);
-            }
-        }
-        ExprKind::Logical(items) => {
-            for item in items {
-                f(item);
-            }
-        }
-        ExprKind::VariableReference(inner) => f(inner),
-    }
-}
-
-/// Calls `f` on each top-level expression an instruction holds.
-pub fn exprs_of_instruction<'a>(kind: &'a InstructionKind, f: &mut impl FnMut(&'a Expr)) {
-    let opt = |e: &'a Option<Expr>, f: &mut dyn FnMut(&'a Expr)| {
-        if let Some(e) = e {
-            f(e);
-        }
-    };
-    match kind {
-        InstructionKind::Assignment { target, value } => {
-            f(target);
-            f(value);
-        }
-        InstructionKind::Message { term, value } => {
-            f(term);
-            opt(value, f);
-        }
-        InstructionKind::Command { expression }
-        | InstructionKind::Push { expression }
-        | InstructionKind::Queue { expression }
-        | InstructionKind::Say { expression }
-        | InstructionKind::Return { expression }
-        | InstructionKind::Exit { expression }
-        | InstructionKind::Reply { expression }
-        | InstructionKind::Numeric { expression, .. } => opt(expression, f),
-        InstructionKind::Do(l) | InstructionKind::Loop(l) => exprs_of_loop(l, f),
-        InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. } => {
-            f(condition)
-        }
-        InstructionKind::WhenCase { values, .. } => {
-            for v in values {
-                f(v);
-            }
-        }
-        InstructionKind::Select { case, .. } => opt(case, f),
-        InstructionKind::Label { .. }
-        | InstructionKind::Then
-        | InstructionKind::Else { .. }
-        | InstructionKind::Otherwise
-        | InstructionKind::Catch(_)
-        | InstructionKind::Leave { .. }
-        | InstructionKind::Iterate { .. }
-        | InstructionKind::End { .. }
-        | InstructionKind::Drop { .. }
-        | InstructionKind::Expose { .. }
-        | InstructionKind::Procedure { .. }
-        | InstructionKind::Nop => {}
-        InstructionKind::Parse(p) | InstructionKind::Arg(p) | InstructionKind::Pull(p) => {
-            exprs_of_parse(p, f)
-        }
-        InstructionKind::Call(c) => match &**c {
-            Call::Named { args, .. } => {
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            Call::Dynamic { target, args } => {
-                f(target);
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            Call::Qualified { args, .. } => {
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            Call::Trap(_) => {}
-        },
-        InstructionKind::Signal(s) => match &**s {
-            Signal::Value(e) => f(e),
-            Signal::Label(_) | Signal::Trap(_) => {}
-        },
-        InstructionKind::Interpret { expression } | InstructionKind::Options { expression } => {
-            f(expression)
-        }
-        InstructionKind::Guard(g) => {
-            let Guard { condition, .. } = &**g;
-            opt(condition, f);
-        }
-        InstructionKind::Forward(fw) => {
-            let Forward {
-                to,
-                message,
-                class,
-                arguments,
-                array,
-                continue_: _,
-            } = &**fw;
-            opt(to, f);
-            opt(message, f);
-            opt(class, f);
-            opt(arguments, f);
-            if let Some(items) = array {
-                for item in items.iter().flatten() {
-                    f(item);
-                }
-            }
-        }
-        InstructionKind::Raise(r) => {
-            let Raise {
-                condition: _,
-                propagate: _,
-                rc,
-                description,
-                additional,
-                array,
-                result,
-            } = &**r;
-            opt(rc, f);
-            opt(description, f);
-            opt(additional, f);
-            if let Some(items) = array {
-                for item in items.iter().flatten() {
-                    f(item);
-                }
-            }
-            if let Some(result) = result {
-                opt(&result.value, f);
-            }
-        }
-        InstructionKind::Use(u) => match &**u {
-            Use::Arg { targets, .. } => {
-                for t in targets.iter().flatten() {
-                    f(&t.target);
-                    opt(&t.default, f);
-                }
-            }
-            Use::Local { .. } => {}
-        },
-        InstructionKind::Address(a) => {
-            opt(&a.dynamic, f);
-            opt(&a.command, f);
-            if let Some(io) = &a.io {
-                for r in [&io.input, &io.output, &io.error] {
-                    match r {
-                        Redirection::Stream(e) | Redirection::Using(e) => f(e),
-                        Redirection::Default | Redirection::Normal | Redirection::Stem(_) => {}
-                    }
-                }
-            }
-        }
-        InstructionKind::Trace(t) => match t {
-            Trace::Value(e) => f(e),
-            Trace::Default | Trace::Setting(_) | Trace::Skip(_) => {}
-        },
-    }
-}
-
-/// The expressions of a `DO`/`LOOP` header, in source order.
-fn exprs_of_loop<'a>(l: &'a Loop, f: &mut impl FnMut(&'a Expr)) {
-    match &l.kind {
-        LoopKind::Simple | LoopKind::Forever => {}
-        LoopKind::Count(e) => {
-            if let Some(e) = e {
-                f(e);
-            }
-        }
-        LoopKind::Controlled(c) => {
-            f(&c.initial);
-            // The keyword expressions in written order, which `order` records.
-            for e in [&c.to, &c.by, &c.for_count].into_iter().flatten() {
-                f(e);
-            }
-        }
-        LoopKind::Over {
-            target, for_count, ..
-        }
-        | LoopKind::With {
-            target, for_count, ..
-        } => {
-            f(target);
-            if let Some(e) = for_count {
-                f(e);
-            }
-        }
-    }
-    if let Some(cond) = &l.conditional {
-        f(&cond.condition);
-    }
-}
-
-/// The expressions of a `PARSE`/`ARG`/`PULL` instruction.
-fn exprs_of_parse<'a>(p: &'a Parse, f: &mut impl FnMut(&'a Expr)) {
-    if let ParseSource::Value(Some(e)) = &p.source {
-        f(e);
-    }
-    for trigger in p.template.iter().flatten() {
-        if let Some(e) = &trigger.value {
-            f(e);
-        }
-        for target in trigger.targets.iter().flatten() {
-            f(target);
-        }
+        ExprView::List(items) | ExprView::Logical(items) => each(items, f),
     }
 }
 
@@ -276,25 +70,6 @@ pub fn body_of_directive(kind: &DirectiveKind) -> Option<&CodeBody> {
         | DirectiveKind::Options(_)
         | DirectiveKind::Requires(_)
         | DirectiveKind::Resource(_) => None,
-    }
-}
-
-/// The expression a directive holds outside any body: only `::CONSTANT (expr)`
-/// has one.
-pub fn expr_of_directive(kind: &DirectiveKind) -> Option<&Expr> {
-    match kind {
-        DirectiveKind::Constant(c) => match &c.value {
-            ConstantValue::Expression(e) => Some(e),
-            ConstantValue::Name | ConstantValue::Text(_) => None,
-        },
-        DirectiveKind::Annotate(_)
-        | DirectiveKind::Attribute(_)
-        | DirectiveKind::Class(_)
-        | DirectiveKind::Method(_)
-        | DirectiveKind::Options(_)
-        | DirectiveKind::Requires(_)
-        | DirectiveKind::Resource(_)
-        | DirectiveKind::Routine(_) => None,
     }
 }
 
@@ -320,31 +95,50 @@ pub fn each_directive<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Directive))
     }
 }
 
-/// Calls `visit` on every expression in the program, parents before children.
-pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Expr)) {
-    // An explicit stack rather than recursion through `children_of`, because
-    // a left-leaning expression tree the width of one clause overflows the
-    // stack here otherwise: `deep_nested_expr.rex`'s 3000-term chain aborted
-    // this walk on a default 2 MiB thread.
-    // Pushing a node's children in reverse and popping is what keeps this a
-    // parents-before-children, left-to-right walk exactly like the recursive
-    // version: the leftmost child is pushed last, so it is popped, and so
-    // fully visited depth-first, before its next sibling.
-    fn walk<'a>(root: &'a Expr, visit: &mut impl FnMut(&'a Expr)) {
-        let mut stack = vec![root];
-        while let Some(e) = stack.pop() {
-            visit(e);
-            let mut children: Vec<&'a Expr> = Vec::new();
-            children_of(e, &mut |child| children.push(child));
-            stack.extend(children.into_iter().rev());
+/// Calls `visit` on every expression in the program: each root's subtree in
+/// arena order, which puts a node's children before the node. A subtree is a
+/// contiguous run of its arena, so this is a loop over the arena's nodes.
+pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(ExprRef<'a>)) {
+    let bodies = std::iter::once(&p.main).chain(
+        p.directives
+            .iter()
+            .filter_map(|d| body_of_directive(&d.kind)),
+    );
+    for body in bodies {
+        for i in &body.instructions {
+            i.kind
+                .for_each_root(&mut |root| body.exprs.subtree(root).for_each(&mut *visit));
         }
     }
-    each_instruction(p, &mut |i| {
-        exprs_of_instruction(&i.kind, &mut |e| walk(e, visit));
-    });
     for d in &p.directives {
-        if let Some(e) = expr_of_directive(&d.kind) {
-            walk(e, visit);
+        if let DirectiveKind::Constant(c) = &d.kind
+            && let ConstantValue::Expression { exprs, root } = &c.value
+        {
+            exprs.subtree(*root).for_each(&mut *visit);
+        }
+    }
+}
+
+/// Calls `visit` on every node of every arena of the program, body by body,
+/// each slot's subtree in evaluation order. The subtrees of a body's roots
+/// cover its arena once, so this is a loop over each arena's nodes.
+pub fn each_node<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Node)) {
+    let bodies = std::iter::once(&p.main).chain(
+        p.directives
+            .iter()
+            .filter_map(|d| body_of_directive(&d.kind)),
+    );
+    for body in bodies {
+        for i in &body.instructions {
+            i.kind
+                .for_each_root(&mut |root| body.exprs.range(root).iter().for_each(&mut *visit));
+        }
+    }
+    for d in &p.directives {
+        if let DirectiveKind::Constant(c) = &d.kind
+            && let ConstantValue::Expression { exprs, root } = &c.value
+        {
+            exprs.range(*root).iter().for_each(&mut *visit);
         }
     }
 }

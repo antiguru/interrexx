@@ -11,24 +11,24 @@ const RUN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60);
 fn a_paths_steps_land_on_the_node_it_names() {
     let program = parse_program(b"zz = -za + zb * f(1)".to_vec()).expect("test program parses");
     let instruction = &program.main.instructions[0];
-    let node = |path| Interp::chunk_node_at(instruction, 0, path);
-    let variable_at = |path| match node(path).map(|node| &node.kind) {
-        Some(ExprKind::Variable(id)) => program.symbols.name(*id).to_string(),
+    let node = |path| Interp::chunk_node_at(&program.main, instruction, 0, path);
+    let variable_at = |path| match node(path).map(|node| node.kind()) {
+        Some(ExprView::Variable(id)) => program.symbols.name(id).to_string(),
         found => panic!("expected a variable at this address, found {found:?}"),
     };
 
     let root = node(NodePath::ROOT).expect("slot 0 is the assignment's value");
-    assert!(matches!(root.kind, ExprKind::Binary { .. }));
+    assert!(matches!(root.kind(), ExprView::Binary { .. }));
 
     let left = NodePath::ROOT.child(false).expect("one step fits");
     let right = NodePath::ROOT.child(true).expect("one step fits");
     assert!(matches!(
-        node(left).expect("the left operand is there").kind,
-        ExprKind::Prefix { .. }
+        node(left).expect("the left operand is there").kind(),
+        ExprView::Prefix { .. }
     ));
     assert!(matches!(
-        node(right).expect("the right operand is there").kind,
-        ExprKind::Binary { .. }
+        node(right).expect("the right operand is there").kind(),
+        ExprView::Binary { .. }
     ));
 
     assert_eq!(variable_at(left.child(false).expect("two steps fit")), "ZA");
@@ -39,8 +39,8 @@ fn a_paths_steps_land_on_the_node_it_names() {
     assert!(matches!(
         node(right.child(true).expect("two steps fit"))
             .expect("the call is the multiplication's right operand")
-            .kind,
-        ExprKind::Call { .. }
+            .kind(),
+        ExprView::Call { .. }
     ));
 
     // A prefix has one child and it is the `false` step, so the `true` one
@@ -52,7 +52,7 @@ fn a_paths_steps_land_on_the_node_it_names() {
         .and_then(|path| path.child(false))
         .expect("three steps fit");
     assert!(node(past_the_call).is_none());
-    assert!(Interp::chunk_node_at(instruction, 1, NodePath::ROOT).is_none());
+    assert!(Interp::chunk_node_at(&program.main, instruction, 1, NodePath::ROOT).is_none());
 }
 
 /// **The two message-send indents, pinned here because nothing else in the

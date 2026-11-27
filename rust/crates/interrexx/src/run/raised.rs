@@ -39,7 +39,7 @@ pub(super) fn raised_guard_not_logical(found: &[u8]) -> Raised {
 /// with `WHEN`'s own sub-number -- a plain `WHEN`'s comma list is the
 /// opposite case (`WhenCase`'s doc comment) and never reaches this raiser:
 /// [`crate::Interp::eval_condition`] hands a list over already `checked`, and
-/// `crate::ir::compile`'s `native_shape` declines `ExprKind::Logical`, so a
+/// `crate::ir::compile`'s `native_shape` declines `NodeKind::Logical`, so a
 /// list never becomes a `crate::ir::Op::ConditionJump` either.
 pub(crate) fn raised_when_not_logical(found: &[u8]) -> Raised {
     Raised::syntax(34, 2, vec![found.to_vec()])

@@ -74,3 +74,29 @@ err>      4 *-* d = rexx:nosuchclass
 err>      4 *-* d = rexx:nosuchclass
 err> Error 98 running /nonexistent/ir-dual-case.rex line 4:
 err> Error 98.988:
+
+# a prefix operator takes the cascade of a reference after it
+program
+a = 3
+say - >a~value
+----
+rc> 159
+err>      2 *-* say - >a~value
+err> Error 97 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 97.1:
+
+program
+a = 'abc'
+say - >a[1]
+----
+rc> 215
+err>      2 *-* say - >a[1]
+err> Error 41 running /nonexistent/ir-dual-case.rex line 2:
+err> Error 41.1:
+
+program
+a = 3
+say - (>a~value)
+----
+rc> 0
+out> -3

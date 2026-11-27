@@ -4,16 +4,26 @@
 //!
 //! An image holds everything a [`Program`] holds except its text, which the
 //! reader is handed and checks against the image: the image is refused
-//! unless it was written by this build's format from that same text. A
-//! refused image is `None`, never a partial program, and the caller parses
-//! the text instead.
+//! unless it was written by this build's format from that same text and every
+//! expression arena it holds is consistent (see [`Exprs::check`]). A refused
+//! image is `None`, never a partial program: `None` is the caller's cue to
+//! parse the text instead.
+//!
+//! The image of the interpreter's own library is read without that check, by
+//! [`program_from_static_image`] and the lazy body reader: the build writes it
+//! with [`checked_program_image`], which runs the check in every profile, and
+//! the check would read every body at startup, which that image exists to
+//! avoid.
 
-use interrexx_cast::CastTruncate;
+use interrexx_cast::{CastFrom, CastTruncate};
 use std::collections::BTreeMap;
 use std::ops::Range;
 
 use crate::Program;
 use crate::ast::*;
+use crate::exprs::{
+    BytesRange, CallTarget, EdgeRange, ExprId, Exprs, Inconsistent, Node, NodeKind,
+};
 use crate::selector::{Selector, SelectorTable};
 use crate::source::{ProgramSource, SourceKind};
 use crate::token::{Operator, SymbolId, SymbolTable};
@@ -23,7 +33,7 @@ const MAGIC: &[u8; 8] = b"RXPARSED";
 
 /// The layout this module writes and reads. A change to what any type below
 /// writes changes it.
-const FORMAT: u32 = 3;
+const FORMAT: u32 = 4;
 
 /// `program`, which was parsed from its own source text, as an image.
 pub fn program_image(program: &Program) -> Vec<u8> {
@@ -38,6 +48,18 @@ pub fn program_image(program: &Program) -> Vec<u8> {
     program.main.put(&mut out);
     program.directives.put(&mut out);
     out.0
+}
+
+/// [`program_image`] for an image that will be read without the arena check,
+/// such as one built into the interpreter: the check runs here instead.
+///
+/// # Errors
+///
+/// The first arena invariant `program` breaks, as [`Program::check`] reports
+/// it, and then no image is written.
+pub fn checked_program_image(program: &Program) -> Result<Vec<u8>, Inconsistent> {
+    program.check()?;
+    Ok(program_image(program))
 }
 
 /// The program `image` holds, given the text it was parsed from, or `None`
@@ -80,7 +102,10 @@ fn read_program(image: &[u8], whole: Option<&'static [u8]>, text: &[u8]) -> Opti
         main: Image::get(&mut input)?,
         directives: Image::get(&mut input)?,
     };
-    input.bytes.is_empty().then_some(program)
+    if !input.bytes.is_empty() || (whole.is_none() && program.check().is_err()) {
+        return None;
+    }
+    Some(program)
 }
 
 /// The code body a [`Body`] left encoded holds.
@@ -203,6 +228,49 @@ impl Image for usize {
 
     fn get(input: &mut Reader<'_>) -> Option<Self> {
         input.usize()
+    }
+}
+
+impl Image for u32 {
+    fn put(&self, out: &mut Writer) {
+        out.usize(usize::cast_from(*self));
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        u32::try_from(input.usize()?).ok()
+    }
+}
+
+/// A node id as the `u32` it is, never 0.
+impl Image for ExprId {
+    fn put(&self, out: &mut Writer) {
+        self.0.get().put(out);
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        std::num::NonZeroU32::new(u32::get(input)?).map(ExprId)
+    }
+}
+
+/// The arena's vectors, its literal bytes as one run.
+impl Image for Exprs {
+    fn put(&self, out: &mut Writer) {
+        let Exprs {
+            nodes,
+            edges,
+            bytes,
+        } = self;
+        nodes.put(out);
+        edges.put(out);
+        out.bytes(bytes);
+    }
+
+    fn get(input: &mut Reader<'_>) -> Option<Self> {
+        Some(Exprs {
+            nodes: Image::get(input)?,
+            edges: Image::get(input)?,
+            bytes: input.bytes()?.to_vec(),
+        })
     }
 }
 
@@ -509,40 +577,53 @@ image_enum!(Operator {
     31 => Backslash,
 });
 
-image_struct!(Expr { kind, span });
-
 image_enum!(PrefixOp {
     0 => Plus,
     1 => Minus,
     2 => Not,
 });
 
+image_struct!(EdgeRange { start, end });
+
+image_struct!(BytesRange { start, end });
+
 image_enum!(CallTarget {
     0 => Symbol(id),
     1 => Literal(bytes),
 });
 
-image_enum!(ExprKind {
+image_enum!(NodeKind {
     0 => Literal(bytes),
     1 => Constant(id),
     2 => Variable(id),
     3 => Stem(id),
     4 => Compound(id),
     5 => DotVariable(id),
-    6 => Prefix { op, operand },
-    7 => Binary { op, left, right },
-    8 => Call { target, args },
-    9 => QualifiedCall { namespace, name, args },
-    10 => ClassResolver { namespace, name },
-    11 => Message { target, name, super_class, args, cascade },
-    12 => List(items),
-    13 => Logical(items),
-    14 => VariableReference(inner),
+    6 => VariableReference { symbol, stem },
+    7 => ClassResolver { namespace, name },
+    8 => Omitted,
+    9 => Prefix { op, operand },
+    10 => Binary { op, left, right },
+    11 => Call { target, args },
+    12 => QualifiedCall { namespace, name, args },
+    13 => Message { name, cascade, scoped, children },
+    14 => List(items),
+    15 => Logical(items),
+});
+
+image_struct!(Node {
+    kind,
+    start,
+    end,
+    first,
+    parent,
+    position
 });
 
 image_struct!(CodeBody {
     instructions,
-    labels
+    labels,
+    exprs
 });
 
 image_enum!(EndStyle {
@@ -877,7 +958,7 @@ image_struct!(ConstantDirective { name, value });
 image_enum!(ConstantValue {
     0 => Name,
     1 => Text(text),
-    2 => Expression(expression),
+    2 => Expression { exprs, root },
 });
 
 image_struct!(Annotate {

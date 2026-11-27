@@ -4,12 +4,6 @@
 //! use [`with_parser_stack`] or give the parsing thread [`PARSER_STACK_BYTES`]
 //! of stack. On a smaller stack, native stack exhaustion can abort the process
 //! before parsing reaches [`MAX_EXPR_DEPTH`].
-//!
-//! `Debug`, `Clone`, and equality on [`Expr`] and the AST types containing
-//! expressions recurse through the tree. Use a large stack for these operations
-//! on deep trees too. Flat expressions can build deeper trees than the
-//! grammar's nesting limit, so the parser stack size is not a depth guarantee
-//! for those traits.
 
 // A layer's entry
 // point can have no non-test caller. `cargo clippy
@@ -23,6 +17,7 @@ mod convert;
 mod directive;
 mod error;
 mod expr;
+mod exprs;
 mod image;
 mod instruction;
 mod scanner;
@@ -32,14 +27,13 @@ mod token;
 
 pub use ast::{
     Access, Address, AddressIo, Annotate, Annotation, AnnotationTarget, AttributeDirective,
-    AttributeStyle, Body, Call, CallTarget, Catch, CatchCode, CatchCondition, ClassDirective,
-    ClassRef, CodeBody, ConditionOption, ConditionTrap, ConstantDirective, ConstantValue,
-    ControlExpr, Controlled, Directive, DirectiveKind, EndStyle, EndTarget, Expr, ExprKind,
-    ExternalSpec, Forward, Guard, GuardOption, Instruction, InstructionKind, Loop, LoopConditional,
-    LoopKind, MethodDirective, NumericSetting, OptionsForm, OutputOption, PackageOption, Parse,
-    ParseSource, ParseTrigger, PrefixOp, Protection, Raise, RaiseResult, Redirection, Requires,
-    Resource, RoutineDirective, Signal, Tail, Trace, TriggerKind, Use, UseTarget, VariableRef,
-    compound_parts,
+    AttributeStyle, Body, Call, Catch, CatchCode, CatchCondition, ClassDirective, ClassRef,
+    CodeBody, ConditionOption, ConditionTrap, ConstantDirective, ConstantValue, ControlExpr,
+    Controlled, Directive, DirectiveKind, EndStyle, EndTarget, ExternalSpec, Forward, Guard,
+    GuardOption, Instruction, InstructionKind, Loop, LoopConditional, LoopKind, MethodDirective,
+    NumericSetting, OptionsForm, OutputOption, PackageOption, Parse, ParseSource, ParseTrigger,
+    PrefixOp, Protection, Raise, RaiseResult, Redirection, Requires, Resource, RoutineDirective,
+    Signal, Tail, Trace, TriggerKind, Use, UseTarget, VariableRef, compound_parts,
 };
 pub use convert::syntax_code;
 /// The parser's own nesting limit, exported because a caller has to be able
@@ -47,7 +41,13 @@ pub use convert::syntax_code;
 /// as an AST, and it is the number a test or an embedder checks its own depths
 /// against rather than hardcoding 50,000 in two places.
 pub use expr::MAX_EXPR_DEPTH;
-pub use image::{program_from_image, program_from_static_image, program_image};
+pub use exprs::{
+    Args, Bounds, Branches, BytesRange, CallTarget, EdgeRange, ExprId, ExprRef, ExprView, Exprs,
+    Inconsistent, Node, NodeKind, Target,
+};
+pub use image::{
+    checked_program_image, program_from_image, program_from_static_image, program_image,
+};
 pub use scanner::{ResourceBody, Scanned, scan};
 pub use selector::Selector;
 pub use source::{ProgramSource, SourceKind};
@@ -116,6 +116,43 @@ pub struct Program {
     /// Retained because a `SymbolId` is meaningless without it: the executor
     /// resolves names back to text to report them.
     pub symbols: SymbolTable,
+}
+
+impl Program {
+    /// Checks the arena of every body and every `::CONSTANT` expression
+    /// against the roots its instructions name and against the source text
+    /// and symbol table its nodes index.
+    ///
+    /// # Errors
+    ///
+    /// The first invariant found broken, as [`Exprs::check`] reports it.
+    pub fn check(&self) -> Result<(), Inconsistent> {
+        let bounds = Bounds {
+            text: self.source.parts().0.len(),
+            symbols: self.symbols.len(),
+        };
+        self.main.check(bounds)?;
+        for directive in &self.directives {
+            let body = match &directive.kind {
+                DirectiveKind::Method(method) => method.body.as_ref(),
+                DirectiveKind::Attribute(attribute) => attribute.body.as_ref(),
+                DirectiveKind::Routine(routine) => routine.body.as_ref(),
+                DirectiveKind::Constant(constant) => {
+                    constant.value.check(bounds)?;
+                    None
+                }
+                DirectiveKind::Annotate(_)
+                | DirectiveKind::Class(_)
+                | DirectiveKind::Options(_)
+                | DirectiveKind::Requires(_)
+                | DirectiveKind::Resource(_) => None,
+            };
+            if let Some(body) = body {
+                body.check(bounds)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 /// What `INTERPRET` produces: one code body, parsed at *run time* rather than
@@ -262,15 +299,17 @@ fn parse(
 ) -> Result<Parsed, (ParseError, Vec<Directive>)> {
     let (scanned, scan_error) = scan_to_error(source);
     // Declared ahead of `ctx`, which borrows it, and dropped with the parse.
-    // A `Selector` in the tree holds the name's bytes itself, so what the
+    // A `Selector` in the arena holds the name's bytes itself, so what the
     // pool's own entry buys is finding a spelling again while the parse is
     // still reading names -- which is exactly as long as it lives.
     let selectors = std::cell::RefCell::new(SelectorTable::new());
+    let exprs = std::cell::RefCell::new(Exprs::default());
     let ctx = ParseCtx {
         source,
         tokens: &scanned.tokens,
         symbols: &scanned.symbols,
         selectors: &selectors,
+        exprs: &exprs,
         keywords: scanned.keywords,
         resources: &scanned.resources,
         required_level,

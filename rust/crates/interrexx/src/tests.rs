@@ -1,7 +1,7 @@
 use super::{Interp, ProgramId, form_name, run_program};
 use interrexx_inventory::errors::expand;
 use interrexx_parse::parse_program;
-use interrexx_parse::{DirectiveKind, Expr, ExprKind, Operator, PrefixOp, Program};
+use interrexx_parse::{DirectiveKind, InstructionKind, Program};
 use std::rc::Rc;
 
 mod resources;
@@ -152,50 +152,37 @@ fn the_ir_render_refuses_a_setting_that_is_not_one() {
     );
 }
 
-fn literal() -> Expr {
-    Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1)
+/// The form name of the expression `say <source>` evaluates.
+fn say_form_name(source: &str) -> String {
+    let program = parse_program(format!("say {source}\n").into_bytes())
+        .expect("a say of an expression parses");
+    let [instruction] = &program.main.instructions[..] else {
+        panic!("one clause expected");
+    };
+    let InstructionKind::Say {
+        expression: Some(expression),
+    } = &instruction.kind
+    else {
+        panic!("a SAY with an expression expected");
+    };
+    form_name(program.main.expr(*expression).kind())
 }
 
-fn nest(depth: usize) -> Expr {
-    let mut node = literal();
-    for _ in 0..depth {
-        node = Expr::new(
-            ExprKind::Binary {
-                op: Operator::Plus,
-                left: Box::new(node),
-                right: Box::new(literal()),
-            },
-            0..1,
-        );
-    }
-    node
+fn sum(terms: usize) -> String {
+    vec!["1"; terms + 1].join("+")
 }
 
 /// `Loud::expression`'s size contract, tested on the two arms that can
 /// break it.
 #[test]
 fn the_two_formatting_arms_do_not_grow_with_the_subtree() {
-    let deep = nest(200);
-    let shallow = nest(1);
-    assert_eq!(form_name(&deep.kind), form_name(&shallow.kind));
-    assert_eq!(form_name(&deep.kind), "the operator `+`");
+    let deep = say_form_name(&sum(200));
+    assert_eq!(deep, say_form_name(&sum(1)));
+    assert_eq!(deep, "the operator `+`");
 
-    let deep = Expr::new(
-        ExprKind::Prefix {
-            op: PrefixOp::Minus,
-            operand: Box::new(nest(200)),
-        },
-        0..1,
-    );
-    let shallow = Expr::new(
-        ExprKind::Prefix {
-            op: PrefixOp::Minus,
-            operand: Box::new(literal()),
-        },
-        0..1,
-    );
-    assert_eq!(form_name(&deep.kind), form_name(&shallow.kind));
-    assert_eq!(form_name(&deep.kind), "the prefix operator `-`");
+    let deep = say_form_name(&format!("-({})", sum(200)));
+    assert_eq!(deep, say_form_name("-(1)"));
+    assert_eq!(deep, "the prefix operator `-`");
 }
 
 // ---- the fragment's lifetime (I7) ----

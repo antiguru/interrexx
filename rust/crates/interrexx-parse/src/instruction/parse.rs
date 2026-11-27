@@ -4,10 +4,11 @@ use interrexx_inventory::errors::{
     E20_903, E20_904, E25_12, E35_931, E38_1, E38_2, E38_3, E38_901, E89_2,
 };
 
-use crate::ast::{Expr, Parse, ParseSource, ParseTrigger, TriggerKind};
+use crate::ast::{Parse, ParseSource, ParseTrigger, TriggerKind};
 use crate::expr::{
     Terminators, need_variable, parse_paren_expression, parse_variable_or_message_term, symbol_kind,
 };
+use crate::exprs::{ExprId, NodeKind};
 use crate::token::{Operator, ParseError, SymbolClass, Tag, Token, TokenKind};
 
 use super::{
@@ -109,7 +110,7 @@ impl<'a> Inst<'a> {
             TriggerKind::String
         };
         let mut template: Vec<Option<ParseTrigger>> = Vec::new();
-        let mut targets: Vec<Option<Expr>> = Vec::new();
+        let mut targets: Vec<Option<ExprId>> = Vec::new();
         loop {
             let Some(index) = self.peek_real_index() else {
                 if !targets.is_empty() {
@@ -163,10 +164,8 @@ impl<'a> Inst<'a> {
                     }));
                 }
                 TokenKind::Literal { value } => {
-                    let literal = Expr::new(
-                        crate::ast::ExprKind::Literal(value.clone()),
-                        token.span.clone(),
-                    );
+                    let bytes = self.ctx.exprs.borrow_mut().push_bytes(value);
+                    let literal = self.ctx.push(NodeKind::Literal(bytes), token.span.clone());
                     template.push(Some(ParseTrigger {
                         kind: string_kind,
                         value: Some(literal),
@@ -180,7 +179,9 @@ impl<'a> Inst<'a> {
                         SymbolClass::Constant => {
                             template.push(Some(ParseTrigger {
                                 kind: TriggerKind::Absolute,
-                                value: Some(Expr::new(symbol_kind(id, class), token.span.clone())),
+                                value: Some(
+                                    self.ctx.push(symbol_kind(id, class), token.span.clone()),
+                                ),
                                 targets: std::mem::take(&mut targets),
                             }));
                         }
@@ -209,7 +210,7 @@ impl<'a> Inst<'a> {
     }
 
     /// The column a `+`, `-`, `=`, `<` or `>` trigger moves to.
-    fn trigger_position(&mut self) -> Result<Expr, ParseError> {
+    fn trigger_position(&mut self) -> Result<ExprId, ParseError> {
         let Some(token) = self.next_real() else {
             // Measured: `parse arg +` is rc 218, Error 38.901.
             return Err(self.error(E38_901, []));
@@ -227,7 +228,7 @@ impl<'a> Inst<'a> {
                 ) {
                     return Err(self.found(E38_2, Some(token)));
                 }
-                Ok(Expr::new(symbol_kind(*id, *class), token.span.clone()))
+                Ok(self.ctx.push(symbol_kind(*id, *class), token.span.clone()))
             }
             _ => Err(self.found(E38_2, Some(token))),
         }

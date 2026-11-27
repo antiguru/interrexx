@@ -7,7 +7,7 @@ use std::ops::Range;
 use gate_walk::{
     DECLARATION_ERRORS, body_of_directive, children_of, corpus_dir, each_expr, rex_files_under,
 };
-use interrexx_parse::{DirectiveKind, Expr, ExprKind, Operator, Program, parse_program};
+use interrexx_parse::{DirectiveKind, ExprRef, ExprView, Operator, Program, parse_program};
 
 /// The non-whitespace-class bytes of `text[range]`, each with its offset.
 fn non_whitespace_class(text: &[u8], range: Range<usize>) -> Vec<(usize, u8)> {
@@ -115,15 +115,19 @@ fn non_whitespace_class_line_tail(text: &[u8], range: Range<usize>) -> Option<us
 }
 
 /// Property 1: every node's span contains its children's spans.
-fn containment_errors(e: &Expr, errors: &mut Vec<String>) {
+fn containment_errors(e: ExprRef<'_>, errors: &mut Vec<String>) {
     children_of(e, &mut |child| {
-        if child.span.start < e.span.start || child.span.end > e.span.end {
-            errors.push(format!(
-                "child span {:?} escapes parent span {:?}",
-                child.span, e.span
-            ));
-        }
+        span_containment_errors(e.span(), child.span(), errors)
     });
+}
+
+/// Property 1 for one parent and child span.
+fn span_containment_errors(parent: Range<usize>, child: Range<usize>, errors: &mut Vec<String>) {
+    if child.start < parent.start || child.end > parent.end {
+        errors.push(format!(
+            "child span {child:?} escapes parent span {parent:?}"
+        ));
+    }
 }
 
 /// A byte that can spell part of a dyadic operator: the ASCII operator
@@ -138,18 +142,28 @@ fn is_operator_byte(b: u8) -> bool {
 
 /// Property 2: a binary node's operands are ordered and the gap between them
 /// holds the operator and nothing else.
-fn binary_tightness_errors(text: &[u8], e: &Expr, errors: &mut Vec<String>) {
-    let ExprKind::Binary { op, left, right } = &e.kind else {
-        return;
-    };
-    if left.span.end > right.span.start {
+fn binary_tightness_errors(text: &[u8], e: ExprRef<'_>, errors: &mut Vec<String>) {
+    if let ExprView::Binary { op, left, right } = e.kind() {
+        operand_tightness_errors(text, op, left.span(), right.span(), errors);
+    }
+}
+
+/// Property 2 for one operator and its operands' spans.
+fn operand_tightness_errors(
+    text: &[u8],
+    op: Operator,
+    left: Range<usize>,
+    right: Range<usize>,
+    errors: &mut Vec<String>,
+) {
+    if left.end > right.start {
         errors.push(format!(
             "binary {:?}: left operand span {:?} overlaps right operand span {:?}",
-            op, left.span, right.span
+            op, left, right
         ));
         return;
     }
-    let gap = non_whitespace_class(text, left.span.end..right.span.start);
+    let gap = non_whitespace_class(text, left.end..right.start);
     let synthetic = matches!(op, Operator::Abuttal | Operator::Blank);
     let mut saw_operator_byte = false;
     for &(offset, byte) in &gap {
@@ -166,34 +180,38 @@ fn binary_tightness_errors(text: &[u8], e: &Expr, errors: &mut Vec<String>) {
             op,
             char::from(byte),
             offset,
-            left.span,
-            right.span
+            left,
+            right
         ));
     }
     if synthetic && saw_operator_byte {
         errors.push(format!(
             "binary {:?}: an operator byte sits between the operand spans {:?} and \
              {:?}, but this operator is synthesised and has no source spelling",
-            op, left.span, right.span
+            op, left, right
         ));
     }
     if !synthetic && !saw_operator_byte {
         errors.push(format!(
             "binary {:?}: no operator byte between the operand spans {:?} and {:?}",
-            op, left.span, right.span
+            op, left, right
         ));
     }
 }
 
 /// A prefix node's span starts before its operand's, because the operator
 /// token sits in front. Falsifiable the same way property 2 is.
-fn prefix_order_errors(e: &Expr, errors: &mut Vec<String>) {
-    if let ExprKind::Prefix { operand, .. } = &e.kind
-        && e.span.start >= operand.span.start
-    {
+fn prefix_order_errors(e: ExprRef<'_>, errors: &mut Vec<String>) {
+    if let ExprView::Prefix { operand, .. } = e.kind() {
+        prefix_span_errors(e.span(), operand.span(), errors);
+    }
+}
+
+/// The prefix property for one prefix node's span and its operand's.
+fn prefix_span_errors(prefix: Range<usize>, operand: Range<usize>, errors: &mut Vec<String>) {
+    if prefix.start >= operand.start {
         errors.push(format!(
-            "prefix node span {:?} does not start before its operand span {:?}",
-            e.span, operand.span
+            "prefix node span {prefix:?} does not start before its operand span {operand:?}"
         ));
     }
 }
@@ -308,7 +326,7 @@ fn every_corpus_program_tiles() {
         let p = match parse_program(text.clone()) {
             Ok(p) => p,
             // A program whose subject is what its declarations refuse has no
-            // tree to tile.
+            // parse to tile.
             Err(e) if DECLARATION_ERRORS.contains(&(e.code(), e.sub())) => continue,
             Err(e) => panic!("{} failed to parse: {e:?}", path.display()),
         };
@@ -335,43 +353,25 @@ fn every_corpus_program_tiles() {
 
 // ---- The checkers can fail. ----
 
-/// A literal leaf claiming `span`, for building violating trees by hand.
-fn leaf(span: Range<usize>) -> Expr {
-    Expr {
-        kind: ExprKind::Literal(b"x".to_vec().into_boxed_slice()),
-        span,
-    }
-}
-
-fn binary(op: Operator, left: Expr, right: Expr, span: Range<usize>) -> Expr {
-    Expr {
-        kind: ExprKind::Binary {
-            op,
-            left: Box::new(left),
-            right: Box::new(right),
-        },
-        span,
-    }
-}
+// A parser never builds a node that breaks these properties, so each control
+// hands its checker the spans of one such node directly.
 
 #[test]
 fn the_containment_checker_rejects_a_child_escaping_its_parent() {
-    let e = binary(Operator::Plus, leaf(0..1), leaf(4..9), 0..5);
     let mut errors = Vec::new();
-    containment_errors(&e, &mut errors);
+    span_containment_errors(0..5, 4..9, &mut errors);
     assert_eq!(errors.len(), 1, "{errors:?}");
     assert!(errors[0].contains("escapes"), "{errors:?}");
 }
 
 #[test]
 fn the_tightness_checker_rejects_a_mis_nested_operand() {
-    // "a + b c": a tree that attached `b` to `+` but claims `c`'s span as the
+    // "a + b c": a node that attached `b` to `+` but claims `c`'s span as the
     // right operand keeps containment under widening and must fail here,
     // because the bytes between the operand spans include the symbol `b`.
     let text = b"a + b c";
-    let e = binary(Operator::Plus, leaf(0..1), leaf(6..7), 0..7);
     let mut errors = Vec::new();
-    binary_tightness_errors(text, &e, &mut errors);
+    operand_tightness_errors(text, Operator::Plus, 0..1, 6..7, &mut errors);
     assert!(
         errors
             .iter()
@@ -383,9 +383,8 @@ fn the_tightness_checker_rejects_a_mis_nested_operand() {
 #[test]
 fn the_tightness_checker_rejects_overlapping_operands() {
     let text = b"a + b";
-    let e = binary(Operator::Plus, leaf(0..3), leaf(2..5), 0..5);
     let mut errors = Vec::new();
-    binary_tightness_errors(text, &e, &mut errors);
+    operand_tightness_errors(text, Operator::Plus, 0..3, 2..5, &mut errors);
     assert!(errors.iter().any(|m| m.contains("overlaps")), "{errors:?}");
 }
 
@@ -394,9 +393,8 @@ fn the_tightness_checker_rejects_a_missing_operator() {
     // Both operand spans are right, but the operator between them is absent
     // from the source: a blank sits where `+` claims to be.
     let text = b"a   b";
-    let e = binary(Operator::Plus, leaf(0..1), leaf(4..5), 0..5);
     let mut errors = Vec::new();
-    binary_tightness_errors(text, &e, &mut errors);
+    operand_tightness_errors(text, Operator::Plus, 0..1, 4..5, &mut errors);
     assert!(
         errors.iter().any(|m| m.contains("no operator byte")),
         "{errors:?}"
@@ -405,15 +403,8 @@ fn the_tightness_checker_rejects_a_missing_operator() {
 
 #[test]
 fn the_prefix_checker_rejects_an_operator_with_nothing_in_front() {
-    let e = Expr {
-        kind: ExprKind::Prefix {
-            op: interrexx_parse::PrefixOp::Minus,
-            operand: Box::new(leaf(0..1)),
-        },
-        span: 0..1,
-    };
     let mut errors = Vec::new();
-    prefix_order_errors(&e, &mut errors);
+    prefix_span_errors(0..1, 0..1, &mut errors);
     assert_eq!(errors.len(), 1, "{errors:?}");
 }
 

@@ -343,8 +343,8 @@ impl Interp {
     }
 
     /// `>L>` (`TRACE_PREFIX_LITERAL`): a literal's own value, untagged.
-    /// `eval.rs`'s `eval` calls this for `ExprKind::Literal` and
-    /// `ExprKind::Constant` alike -- a constant symbol's own upcased spelling
+    /// `eval.rs`'s `eval` calls this for `NodeKind::Literal` and
+    /// `NodeKind::Constant` alike -- a constant symbol's own upcased spelling
     /// is not distinguished from a quoted literal here, matching how little
     /// either one is.
     #[inline(always)]

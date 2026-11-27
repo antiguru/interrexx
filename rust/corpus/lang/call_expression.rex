@@ -1,4 +1,4 @@
-/* ExprKind::Call, the internal-function expression form: f(...)
+/* NodeKind::Call, the internal-function expression form: f(...)
    evaluated for its own value inside a larger expression, not run as a CALL
    clause of its own.
 

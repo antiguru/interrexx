@@ -1,7 +1,7 @@
 //! `ADDRESS`, `NUMERIC` and `TRACE`, and the `>I>`/`<I<` invocation lines.
 
 use super::{
-    Announced, Code, DirectiveKind, Expr, Failure, Form, Interp, Loud, NumericSetting, ObjRef,
+    Announced, Code, DirectiveKind, ExprRef, Failure, Form, Interp, Loud, NumericSetting, ObjRef,
     Raised, Trace, TraceEntry, is_whole_number, raised_from_settings, raised_invalid_trace_letter,
     raised_naming_the_operand, raised_numeric_trace_interactive_only,
 };
@@ -110,7 +110,7 @@ impl Interp {
             // `whole_number` attempt precedes its `check_trace_setting`
             // fallback).
             Trace::Value(expression) => {
-                let value = self.eval(code, expression)?;
+                let value = self.eval(code, code.body.expr(*expression))?;
                 return self.exec_trace_value(code, value);
             }
         }
@@ -332,7 +332,7 @@ impl Interp {
                 self.store_io_config(code, environment, address);
             }
             (None, Some(expression)) => {
-                let value = self.eval(code, expression)?;
+                let value = self.eval(code, code.body.expr(*expression))?;
                 return self.exec_address_value(code, address, value);
             }
         }
@@ -377,7 +377,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         setting: &NumericSetting,
-        expression: &Option<Expr>,
+        expression: Option<ExprRef<'_>>,
     ) -> Result<(), Failure> {
         let value = match expression {
             Some(expression) => Some(self.eval(code, expression)?),

@@ -1,7 +1,7 @@
 //! Measures, rather than assumes, which of several candidate recursions in
 //! `interrexx-parse` is what overflows a default-stack thread on a deep
 //! `1 + 1 + ... + 1` chain, and how deep each one tolerates.
-use interrexx_parse::{Expr, ExprKind, Operator, parse_program};
+use interrexx_parse::parse_program;
 
 fn main() {
     let n: usize = std::env::args().nth(1).unwrap().parse().unwrap();
@@ -31,63 +31,9 @@ fn main() {
                 .unwrap();
             handle.join().unwrap();
         }
-        // Builds a left-leaning Binary chain directly, with a plain
-        // iterative loop and no parser involved at all, to isolate the cost
-        // of dropping the tree from the cost of parsing it.
-        "build_drop" | "build_leak" => {
-            let leak = mode == "build_leak";
-            let handle = std::thread::Builder::new()
-                .spawn(move || {
-                    let mut e = Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-                    for _ in 0..n {
-                        let rhs = Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-                        e = Expr::binary(Operator::Plus, e, rhs);
-                    }
-                    if leak {
-                        std::mem::forget(e);
-                    } else {
-                        drop(e);
-                    }
-                    println!("ok: depth {n} {mode}");
-                })
-                .unwrap();
-            handle.join().unwrap();
-        }
-        // Builds one tree the same way `build_drop` does, then exercises one
-        // derive on it, to find each derive's own cliff independently of
-        // parsing and independently of `Drop` (which is now iterative and
-        // is not what these three exercise).
-        "debug" | "eq" | "clone" => {
-            let handle = std::thread::Builder::new()
-                .spawn(move || {
-                    let build = || {
-                        let leaf = || Expr::new(ExprKind::Literal(Box::from(&b"1"[..])), 0..1);
-                        (0..n).fold(leaf(), |left, _| Expr::binary(Operator::Plus, left, leaf()))
-                    };
-                    let e = build();
-                    match mode.as_str() {
-                        "debug" => {
-                            let text = format!("{e:?}");
-                            println!("ok: depth {n} debug, {} chars", text.len());
-                        }
-                        "eq" => {
-                            let other = build();
-                            println!("ok: depth {n} eq, equal={}", e == other);
-                        }
-                        "clone" => {
-                            let cloned = e.clone();
-                            drop(cloned);
-                            println!("ok: depth {n} clone");
-                        }
-                        _ => unreachable!(),
-                    }
-                })
-                .unwrap();
-            handle.join().unwrap();
-        }
         // `say (((...('a')...)))` with `n` levels of nesting, to measure the
         // parenthesis-descent recursion in `subterm`/`full_subexpression`
-        // rather than the flat-chain recursions above. `paren_sized` uses
+        // rather than the flat chain above. `paren_sized` uses
         // the 512 MiB stack `interrexx`'s public entry point runs on;
         // `paren_default` uses no explicit `stack_size`, i.e. what a
         // `cargo test` thread gets, which is the number that decides

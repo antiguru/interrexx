@@ -3,9 +3,9 @@
 use crate::activity::LevelName;
 
 use super::{
-    Activation, BehaviourId, Body, BodyKey, CallContext, CallType, Code, Ended, Expr, ExprKind,
-    Failure, Flow, Inherited, InstalledRoutine, Interp, Loud, ObjRef, Raised, Rc, Resolved,
-    VarRefHome, body_of, builtin,
+    Activation, Args, BehaviourId, Body, BodyKey, CallContext, CallType, Code, Ended, ExprRef,
+    ExprView, Failure, Flow, Inherited, InstalledRoutine, Interp, Loud, ObjRef, Raised, Rc,
+    Resolved, SymbolId, VarRefHome, body_of, builtin,
 };
 
 /// The name an internal routine's call passes it, which its frame and
@@ -369,7 +369,7 @@ impl Interp {
         code: &Code<'_>,
         target: crate::builtin::BuiltinTarget,
         name: &[u8],
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<ObjRef, Failure> {
         // **Pushed onto the shared stack one at a time**, rather than into a
         // buffer lent for the whole loop: each argument's evaluation calls
@@ -377,7 +377,7 @@ impl Interp {
         // a run that is only ever appended to needs no borrow between pushes.
         // The compiled path's `Op::PushArg` writes the same stack.
         let mark = self.activity.value_buffer.len();
-        for arg in args {
+        for arg in args.iter() {
             let value = match arg {
                 None => {
                     self.trace_argument(self.activity.clause_state.current_value_indent, b"");
@@ -406,7 +406,7 @@ impl Interp {
         code: &Code<'_>,
         resolution: CallResolution<'_>,
         name: &[u8],
-        args: &[Option<Expr>],
+        args: Args<'_>,
         call_type: CallType,
     ) -> Result<Ended, Failure> {
         let begun = self.begin_invoke_call(code, resolution, name, args, call_type)?;
@@ -419,7 +419,7 @@ impl Interp {
         code: &Code<'_>,
         resolution: CallResolution<'_>,
         name: &[u8],
-        args: &[Option<Expr>],
+        args: Args<'_>,
         call_type: CallType,
     ) -> Result<Begun, Failure> {
         // **Evaluated in the caller, before anything is pushed**, which is
@@ -438,7 +438,7 @@ impl Interp {
         // arguments to the callee, which keeps them, so there is nothing to
         // give back and a pool would allocate on every call anyway.
         let mut arguments: Vec<Option<ObjRef>> = Vec::with_capacity(args.len());
-        for arg in args {
+        for arg in args.iter() {
             match arg {
                 None => {
                     // An omitted position traces an **empty** value line, not
@@ -1542,12 +1542,9 @@ impl Interp {
     pub(crate) fn variable_reference(
         &mut self,
         code: &Code<'_>,
-        inner: &Expr,
+        id: SymbolId,
+        stem: bool,
     ) -> Result<ObjRef, Failure> {
-        let id = match &inner.kind {
-            ExprKind::Variable(id) | ExprKind::Stem(id) => *id,
-            other => return Err(Loud::expression(other).into()),
-        };
         let slot = match code.slot_for(id) {
             Some(slot) => slot,
             None => self.slot_of(code.symbols.name(id).as_bytes()),
@@ -1555,7 +1552,7 @@ impl Interp {
         let frame = self.activation().frame;
         let spelling = code.symbols.name(id).as_bytes();
         // A reference uses the stem variable it names, which creates it.
-        if matches!(inner.kind, ExprKind::Stem(_)) && self.variable(frame, slot).is_none() {
+        if stem && self.variable(frame, slot).is_none() {
             self.create_stem_variable(frame, slot, spelling);
         }
         // Resolved here, where the name's own home is: an alias this
@@ -1592,17 +1589,21 @@ impl Interp {
     /// One call argument, evaluated, rooted and traced -- the step both call
     /// paths share.
     #[inline(always)]
-    fn leaf_argument(&self, expr: &Expr) -> bool {
+    fn leaf_argument(&self, expr: ExprRef<'_>) -> bool {
         !self.tracing_intermediates()
             && matches!(
-                expr.kind,
-                ExprKind::Literal(_) | ExprKind::Constant(_) | ExprKind::Variable(_)
+                expr.kind(),
+                ExprView::Literal(_) | ExprView::Constant(_) | ExprView::Variable(_)
             )
     }
 
     /// One argument's value, for a shape whose evaluation produces that
     /// value and nothing else.
-    fn eval_leaf_argument(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
+    fn eval_leaf_argument(
+        &mut self,
+        code: &Code<'_>,
+        expr: ExprRef<'_>,
+    ) -> Result<ObjRef, Failure> {
         let anchor = 0u8;
         self.enter_eval_node(&raw const anchor)?;
         let value = self.eval_node(code, expr);
@@ -1615,7 +1616,7 @@ impl Interp {
     pub(crate) fn eval_traced_argument(
         &mut self,
         code: &Code<'_>,
-        expr: &Expr,
+        expr: ExprRef<'_>,
     ) -> Result<ObjRef, Failure> {
         let argument = self.eval(code, expr)?;
         self.roots.activity_mut().push_temp(argument);
@@ -1632,7 +1633,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         resolution: Result<T, Failure>,
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<T, Failure> {
         match resolution {
             Ok(resolved) => Ok(resolved),
@@ -1648,13 +1649,13 @@ impl Interp {
     fn arguments_before_failure(
         &mut self,
         code: &Code<'_>,
-        args: &[Option<Expr>],
+        args: Args<'_>,
         failure: Failure,
     ) -> Failure {
         // The same three shapes `invoke_call`'s own loop has, for their trace
         // lines and their failures; the values themselves are dropped, since
         // there is no callee to hand them to.
-        for arg in args {
+        for arg in args.iter() {
             let raised = match arg {
                 None => {
                     self.trace_argument(self.activity.clause_state.current_value_indent, b"");
@@ -1682,7 +1683,7 @@ impl Interp {
         &mut self,
         code: &Code<'_>,
         value: ObjRef,
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<Flow, Failure> {
         self.roots.activity_mut().push_temp(value);
         let value = self.required_string_value(value)?;
@@ -1698,7 +1699,7 @@ impl Interp {
         code: &Code<'_>,
         name: &[u8],
         search_labels: bool,
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<Flow, Failure> {
         let fixed = self.resolve_fixed_call(name, search_labels);
         let fixed = self.resolved_after_arguments(code, fixed, args)?;
@@ -1713,7 +1714,7 @@ impl Interp {
         code: &Code<'_>,
         resolution: CallResolution<'_>,
         name: &[u8],
-        args: &[Option<Expr>],
+        args: Args<'_>,
     ) -> Result<Flow, Failure> {
         // Captured before `invoke_call` runs the callee, which overwrites
         // `current_value_indent` with its own clauses' -- this is the `CALL`

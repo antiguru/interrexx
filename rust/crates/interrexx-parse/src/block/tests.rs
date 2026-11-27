@@ -836,7 +836,8 @@ fn the_shapes_the_oracle_accepts_are_accepted() {
 
 #[test]
 fn catch_clauses_keep_their_owning_block_and_matchers() {
-    use crate::ast::{CatchCode, ExprKind};
+    use crate::ast::CatchCode;
+    use crate::exprs::ExprView;
 
     let program = ok("do label attempt
   do
@@ -875,7 +876,7 @@ end
     let handler = handlers.next().unwrap();
     assert_eq!(handler.block, Some(0));
     assert!(
-        matches!(handler.variable.as_ref().unwrap().kind, ExprKind::Variable(name)
+        matches!(program.main.expr(handler.variable.unwrap()).kind(), ExprView::Variable(name)
         if program.symbols.name(name) == "ERRORINFO")
     );
     assert_eq!(handler.conditions[0].name.as_ref(), b"SYNTAX");

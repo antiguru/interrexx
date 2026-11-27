@@ -681,7 +681,7 @@ fn pass_of(
                     if matches!(
                         kind_at(code, index),
                         Some(InstructionKind::Assignment { target, .. })
-                            if matches!(target.kind, ExprKind::Compound(_))
+                            if matches!(code.body.expr(*target).kind(), ExprView::Compound(_))
                     ) =>
                 {
                     Step::Compound { pc: at }
@@ -1433,7 +1433,7 @@ impl Host for Driven<'_, '_> {
                 else {
                     return false;
                 };
-                let ExprKind::Compound(id) = target.kind else {
+                let ExprView::Compound(id) = self.code.body.expr(*target).kind() else {
                     return false;
                 };
                 // The key the write takes: the one the read before it holds,
@@ -1450,7 +1450,7 @@ impl Host for Driven<'_, '_> {
                 // The value rooted for the write is released with it, as for
                 // a builtin's temporaries.
                 let frame = interp.roots.activity_mut().push_frame();
-                let wrote = interp.assign_evaluated(self.code, target, value, None, shared);
+                let wrote = interp.assign_evaluated(self.code, *target, value, None, shared);
                 interp.roots.activity_mut().pop_frame(frame);
                 // A write that failed is made again by the full path, which
                 // raises its failure; a second write of the same value to the

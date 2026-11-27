@@ -1,8 +1,9 @@
 //! `SELECT`'s own clauses, and where `IF`, `WHEN` and `SELECT` send control.
 
 use super::{
-    Code, ConditionTrace, Expr, Failure, Flow, Instruction, InstructionKind, Interp, LeaveOrigin,
-    ObjRef, SymbolId, raised_iterate_wrong_kind, raised_when_not_logical, static_indent,
+    Code, ConditionTrace, ExprRef, Failure, Flow, Instruction, InstructionKind, Interp,
+    LeaveOrigin, ObjRef, SymbolId, raised_iterate_wrong_kind, raised_when_not_logical,
+    static_indent,
 };
 
 impl Interp {
@@ -12,7 +13,7 @@ impl Interp {
     pub(crate) fn select_case(
         &mut self,
         code: &Code<'_>,
-        case_expr: &Expr,
+        case_expr: ExprRef<'_>,
     ) -> Result<ObjRef, Failure> {
         // The clause unit set this to the `SELECT`'s own printed indent on the
         // way in.
@@ -58,12 +59,12 @@ impl Interp {
         match &when_instruction.kind {
             InstructionKind::When { condition, .. } => self.eval_condition(
                 code,
-                condition,
+                code.body.expr(*condition),
                 ConditionTrace::Result(indent),
                 raised_when_not_logical,
             ),
             InstructionKind::WhenCase { values, .. } => match case {
-                Some(case) => self.test_case_when(code, values, case, indent),
+                Some(case) => self.test_case_when(code, code.body.items(values), case, indent),
                 // A listed `WhenCase` with no `case` expression: a plain
                 // `SELECT` with no `CASE` at all, which the parser should
                 // never produce for a `WhenCase` node (only `SELECT CASE`
@@ -73,7 +74,7 @@ impl Interp {
                 // never matches, the identical fallback.
                 None => {
                     for value in values {
-                        let v = self.eval(code, value)?;
+                        let v = self.eval(code, code.body.expr(*value))?;
                         self.roots.activity_mut().push_temp(v);
                     }
                     Ok(false)

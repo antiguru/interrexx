@@ -7,7 +7,7 @@ use std::os::unix::process::ExitStatusExt;
 use std::process::Stdio;
 use std::rc::Rc;
 
-use interrexx_parse::{AddressIo, Expr, Instruction, ProgramSource};
+use interrexx_parse::{AddressIo, ExprRef, Instruction, ProgramSource};
 
 use interrexx_core::ObjRef;
 
@@ -1220,7 +1220,7 @@ impl Interp {
         index: usize,
         instruction: &Instruction,
         source: Option<&ProgramSource>,
-        expression: &Expr,
+        expression: ExprRef<'_>,
         environment: Option<&[u8]>,
         io: Option<&AddressIo>,
     ) -> Result<ExecOutcome, Failure> {

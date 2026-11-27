@@ -408,7 +408,7 @@ fn a_callees_clauses_echo_at_the_calling_clauses_indent_plus_two() {
 /// `clause_line_override` (that function's own doc comment) -- and this
 /// is the shape that tells a version missing the restore apart from a
 /// correct one: **two** internal-function calls inside *one* clause
-/// (`ExprKind::Call`). Without the restore,
+/// (`NodeKind::Call`). Without the restore,
 /// `g`'s own base indent -- and everything computed from it: its
 /// clauses, its `RETURN`'s own value trace, and the enclosing `say`
 /// clause's own final `>>>` -- is derived from `f`'s last clause instead

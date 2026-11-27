@@ -33,8 +33,10 @@ A hand-written scanner turns retained source bytes into tokens, a clause splitte
 Keyword-ness is decided by position, never by the scanner, because Rexx has no reserved words.
 Blanks are significant (`f(x)` is a call, `f (x)` is abuttal), so the scanner reports them. The AST
 is plain owned Rust data, not heap objects: nothing in the language or the C API exposes code
-below Method, Routine and Package, and source is exposed only as text. The parser has its own
-nesting limit, past which it raises 11.1.
+below Method, Routine and Package, and source is exposed only as text. Each code body keeps its
+expressions in one arena of nodes in post-order, so the nodes of a subtree are a contiguous range
+and every pass over an expression is a loop over that range (`docs/design/expressions.md`). The
+parser has its own nesting limit, past which it raises 11.1.
 
 ## The IR and executor
 

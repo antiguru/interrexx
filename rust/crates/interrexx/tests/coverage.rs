@@ -1,4 +1,4 @@
-//! Every `InstructionKind`, `ExprKind`, `LoopKind`, `PrefixOp`, `EndStyle`,
+//! Every `InstructionKind`, `NodeKind`, `LoopKind`, `PrefixOp`, `EndStyle`,
 //! `Trace` and `Operator` variant is either constructed by a program in
 //! `rust/corpus/differential.txt`, or is unreachable. The
 //! differential half -- those programs agree with the oracle -- is
@@ -9,15 +9,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use interrexx_parse::{
-    DirectiveKind, EndTarget, Expr, ExprKind, Instruction, InstructionKind, Loop, LoopKind,
-    Program, Trace, parse_program,
+    CodeBody, DirectiveKind, EndTarget, Instruction, InstructionKind, Node, NodeKind, Program,
+    parse_program,
 };
 
 #[path = "variant_tags.rs"]
 mod variant_tags;
 use variant_tags::{
-    Coverage, END_STYLE_TAGS, EXPR_TAGS, INSTRUCTION_TAGS, LOOP_TAGS, OPERATOR_TAGS,
-    PREFIX_OP_TAGS, TRACE_TAGS, end_style_tag, expr_tag, instruction_tag, loop_tag, operator_tag,
+    Coverage, END_STYLE_TAGS, INSTRUCTION_TAGS, LOOP_TAGS, NODE_TAGS, OPERATOR_TAGS,
+    PREFIX_OP_TAGS, TRACE_TAGS, end_style_tag, instruction_tag, loop_tag, node_tag, operator_tag,
     prefix_op_tag, trace_tag,
 };
 
@@ -155,262 +155,38 @@ fn an_unadmitted_directive_still_panics() {
     });
 }
 
-/// Every direct child expression of `expr`, in source order. Exhaustive so a
-/// new `ExprKind` variant is a compile error here, the same guarantee the
-/// `tags!` tables above carry.
-fn children_of<'a>(expr: &'a Expr, f: &mut impl FnMut(&'a Expr)) {
-    match &expr.kind {
-        ExprKind::Literal(_)
-        | ExprKind::Constant(_)
-        | ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_)
-        | ExprKind::ClassResolver { .. } => {}
-        ExprKind::Prefix { operand, .. } => f(operand),
-        ExprKind::Binary { left, right, .. } => {
-            f(left);
-            f(right);
-        }
-        ExprKind::Call { args, .. } | ExprKind::QualifiedCall { args, .. } => {
-            for arg in args.iter().flatten() {
-                f(arg);
-            }
-        }
-        ExprKind::Message {
-            target,
-            super_class,
-            args,
-            ..
-        } => {
-            f(target);
-            if let Some(super_class) = super_class {
-                f(super_class);
-            }
-            for arg in args.iter().flatten() {
-                f(arg);
-            }
-        }
-        ExprKind::List(items) => {
-            for item in items.iter().flatten() {
-                f(item);
-            }
-        }
-        ExprKind::Logical(items) => {
-            for item in items {
-                f(item);
-            }
-        }
-        ExprKind::VariableReference(inner) => f(inner),
-    }
-}
-
-/// Every top-level expression an instruction holds directly. Exhaustive over
-/// `InstructionKind`.
-fn exprs_of_instruction<'a>(kind: &'a InstructionKind, f: &mut impl FnMut(&'a Expr)) {
-    let opt = |e: &'a Option<Expr>, f: &mut dyn FnMut(&'a Expr)| {
-        if let Some(e) = e {
-            f(e);
-        }
-    };
-    match kind {
-        InstructionKind::Assignment { target, value } => {
-            f(target);
-            f(value);
-        }
-        InstructionKind::Message { term, value } => {
-            f(term);
-            opt(value, f);
-        }
-        InstructionKind::Command { expression }
-        | InstructionKind::Push { expression }
-        | InstructionKind::Queue { expression }
-        | InstructionKind::Say { expression }
-        | InstructionKind::Return { expression }
-        | InstructionKind::Exit { expression }
-        | InstructionKind::Reply { expression }
-        | InstructionKind::Numeric { expression, .. } => opt(expression, f),
-        InstructionKind::Do(l) | InstructionKind::Loop(l) => exprs_of_loop(l, f),
-        InstructionKind::If { condition, .. } | InstructionKind::When { condition, .. } => {
-            f(condition)
-        }
-        InstructionKind::WhenCase { values, .. } => {
-            for v in values {
-                f(v);
-            }
-        }
-        InstructionKind::Select { case, .. } => opt(case, f),
-        InstructionKind::Label { .. }
-        | InstructionKind::Then
-        | InstructionKind::Else { .. }
-        | InstructionKind::Otherwise
-        | InstructionKind::Catch(_)
-        | InstructionKind::Leave { .. }
-        | InstructionKind::Iterate { .. }
-        | InstructionKind::End { .. }
-        | InstructionKind::Drop { .. }
-        | InstructionKind::Expose { .. }
-        | InstructionKind::Procedure { .. }
-        | InstructionKind::Nop => {}
-        InstructionKind::Parse(p) | InstructionKind::Arg(p) | InstructionKind::Pull(p) => {
-            for trigger in p.template.iter().flatten() {
-                if let Some(e) = &trigger.value {
-                    f(e);
-                }
-                for target in trigger.targets.iter().flatten() {
-                    f(target);
-                }
-            }
-            if let interrexx_parse::ParseSource::Value(Some(e)) = &p.source {
-                f(e);
-            }
-        }
-        InstructionKind::Call(c) => match &**c {
-            interrexx_parse::Call::Named { args, .. }
-            | interrexx_parse::Call::Qualified { args, .. } => {
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            interrexx_parse::Call::Dynamic { target, args } => {
-                f(target);
-                for arg in args.iter().flatten() {
-                    f(arg);
-                }
-            }
-            interrexx_parse::Call::Trap(_) => {}
-        },
-        InstructionKind::Signal(s) => match &**s {
-            interrexx_parse::Signal::Value(e) => f(e),
-            interrexx_parse::Signal::Label(_) | interrexx_parse::Signal::Trap(_) => {}
-        },
-        InstructionKind::Interpret { expression } | InstructionKind::Options { expression } => {
-            f(expression)
-        }
-        InstructionKind::Guard(g) => opt(&g.condition, f),
-        InstructionKind::Forward(fw) => {
-            opt(&fw.to, f);
-            opt(&fw.message, f);
-            opt(&fw.class, f);
-            opt(&fw.arguments, f);
-            if let Some(items) = &fw.array {
-                for item in items.iter().flatten() {
-                    f(item);
-                }
-            }
-        }
-        InstructionKind::Raise(r) => {
-            opt(&r.rc, f);
-            opt(&r.description, f);
-            opt(&r.additional, f);
-            if let Some(items) = &r.array {
-                for item in items.iter().flatten() {
-                    f(item);
-                }
-            }
-            if let Some(result) = &r.result {
-                opt(&result.value, f);
-            }
-        }
-        InstructionKind::Use(u) => match &**u {
-            interrexx_parse::Use::Arg { targets, .. } => {
-                for t in targets.iter().flatten() {
-                    f(&t.target);
-                    opt(&t.default, f);
-                }
-            }
-            interrexx_parse::Use::Local { .. } => {}
-        },
-        InstructionKind::Address(a) => {
-            opt(&a.dynamic, f);
-            opt(&a.command, f);
-            if let Some(io) = &a.io {
-                for r in [&io.input, &io.output, &io.error] {
-                    match r {
-                        interrexx_parse::Redirection::Stream(e)
-                        | interrexx_parse::Redirection::Using(e) => f(e),
-                        interrexx_parse::Redirection::Default
-                        | interrexx_parse::Redirection::Normal
-                        | interrexx_parse::Redirection::Stem(_) => {}
-                    }
-                }
-            }
-        }
-        InstructionKind::Trace(t) => {
-            if let Trace::Value(e) = t {
-                f(e);
-            }
-        }
-    }
-}
-
-fn exprs_of_loop<'a>(l: &'a Loop, f: &mut impl FnMut(&'a Expr)) {
-    match &l.kind {
-        LoopKind::Simple | LoopKind::Forever => {}
-        LoopKind::Count(e) => {
-            if let Some(e) = e {
-                f(e);
-            }
-        }
-        LoopKind::Controlled(c) => {
-            f(&c.initial);
-            for e in [&c.to, &c.by, &c.for_count].into_iter().flatten() {
-                f(e);
-            }
-        }
-        LoopKind::Over {
-            target, for_count, ..
-        }
-        | LoopKind::With {
-            target, for_count, ..
-        } => {
-            f(target);
-            if let Some(e) = for_count {
-                f(e);
-            }
-        }
-    }
-    if let Some(cond) = &l.conditional {
-        f(&cond.condition);
-    }
-}
-
-/// Every instruction of the main body **and of every `::ROUTINE` body**.
-fn each_instruction<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Instruction)) {
-    for i in &p.main.instructions {
-        visit(i);
-    }
+/// The main body **and every `::ROUTINE`, `::METHOD` and `::ATTRIBUTE`
+/// body**.
+fn each_body<'a>(p: &'a Program, visit: &mut impl FnMut(&'a CodeBody)) {
+    visit(&p.main);
     for directive in &p.directives {
         let body = match &directive.kind {
-            DirectiveKind::Routine(routine) => routine.body.as_ref(),
-            DirectiveKind::Method(method) => method.body.as_ref(),
-            DirectiveKind::Attribute(attribute) => attribute.body.as_ref(),
+            DirectiveKind::Routine(routine) => routine.body.as_deref(),
+            DirectiveKind::Method(method) => method.body.as_deref(),
+            DirectiveKind::Attribute(attribute) => attribute.body.as_deref(),
             _ => None,
         };
         if let Some(body) = body {
-            for i in &body.instructions {
-                visit(i);
-            }
+            visit(body);
         }
     }
 }
 
-fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Expr)) {
-    // An explicit stack, not recursion through `children_of`: `deep_nested_expr.rex`'s
-    // 3,000-term chain is in this subset specifically to exercise this walker, and
-    // `variants.rs` measured that a naive recursive walk aborts on
-    // it. See that file's own comment for the full argument.
-    fn walk<'a>(root: &'a Expr, visit: &mut impl FnMut(&'a Expr)) {
-        let mut stack = vec![root];
-        while let Some(e) = stack.pop() {
-            visit(e);
-            let mut children: Vec<&'a Expr> = Vec::new();
-            children_of(e, &mut |child| children.push(child));
-            stack.extend(children.into_iter().rev());
+/// Every instruction of every body `each_body` visits.
+fn each_instruction<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Instruction)) {
+    each_body(p, &mut |body| {
+        body.instructions.iter().for_each(&mut *visit)
+    });
+}
+
+/// Every expression node of every body `each_body` visits: the subtrees of a
+/// body's roots cover its arena once, so this is a loop over each arena.
+fn each_node<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Node)) {
+    each_body(p, &mut |body| {
+        for i in &body.instructions {
+            i.kind
+                .for_each_root(&mut |root| body.exprs.range(root).iter().for_each(&mut *visit));
         }
-    }
-    each_instruction(p, &mut |i| {
-        exprs_of_instruction(&i.kind, &mut |e| walk(e, visit));
     });
 }
 
@@ -498,7 +274,7 @@ const TRANSLATION_REFUSED: &[(&str, u16, u16)] = &[
 #[test]
 fn every_in_scope_variant_is_witnessed_by_the_corpus_list() {
     let mut instructions = Coverage::new("InstructionKind", INSTRUCTION_TAGS);
-    let mut exprs = Coverage::new("ExprKind", EXPR_TAGS);
+    let mut nodes = Coverage::new("NodeKind", NODE_TAGS);
     let mut loops = Coverage::new("LoopKind", LOOP_TAGS);
     let mut prefix_ops = Coverage::new("PrefixOp", PREFIX_OP_TAGS);
     let mut end_styles = Coverage::new("EndStyle", END_STYLE_TAGS);
@@ -560,13 +336,13 @@ fn every_in_scope_variant_is_witnessed_by_the_corpus_list() {
                 _ => {}
             }
         });
-        each_expr(&p, &mut |e| {
-            exprs.seen.insert(expr_tag(&e.kind).0);
-            match &e.kind {
-                ExprKind::Prefix { op, .. } => {
+        each_node(&p, &mut |node| {
+            nodes.seen.insert(node_tag(node.kind()).0);
+            match node.kind() {
+                NodeKind::Prefix { op, .. } => {
                     prefix_ops.seen.insert(prefix_op_tag(op).0);
                 }
-                ExprKind::Binary { op, .. } => {
+                NodeKind::Binary { op, .. } => {
                     operators.seen.insert(operator_tag(op).0);
                 }
                 _ => {}
@@ -584,7 +360,7 @@ fn every_in_scope_variant_is_witnessed_by_the_corpus_list() {
     let mut report = String::new();
     for cov in [
         &instructions,
-        &exprs,
+        &nodes,
         &loops,
         &prefix_ops,
         &end_styles,

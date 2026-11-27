@@ -59,7 +59,7 @@ pub(crate) struct ClauseState {
     /// The line the clause currently being stepped starts at -- **`SIGL`'s** own value, one
     /// control transfer away from being read, and the exact analogue of
     /// `current_value_indent` just above: `Interp::invoke_call` (`CALL`, and
-    /// `ExprKind::Call`'s expression form through `eval_call`, `eval.rs`) and `SIGNAL`'s
+    /// `NodeKind::Call`'s expression form through `eval_call`, `eval.rs`) and `SIGNAL`'s
     /// own two `step` arms all need "which line is this transfer's own", and `eval_call`
     /// reaches `invoke_call` from arbitrarily deep inside an expression tree with no
     /// `source`/ `instruction` of its own to compute it from -- threading either through

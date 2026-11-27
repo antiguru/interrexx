@@ -127,8 +127,7 @@ fn prefix_operators_covers_plus_and_backslash() {
     check_witness("prefix_operators", &path);
 }
 
-/// `>E>`: `.nil` is one of `ExprKind::DotVariable`'s own three admissible
-/// names, so it is reachable.
+/// `>E>`: `.nil` is one of a dot variable's own three admissible names, so it is reachable.
 #[test]
 fn dotvariable_beyond_the_list_covers_the_spec_correction() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))

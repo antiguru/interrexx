@@ -172,11 +172,20 @@ impl Interp {
             .flatten()
     }
 
-    pub(super) fn use_arg_default(use_: &Use, slot: usize) -> Option<&Expr> {
+    pub(super) fn use_arg_default<'a>(
+        body: &'a CodeBody,
+        use_: &'a Use,
+        slot: usize,
+    ) -> Option<ExprRef<'a>> {
         let Use::Arg { targets, .. } = use_ else {
             return None;
         };
-        targets.get(slot)?.as_ref()?.default.as_ref()
+        targets
+            .get(slot)?
+            .as_ref()?
+            .default
+            .as_ref()
+            .map(|e| body.expr(*e))
     }
 
     /// Bind the supplied value, or leave the next ops to compute and bind the
@@ -311,7 +320,7 @@ impl Interp {
             Some(argument) => Some(argument),
             None => match &target.default {
                 Some(default) => {
-                    let value = self.eval(code, default)?;
+                    let value = self.eval(code, code.body.expr(*default))?;
                     self.roots.activity_mut().push_temp(value);
                     Some(value)
                 }
@@ -321,7 +330,10 @@ impl Interp {
         // A message or bracket term assigns through PARSE's arm; its `drop` is
         // a no-op, so an omitted argument
         // without a default leaves it alone.
-        if matches!(target.target.kind, ExprKind::Message { .. }) {
+        if matches!(
+            code.body.expr(target.target).kind(),
+            ExprView::Message { .. }
+        ) {
             return match value {
                 Some(value) => {
                     let indent = self.activity.clause_state.current_value_indent;
@@ -329,7 +341,13 @@ impl Interp {
                     if let Some(rendered) = &rendered {
                         self.trace_result(indent, rendered);
                     }
-                    self.assign_expr_target(code, &target.target, value, indent, None)
+                    self.assign_expr_target(
+                        code,
+                        code.body.expr(target.target),
+                        value,
+                        indent,
+                        None,
+                    )
                 }
                 None if strict => Err(if in_method {
                     Raised::missing_method_argument(position).into()
@@ -343,19 +361,19 @@ impl Interp {
         // A simple variable the plan bound a slot to is assigned through the
         // slot, which is the one `assign_by_name` finds by the name's shape
         // and hash.
-        if let ExprKind::Variable(id) = &target.target.kind
-            && let Some(slot) = code.slot_for(*id)
+        if let ExprView::Variable(id) = code.body.expr(target.target).kind()
+            && let Some(slot) = code.slot_for(id)
             && let Some(value) = value
         {
-            return self.use_into_slot(code, *id, slot, value);
+            return self.use_into_slot(code, id, slot, value);
         }
         let mut name = self.use_target_name(code, target)?;
         // A compound target's tail takes the values its variables have now,
         // so an earlier target of this `USE` that set one counts.
-        let compound = match &target.target.kind {
-            ExprKind::Compound(id) => {
-                let (stem_name, stem_at) = code.stem(*id);
-                let key = self.tail_key(code, *id)?;
+        let compound = match code.body.expr(target.target).kind() {
+            ExprView::Compound(id) => {
+                let (stem_name, stem_at) = code.stem(id);
+                let key = self.tail_key(code, id)?;
                 name = [stem_name, key.as_slice()].concat();
                 Some((stem_name, stem_at, key))
             }
@@ -462,9 +480,9 @@ impl Interp {
 
     /// One `USE ARG` target's variable name.
     fn use_target_name(&self, code: &Code<'_>, target: &UseTarget) -> Result<Vec<u8>, Failure> {
-        match &target.target.kind {
-            ExprKind::Variable(id) | ExprKind::Stem(id) | ExprKind::Compound(id) => {
-                Ok(code.symbols.name(*id).as_bytes().to_vec())
+        match code.body.expr(target.target).kind() {
+            ExprView::Variable(id) | ExprView::Stem(id) | ExprView::Compound(id) => {
+                Ok(code.symbols.name(id).as_bytes().to_vec())
             }
             other => Err(Loud::expression(other).into()),
         }
