@@ -52,11 +52,25 @@ jobs:
           ./windows-path-tests.exe
 
       - name: Build rexx.exe and the interpreter SDK
-        run: cargo build --locked -p interrexx -p interrexx-capi -p interrexx-capi-rxapi --lib --bin rexx
-      - name: Run the Windows interpreter
+        run: cargo build --locked -p interrexx -p interrexx-capi -p interrexx-capi-rxapi -p interrexx-rxapi --lib --bin rexx --bin rxapi
+      - name: Build and stage the x64 MSVC SDK
         shell: pwsh
         run: |
-          $rexx = (Resolve-Path target/debug/rexx.exe).Path
+          New-Item -ItemType Directory -Path sdk/bin, sdk/lib | Out-Null
+          Copy-Item -Recurse ../include sdk/include
+          Copy-Item target/debug/rexx.exe,target/debug/rxapi.exe sdk/bin
+          foreach ($name in 'rexx', 'rexxapi') {
+            Copy-Item "target/debug/$name.dll" sdk/bin
+            $import = @("target/debug/$name.dll.lib", "target/debug/$name.lib") |
+              Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $import) { throw "Missing $name MSVC import library" }
+            Copy-Item $import "sdk/lib/$name.lib"
+          }
+
+      - name: Run the staged Windows interpreter
+        shell: pwsh
+        run: |
+          $rexx = (Resolve-Path sdk/bin/rexx.exe).Path
           function Check-Rexx($expected, $arguments) {
             $output = @(& $rexx @arguments)
             if ($LASTEXITCODE -ne 0 -or $output.Count -ne 1 -or $output[0] -cne $expected) {
@@ -73,26 +87,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: rexx-windows-x64
-          path: |
-            rust/target/debug/rexx.exe
-            rust/target/debug/rexx.dll
-            rust/target/debug/rexxapi.dll
+          path: rust/sdk/bin/
           if-no-files-found: error
           retention-days: 7
-
-      - name: Build and stage the x64 MSVC SDK
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path sdk/bin, sdk/lib | Out-Null
-          Copy-Item -Recurse ../include sdk/include
-          Copy-Item target/debug/rexx.exe sdk/bin
-          foreach ($name in 'rexx', 'rexxapi') {
-            Copy-Item "target/debug/$name.dll" sdk/bin
-            $import = @("target/debug/$name.dll.lib", "target/debug/$name.lib") |
-              Where-Object { Test-Path $_ } | Select-Object -First 1
-            if (-not $import) { throw "Missing $name MSVC import library" }
-            Copy-Item $import "sdk/lib/$name.lib"
-          }
 
       - name: Link and run C clients against the SDK
         shell: cmd
@@ -105,10 +102,11 @@ jobs:
           link /nologo /OUT:target\debug\rxapi-smoke.exe rxapi-smoke.obj sdk\lib\rexxapi.lib || exit /b 1
           sdk\bin\sdk-smoke.exe || exit /b 1
           target\debug\rxapi-smoke.exe || exit /b 1
-          cl /nologo /W4 /WX /LD /I sdk\include /I sdk\include\platform\windows ..\ci\cli-registration.cpp sdk\lib\rexxapi.lib /link /OUT:target\debug\cli-registration.dll || exit /b 1
-          pushd target\debug
+          cl /nologo /W4 /WX /LD /I sdk\include /I sdk\include\platform\windows ..\ci\cli-registration.cpp sdk\lib\rexxapi.lib /link /OUT:sdk\bin\cli-registration.dll || exit /b 1
+          pushd sdk\bin
           rexx.exe ..\..\..\ci\cli-registration.rex || exit /b 1
           popd
+          del sdk\bin\cli-registration.dll
           del sdk\bin\sdk-smoke.exe
           cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:target\debug\rexxutil-console.exe /link user32.lib || exit /b 1
           target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-rexxutil-console.rex"
@@ -270,7 +268,6 @@ jobs:
         run: |
           $bin = (Resolve-Path sdk/bin).Path
           $source = (Resolve-Path ../third_party/ooRexx/extensions/platform/windows/oodialog).Path
-          Copy-Item target/debug/rexx.exe $bin
           Copy-Item "$source/ooShapes.cls" $bin
           Copy-Item ../ci/windows-oodialog/smoke.rex $bin
           Push-Location $source

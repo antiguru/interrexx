@@ -18,6 +18,8 @@
 //! ([`private_service`]); the oracle's runs on its private
 //! `XDG_RUNTIME_DIR` (`support/oracle_runtime.rs`).
 
+#[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
+mod cdylibs;
 #[path = "support/group_runner.rs"]
 mod group_runner;
 
@@ -25,7 +27,7 @@ mod group_runner;
 /// nothing here.
 const COPY_HOOK: Option<fn(&std::path::Path, &str)> = None;
 
-// The C API, compiled in and exported as `rexx` does (`build.rs`), so a test
+// The C API, compiled in and exported by `build.rs`, so a test
 // library this process loads binds to this process's interpreter rather than
 // to the oracle's `librexx.so.4` and `librexxapi.so.4`.
 #[path = "../../interrexx-capi/src/exports.rs"]

@@ -32,8 +32,6 @@ macro_rules! running_test {
 
 #[path = "group_runner/bytes/mod.rs"]
 mod bytes;
-#[path = "../../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
-mod cdylibs;
 #[cfg(test)]
 #[path = "group_runner/tests.rs"]
 mod tests;
@@ -47,6 +45,7 @@ use std::path::{Path, PathBuf};
 
 use interrexx::Invocation;
 
+use crate::cdylibs;
 use crate::support::oracle::{self, did_not_finish};
 use crate::watchdog;
 

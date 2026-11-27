@@ -551,6 +551,8 @@ fn the_detector_tells_an_instruction_from_a_name_that_only_looks_like_one() {
     expect("TEST_CLASS", &["Alarm", "GUARD"]);
 }
 
+#[path = "../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
+mod cdylibs;
 #[path = "support/group_runner.rs"]
 mod group_runner;
 #[path = "support/suite_rows/mod.rs"]

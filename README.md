@@ -8,13 +8,32 @@ This is an independent project, not affiliated with the Rexx Language Associatio
 
 ## Building
 
+On Linux and macOS, build the workspace. The Windows command is below.
+
 ```sh
 git clone https://github.com/antiguru/interrexx
 cd interrexx/rust
 cargo build --release
 ```
 
-The build reads only files of this repository, so it needs no submodule. Binaries are `rexx` and `rexxc`.
+The build needs no submodule. Run `target/release/rexx` from the build or install it with
+its companion interpreter library. Building only the `rexx` binary, or using
+`cargo install interrexx` on its own, does not install the library.
+
+### Windows and macOS installs
+
+On Windows, build the launcher, SDK DLLs, and RXAPI daemon from `rust/`.
+
+```powershell
+cargo build --locked --release -p interrexx -p interrexx-capi -p interrexx-capi-rxapi -p interrexx-rxapi --lib --bin rexx --bin rxapi
+```
+
+Keep `rexx.exe`, `rexx.dll`, `rexxapi.dll`, and `rxapi.exe` together from
+`target/release/`. The Windows CI runtime artifact contains the same set.
+
+On macOS, use the workspace build above. Put `rexx` and `rxapi` in the installation's
+`bin/` directory. Copy `librexx.dylib` and `librexxapi.dylib` into its `lib/` directory
+under the names `librexx.4.dylib` and `librexxapi.4.dylib`.
 
 ### Debian package
 
