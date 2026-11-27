@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-cargo-check
+  group: windows-sysgetkey-oracle-probe
   cancel-in-progress: false
 
 defaults:
@@ -34,37 +34,27 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions-rust-lang/setup-rust-toolchain@v2
-        with:
-          cache: false
+      - name: Check out the pinned ooRexx revision
+        working-directory: .
+        run: git submodule update --init --depth 1 -- third_party/ooRexx
+      - name: Build the reference and the console fixture
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VS_PATH=%%i"
+          call "%VS_PATH%\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 || exit /b 1
+          cmake -G Ninja -S ..\third_party\ooRexx -B "%RUNNER_TEMP%\oorexx-build" -DCMAKE_BUILD_TYPE=Release -DORX_ENABLE_IPO=OFF || exit /b 1
+          cmake --build "%RUNNER_TEMP%\oorexx-build" --target rexx_exe rexx_img --parallel 4 || exit /b 1
+          cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:oracle-console.exe /link user32.lib || exit /b 1
       - name: Measure Windows ooRexx keyboard results
         shell: pwsh
-        timeout-minutes: 6
         run: |
-          $name = 'oorexx-5.2.0-13156.windows.x86_64-portable-release.zip'
-          $archive = Join-Path $env:RUNNER_TEMP $name
-          $expected = 'd7ea5b40f0f889d0b307bbc217fe9fb36bc3e3fd0688a829668ce681a350203e'
-          foreach ($mirror in 'netix', 'pilotfiber', 'phoenixnap') {
-            $url = "https://downloads.sourceforge.net/project/oorexx/oorexx/5.2.0/portable/${name}?use_mirror=$mirror"
-            curl.exe --fail --location --silent --show-error --connect-timeout 10 --max-time 75 --output $archive $url
-            if ($LASTEXITCODE -eq 0 -and (Get-FileHash $archive).Hash -eq $expected) { break }
-            Remove-Item $archive -ErrorAction SilentlyContinue
-          }
-          if (-not (Test-Path $archive)) { throw 'No mirror returned the expected ooRexx archive' }
-          $destination = Join-Path $env:RUNNER_TEMP 'oorexx'
-          Expand-Archive -LiteralPath $archive -DestinationPath $destination
-          $oracle = Get-ChildItem -Path $destination -Recurse -Filter rexx.exe | Select-Object -First 1
-          if (-not $oracle) { throw 'No rexx.exe in the ooRexx bundle' }
-          $env:PATH = "$($oracle.DirectoryName);$env:PATH"
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
-          $vs = & $vswhere -latest -property installationPath
-          $vsdev = Join-Path $vs 'Common7/Tools/VsDevCmd.bat'
-          cmd.exe /d /c ('""{0}" -arch=x64 -host_arch=x64 && cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:oracle-console.exe /link user32.lib"' -f $vsdev)
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $oracle = Join-Path $env:RUNNER_TEMP 'oorexx-build/bin/rexx.exe'
+          if (-not (Test-Path $oracle)) { throw 'No built ooRexx executable' }
+          $env:PATH = "$(Split-Path -Parent $oracle);$env:PATH"
           $source = (Resolve-Path ../ci/windows-sysgetkey-oracle.rex).Path
           foreach ($page in '1252', '437') {
             $report = Join-Path $env:RUNNER_TEMP "key-$page.txt"
-            & ./oracle-console.exe $oracle.FullName $source $report $page
+            & ./oracle-console.exe $oracle $source $report $page
             $result = $LASTEXITCODE
             if (Test-Path $report) { Write-Host "CP${page}: $((Get-Content $report) -join ' ')" }
             if ($result -ne 0) { throw "Console fixture returned $result" }
