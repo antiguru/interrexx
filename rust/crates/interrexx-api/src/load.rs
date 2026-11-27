@@ -28,6 +28,59 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+/// Runs the version-matched CLI entry in the interpreter library next to
+/// the executable. A development macOS build uses Cargo's unversioned name.
+#[cfg(any(windows, target_os = "macos"))]
+pub fn run_cli() -> std::io::Result<u8> {
+    let executable = std::env::current_exe()?;
+    let path = executable.with_file_name(crate::library_names::host_api_libraries().librexx);
+    #[cfg(target_os = "macos")]
+    let path = if path.try_exists()? {
+        path
+    } else {
+        executable.with_file_name("librexx.dylib")
+    };
+    // SAFETY: the path is absolute and names the interpreter installed with
+    // the launcher. On macOS package lookup also needs its public C symbols.
+    #[cfg(target_os = "macos")]
+    let library = unsafe {
+        PlatformLibrary::open(
+            Some(&path),
+            libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL,
+        )
+    };
+    // SAFETY: the absolute path names the installed interpreter. Resolve
+    // dependent DLLs without searching the current working directory.
+    #[cfg(windows)]
+    let library = unsafe {
+        use libloading::os::windows::{
+            LOAD_LIBRARY_SEARCH_DEFAULT_DIRS, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR,
+        };
+        PlatformLibrary::load_with_flags(
+            &path,
+            LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS,
+        )
+    };
+    let library = library
+        .map_err(|error| std::io::Error::other(format!("loading {}: {error}", path.display())))?;
+    // SAFETY: this versioned name has this signature in the matching C API
+    // library. Keep the library alive until the entry point returns.
+    unsafe {
+        let entry = library
+            .get::<extern "C" fn() -> u8>(b"interrexx_main_v1\0")
+            .map_err(|error| {
+                std::io::Error::other(format!(
+                    "finding the launcher entry in {}: {error}",
+                    path.display()
+                ))
+            })?;
+        let status = entry();
+        // A native worker can still be unwinding as the process exits.
+        std::mem::forget(library);
+        Ok(status)
+    }
+}
+
 /// The C signature of the stub the `RexxMethodN` macros generate.
 ///
 /// A null `arguments` is the signature request and answers the static type

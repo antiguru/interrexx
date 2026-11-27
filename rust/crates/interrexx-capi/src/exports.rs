@@ -569,3 +569,11 @@ const _: () = {
 pub extern "system" fn RexxSetProcessMessages(_turn_on: i32) -> i32 {
     1
 }
+
+/// Private CLI entry point. On these hosts the library can read the command
+/// line directly from the process, including non-UTF-8 host arguments.
+#[cfg(any(windows, target_os = "macos"))]
+#[unsafe(no_mangle)]
+pub extern "C" fn interrexx_main_v1() -> u8 {
+    interrexx::launcher::run_cli()
+}

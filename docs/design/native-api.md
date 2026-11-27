@@ -209,13 +209,15 @@ Raising and throwing differ, as in ooRexx:
 * On macOS the two are `librexx.4.dylib` and `librexxapi.4.dylib`, with install names under
   `@rpath`; `librexxapi` records `@loader_path/librexx.4.dylib` as a load command and opens it by
   that path. `interrexx-api/src/library_names.rs` holds the names of each host.
-* The `rexx` executable compiles the same export module, so an extension it loads reaches the
-  interpreter it is running in. That holds where an extension's imports resolve in the process's
-  global scope, as on Linux, where the executable's exports come first. On macOS an import binds
-  to the library the extension was linked against (two-level namespace), so an extension linked
-  against `librexxapi` reaches the interpreter of `librexx.4.dylib`, a second one, not the one
-  `rexx` runs. This follows from the binding rules; no test shows it yet. #761 proposes making
-  `rexx` a launcher over `librexx`, which would leave one interpreter on every host.
+* On Windows, `rexxapi.dll` forwards to `rexx.dll` in its own directory. On Windows and macOS
+  the `rexx` executable loads the interpreter library beside itself and calls its private,
+  versioned CLI entry. The CLI and a native extension's C API calls then share the library's
+  process-local registrations and interpreter state. Keep both API libraries beside the
+  executable when installing it. In a macOS Cargo build the launcher also accepts
+  `librexx.dylib`, Cargo's unversioned development filename.
+* On ELF hosts the executable compiles in the C API exports. The loader resolves an extension's
+  imports against those process exports first. In-process Rust test binaries retain their
+  own C entry points for tests that invoke the interpreter directly.
 * `RexxStart` runs a program with the classic system exits, on the calling thread or as a classic
   run other threads can halt or trace. `RexxCreateInterpreter` makes an instance; several may
   exist in one process, each isolated. `AttachThread` joins a foreign thread to an instance (see

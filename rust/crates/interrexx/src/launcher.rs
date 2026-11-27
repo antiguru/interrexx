@@ -1,6 +1,10 @@
 //! The `rexx` and `rexxc` command lines' library half: option scanning, the
 //! program search, and the texts the launchers print themselves.
 
+mod cli;
+
+pub use cli::run_cli;
+
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 

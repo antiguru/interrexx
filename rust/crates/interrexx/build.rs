@@ -1,6 +1,5 @@
-//! The `rexx` executable exports the C API it compiles in, so an extension it loads binds to its
-//! interpreter rather than to a second copy in `librexx.so.4`; so does a test binary that compiles
-//! it in to run the interpreter in its own process. The build date `PARSE VERSION`
+//! On ELF hosts `rexx` exports the C API it compiles in so an extension binds to its interpreter.
+//! Unix test binaries that embed the interpreter also export the API. The build date `PARSE VERSION`
 //! carries is stamped here, from `SOURCE_DATE_EPOCH` when set; it is the date the build script
 //! last ran.
 
@@ -13,7 +12,7 @@
 mod build_date;
 
 fn main() {
-    // Only Unix executables use the Unix loader's exported-symbol flags.
+    // In-process tests and executables that embed the interpreter export the C API.
     if std::env::var("CARGO_CFG_TARGET_FAMILY").as_deref() == Ok("unix") {
         // Apple's linker spells the export with the C symbol prefix, and an exported symbol is also
         // kept from dead stripping.
@@ -22,7 +21,9 @@ fn main() {
         } else {
             "-Wl,--export-dynamic-symbol=Rexx*"
         };
-        println!("cargo:rustc-link-arg-bin=rexx={export}");
+        if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("macos") {
+            println!("cargo:rustc-link-arg-bin=rexx={export}");
+        }
         println!("cargo:rustc-link-arg-tests={export}");
     }
     println!("cargo:rerun-if-changed=build.rs");
