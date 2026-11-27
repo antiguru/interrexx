@@ -77,6 +77,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     rexx_run("Directory", crate::builtin::platform::directory),
     rexx_run("Filespec", crate::builtin::platform::filespec),
     rexx_run("Beep", crate::builtin::platform::beep),
+    #[cfg(windows)]
+    util_run(
+        "RxMessageBox",
+        crate::builtin::rexxutil::windows_interaction::message_box,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "RxWinExec",
+        crate::builtin::rexxutil::windows_process::win_exec,
+    ),
     util_run("SysAddRexxMacro", crate::builtin::rexxutil::macros::add),
     #[cfg(windows)]
     util_run(
@@ -105,6 +115,16 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysCreatePipe",
         crate::builtin::rexxutil::process::create_pipe,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysCurPos",
+        crate::builtin::rexxutil::windows_console::cursor_position,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysCurState",
+        crate::builtin::rexxutil::windows_console::cursor_state,
     ),
     #[cfg(windows)]
     util_run(
@@ -156,13 +176,17 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysFileSystemType",
         crate::builtin::rexxutil::windows_files::file_system_type,
     ),
-    #[cfg(unix)]
     util_run("SysFileTree", crate::builtin::rexxutil::tree::file_tree),
     #[cfg(unix)]
     util_run("SysFork", crate::builtin::rexxutil::process::fork),
     util_run(
         "SysFormatMessage",
         crate::builtin::rexxutil::messages::format,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysFromUnicode",
+        crate::builtin::rexxutil::windows_encoding::from_unicode,
     ),
     util_run(
         "SysGetErrorText",
@@ -177,6 +201,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysGetFileDateTime",
         crate::builtin::rexxutil::files::get_file_date_time,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysGetKey",
+        crate::builtin::rexxutil::windows_interaction::get_key,
     ),
     #[cfg(unix)]
     util_run("SysGetKey", crate::builtin::rexxutil::process::get_key),
@@ -198,6 +227,8 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysGetShortPathName",
         crate::builtin::rexxutil::windows_files::file_name_spelling::<true>,
     ),
+    #[cfg(windows)]
+    util_run("SysIni", crate::builtin::rexxutil::windows_ini::ini),
     util_run("SysIsFile", crate::builtin::rexxutil::is_file),
     #[cfg(windows)]
     util_run(
@@ -274,6 +305,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run("SysOpenEventSem", crate::builtin::rexxutil::open_sem),
     util_run("SysOpenMutexSem", crate::builtin::rexxutil::open_sem),
     util_run("SysPostEventSem", crate::builtin::rexxutil::post_event_sem),
+    #[cfg(windows)]
+    util_run(
+        "SysQueryProcess",
+        crate::builtin::rexxutil::windows_process::query_process,
+    ),
     #[cfg(unix)]
     util_run(
         "SysQueryProcess",
@@ -315,16 +351,31 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysSetFileDateTime",
         crate::builtin::rexxutil::files::set_file_date_time,
     ),
+    #[cfg(windows)]
+    util_run(
+        "SysSetPriority",
+        crate::builtin::rexxutil::windows_process::set_priority,
+    ),
     #[cfg(unix)]
     util_run(
         "SysSetPriority",
         crate::builtin::rexxutil::process::set_priority,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysShutdownSystem",
+        crate::builtin::rexxutil::windows_process::shutdown_system,
     ),
     util_run("SysSleep", crate::builtin::rexxutil::sleep),
     util_run("SysStemCopy", crate::builtin::rexxutil::stems::copy),
     util_run("SysStemDelete", crate::builtin::rexxutil::stems::delete),
     util_run("SysStemInsert", crate::builtin::rexxutil::stems::insert),
     util_run("SysStemSort", crate::builtin::rexxutil::stems::sort),
+    #[cfg(windows)]
+    util_run(
+        "SysSwitchSession",
+        crate::builtin::rexxutil::windows_interaction::switch_session,
+    ),
     #[cfg(windows)]
     util_run(
         "SysSystemDirectory",
@@ -336,8 +387,18 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(windows)]
     util_run(
+        "SysTextScreenRead",
+        crate::builtin::rexxutil::windows_console::screen_read,
+    ),
+    #[cfg(windows)]
+    util_run(
         "SysTextScreenSize",
         crate::builtin::rexxutil::windows_console::screen_size,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysToUnicode",
+        crate::builtin::rexxutil::windows_encoding::to_unicode,
     ),
     util_run("SysUtilVersion", crate::builtin::rexxutil::util_version),
     util_run("SysVersion", crate::builtin::rexxutil::version),
@@ -348,6 +409,11 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     ),
     #[cfg(unix)]
     util_run("SysWait", crate::builtin::rexxutil::process::wait),
+    #[cfg(windows)]
+    util_run(
+        "SysWaitNamedPipe",
+        crate::builtin::rexxutil::windows_interaction::wait_named_pipe,
+    ),
     util_run("SysWaitEventSem", crate::builtin::rexxutil::wait_sem),
     #[cfg(windows)]
     util_run(
@@ -358,6 +424,21 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     util_run(
         "SysWinEncryptFile",
         crate::builtin::rexxutil::windows_files::set_encrypted::<true>,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinGetDefaultPrinter",
+        crate::builtin::rexxutil::windows_printers::get_default,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinGetPrinters",
+        crate::builtin::rexxutil::windows_printers::list,
+    ),
+    #[cfg(windows)]
+    util_run(
+        "SysWinSetDefaultPrinter",
+        crate::builtin::rexxutil::windows_printers::set_default,
     ),
     #[cfg(windows)]
     util_run("SysWinVer", crate::builtin::rexxutil::version),

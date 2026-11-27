@@ -2,6 +2,7 @@
 //! Decisions section: "compilation is whole-body and lazy: one body at a
 //! time, on first entry, cached").
 
+use interrexx_cast::CastFrom;
 use rustc_hash::FxHashMap;
 
 use interrexx_parse::{
@@ -458,7 +459,7 @@ fn compile_settled(
                         src: dst,
                     });
                     let body = op_index(&ops)?;
-                    if let Op::LoopTest { end, .. } = &mut ops[test as usize] {
+                    if let Op::LoopTest { end, .. } = &mut ops[usize::cast_from(test)] {
                         *end = body;
                     }
                     loop_test_of[index] = Some(LoopTestOps { test, body });
@@ -483,15 +484,17 @@ fn compile_settled(
                         dst,
                     )?;
                     debug_assert!(
-                        conditions[start as usize..].iter().all(|op| matches!(
-                            op,
-                            Op::Const { .. }
-                                | Op::LoadConstant { .. }
-                                | Op::Load { .. }
-                                | Op::Arith { .. }
-                                | Op::Binary { .. }
-                                | Op::Prefix { .. }
-                        )),
+                        conditions[usize::cast_from(start)..]
+                            .iter()
+                            .all(|op| matches!(
+                                op,
+                                Op::Const { .. }
+                                    | Op::LoadConstant { .. }
+                                    | Op::Load { .. }
+                                    | Op::Arith { .. }
+                                    | Op::Binary { .. }
+                                    | Op::Prefix { .. }
+                            )),
                         "a compiled loop condition holds an op `Interp::run_condition` does not run"
                     );
                     condition_of[index] = Some(ConditionOps {
@@ -819,7 +822,7 @@ fn compile_settled(
                     0,
                     dst,
                 )?;
-                let shared = share_tail_key(&mut ops[at as usize..], target, value);
+                let shared = share_tail_key(&mut ops[usize::cast_from(at)..], target, value);
                 ops.push(Op::Store {
                     index: instruction_index(index)?,
                     at: write_slot(plan, target),
@@ -955,19 +958,53 @@ fn compile_settled(
                 // not. Its operands get no ops, since those carry no echoes.
                 let opening = parse_opening(parse, plan);
                 let runs = !echoes_values && !echoes_keyword;
-                push_template(
-                    &mut ops,
-                    &mut consts,
-                    &mut registers,
-                    &mut hints,
-                    &mut calls,
-                    plan,
-                    parse,
-                    instruction_index(index)?,
-                    src,
-                    opening,
-                    runs,
-                )?;
+                let known_traced = matches!(pool, super::trace_flow::Setting::Known(setting)
+                    if setting.results() || setting.intermediates());
+                if !known_traced
+                    && let Some(scratch) = src
+                    && let Some(writes) = plan.literal_parse(index)
+                {
+                    debug_assert!(
+                        parse
+                            .template
+                            .iter()
+                            .flatten()
+                            .flat_map(|trigger| trigger.targets.iter().flatten())
+                            .map(|target| match target.kind {
+                                ExprKind::Variable(id) => plan.slot_for_symbol(id),
+                                _ => None,
+                            })
+                            .eq(writes.iter().map(|&(slot, _)| Some(usize::cast_from(slot)))),
+                        "prepared PARSE writes disagree with the target slots in this body's plan"
+                    );
+                    ops.push(Op::ParseBegin {
+                        index: instruction_index(index)?,
+                        src: scratch,
+                        base: Op::ARG_OMITTED,
+                        to: 0,
+                        opening: ParseOpening::Literal,
+                        strings: 0,
+                    });
+                    ops.extend(writes.iter().map(|&(slot, value)| Op::ParseStore {
+                        slot,
+                        value,
+                        scratch,
+                    }));
+                } else {
+                    push_template(
+                        &mut ops,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        parse,
+                        instruction_index(index)?,
+                        src,
+                        opening,
+                        runs,
+                    )?;
+                }
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
@@ -1061,15 +1098,23 @@ fn compile_settled(
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
-            // A `CALL name`/`CALL "name"` clause, whose arguments compile to
-            // ops of their own when every one of them does -- a `>name`
-            // reference carries the caller's own slot rather than an `ObjRef`,
-            // so one keeps the whole clause on `Op::Call` and leaves the
-            // arguments, the `>A>` lines and their intermediates to
-            // `Interp::invoke_call`.
-            InstructionKind::Call(call) if matches!(&**call, Call::Named { .. }) => {
-                let Call::Named { args, .. } = &**call else {
-                    unreachable!("the guard above admits only `Call::Named`")
+            // A named or qualified CALL: argument k is expression slot k.
+            // Where an argument cannot be addressed, the call walks its
+            // arguments and traces them itself.
+            InstructionKind::Call(call)
+                if matches!(&**call, Call::Named { .. } | Call::Qualified { .. }) =>
+            {
+                let (args, qualified) = match &**call {
+                    Call::Named { args, .. } => (args, false),
+                    Call::Qualified { args, .. } => (args, true),
+                    _ => unreachable!("the guard above admits only named or qualified calls"),
+                };
+                let reserve_site = |calls: &mut Calls| {
+                    if qualified {
+                        Ok(super::UNCACHED_CALL)
+                    } else {
+                        calls.reserve()
+                    }
                 };
                 let mark = registers.mark();
                 let at = op_index(&ops)?;
@@ -1098,18 +1143,23 @@ fn compile_settled(
                         plan,
                         args,
                         instruction_index(index)?,
-                        |k| (k as u32, Some(NodePath::ROOT)),
+                        |k| {
+                            (
+                                u32::try_from(k).expect("an argument of one clause"),
+                                Some(NodePath::ROOT),
+                            )
+                        },
                         true,
                     )?;
                     ops.push(Op::CallNamed {
                         index: instruction_index(index)?,
-                        site: calls.reserve()?,
+                        site: reserve_site(&mut calls)?,
                         argc,
                     });
                 } else {
                     ops.push(Op::Call {
                         index: instruction_index(index)?,
-                        site: calls.reserve()?,
+                        site: reserve_site(&mut calls)?,
                     });
                 }
                 close_region(&mut ops, at)?;
@@ -1366,7 +1416,7 @@ fn compile_settled(
             // Bare FORWARD has no option expressions to compile.
             InstructionKind::Forward(forward)
                 if forward.array.as_ref().is_none_or(|array| {
-                    array.len() <= (u32::from(u16::MAX) - FORWARD_ARRAY_SLOT) as usize
+                    array.len() <= usize::cast_from(u32::from(u16::MAX) - FORWARD_ARRAY_SLOT)
                 }) && (forward.array.is_some()
                     || forward_option_parts(forward)
                         .iter()
@@ -1403,7 +1453,7 @@ fn compile_settled(
                         plan,
                         expr,
                         clause,
-                        slot as u32,
+                        u32::try_from(slot).expect("one of the option parts"),
                         src,
                     )?;
                     ops.push(Op::ForwardPart {
@@ -1427,7 +1477,8 @@ fn compile_settled(
                                 plan,
                                 expr,
                                 clause,
-                                FORWARD_ARRAY_SLOT + slot as u32,
+                                FORWARD_ARRAY_SLOT
+                                    + u32::try_from(slot).expect("within the bound the arm checks"),
                                 src,
                             )?;
                             src
@@ -1605,7 +1656,7 @@ fn compile_settled(
                     )?;
                     ops.push(Op::UseArg(UseArgOp::BindDefault { slot, src }));
                     let skip = op_index(&ops)? - bind - 1;
-                    ops[bind as usize] = Op::UseArg(UseArgOp::Bind { slot, skip });
+                    ops[usize::cast_from(bind)] = Op::UseArg(UseArgOp::Bind { slot, skip });
                     registers.release(mark);
                 }
                 close_region(&mut ops, at)?;
@@ -1739,7 +1790,7 @@ fn compile_settled(
                 landing[select].expect("a SELECT's EnterOtherwise is emitted before patching")
             }
         };
-        match &mut ops[patch.op as usize] {
+        match &mut ops[usize::cast_from(patch.op)] {
             Op::Jump { target: slot }
             | Op::JumpUnless { target: slot, .. }
             | Op::ConditionJump { target: slot, .. } => *slot = target,
@@ -1758,12 +1809,14 @@ fn compile_settled(
     assert_exec_regions_hold_nothing_else(&ops);
 
     let consts = consts.values;
-    // Sized from the stream rather than from the program's symbol table, which
-    // `compile` does not have: the widest constant symbol this body actually
-    // names, and nothing for a body that names none. `Chunk::interned_symbols`
-    // has why the gap in front of a high id is the right trade.
+    // Sized from the ops rather than from the program's symbol table, which
+    // `compile` does not have. Both the main stream and side-table conditions
+    // cache constant symbols, so use the widest id either of them names.
+    // `Chunk::interned_symbols` has why the gap in front of a high id is the
+    // right trade.
     let widest_constant_symbol = ops
         .iter()
+        .chain(&conditions)
         .filter_map(|op| match op {
             Op::LoadConstant { symbol, .. } => Some(symbol.index()),
             _ => None,
@@ -1886,7 +1939,11 @@ fn push_condition<'a>(
         return Ok(false);
     }
     for (item_at, item) in items.iter().enumerate() {
-        let slot = if comma_list { item_at as u32 + 1 } else { 0 };
+        let slot = if comma_list {
+            u32::try_from(item_at).expect("an item of one clause") + 1
+        } else {
+            0
+        };
         push_native(
             ops,
             echoes_values,
@@ -2878,7 +2935,7 @@ fn release_to(slot: &mut Option<Mark>, mark: Mark) {
 /// an [`Op::CallingClause`] where the region holds an op a callee resumes.
 fn close_region(ops: &mut [Op], at: u32) -> Result<(), ChunkTooLarge> {
     let end = op_index(ops)?;
-    let (head, region) = ops[at as usize..].split_at_mut(1);
+    let (head, region) = ops[usize::cast_from(at)..].split_at_mut(1);
     let calling = region.iter().any(|op| {
         matches!(
             op,

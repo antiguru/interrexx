@@ -8,6 +8,7 @@ use std::cell::{Cell, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int};
 
+use interrexx_cast::CastFrom;
 use interrexx_core::ObjRef;
 
 use crate::callbacks::Surface;
@@ -250,7 +251,7 @@ impl std::fmt::Display for Failure {
                 Failure::ClassicStyle => write!(f, "a call to a ROUTINE_CLASSIC_STYLE routine"),
                 Failure::UnfilledSlot { entry } => write!(f, "{entry}"),
                 Failure::StaleHandle => {
-                    write!(f, "the handle is no longer held by this activation")
+                    write!(f, "a handle naming no live object")
                 }
                 Failure::Raised => {
                     write!(f, "the interpreter raised a condition while converting")
@@ -1089,7 +1090,7 @@ impl<'a> Activation<'a> {
     /// any returned object is.
     pub fn whole_number(&self, value: isize) -> RexxObjectPtr {
         let mut cx = self.conversion();
-        let object = cx.host.whole_number(value as i64);
+        let object = cx.host.whole_number(i64::cast_from(value));
         cx.host.register_local(object)
     }
 

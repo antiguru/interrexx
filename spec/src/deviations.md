@@ -245,12 +245,12 @@ is refused, exit code 120, and so is `d~unknown('A=', args)` sent directly
 with an argument array that holds no item. ooRexx stores an unrelated leftover
 value for the first and removes the entry for the second.
 
-## 30. A STRING method answering a non-string
+## 30. Withdrawn
 
-String conversion falls back to the object's name when `STRING` supplies no
-usable value. The pinned ooRexx revision may give an unusable result or crash.
-ooRexx r13624 adopted this fallback. See the [conversion
-rule](r:conv.string.deviation.30).
+A `STRING` method that answers an object with no string value: interrexx
+reads the object as its default string value, as ooRexx does since r13624
+([the answer rule](r:conv.string.answer)). Withdrawn by the owner on
+2026-11-24 (ooRexx r13624, upstream #1743).
 
 ## 31. Withdrawn
 
@@ -640,7 +640,9 @@ between instances through the native API is refused. ooRexx shares one
 Each instance also has its own objects. A reference that native code got from
 one instance names no object in another: passed as an argument there it is
 omitted, a message sent to it answers `NULLOBJECT`, and any other call given
-it answers as for `NULLOBJECT`.
+it answers as for `NULLOBJECT`. A reference that carries its value, an
+integer, a string of at most 7 bytes or `.nil` (Deviation 95), is that same
+value in every instance.
 ooRexx keeps the objects of every instance in a process in one space, so an
 extension that holds an object it got from one instance, as BSF4ooRexx does
 for the objects it hands to Java, can use it from any other.
@@ -656,13 +658,12 @@ first attempt to reach the service, for a queue, a registration or the
 macrospace, writes a line to standard error that says so
 ([the rule](r:util.macrospace.deviation.86)). ooRexx accepts such a directory.
 
-## 87. rxregexp follows its documented grammar
+## 87. rxregexp refuses a pattern too large to compile
 
-A pattern whose compiled automaton exceeds the size limit raises parse
-error 5. The pinned ooRexx revision can exhaust memory at large repeat
-counts. It also miscompiles some alternatives, loops on some empty matches,
-and uses signed byte values for set ranges. ooRexx r13618 fixed the range
-rules and r13620 fixed the automaton construction and empty cycles.
+A pattern whose counts are too large for its automaton to be built, such as
+`a{99999999999}`, is compile error 5 in interrexx. ooRexx uses memory until
+it is killed. Narrowed by the owner on 2026-11-24 (ooRexx r13624, upstream
+#2183 and #2184).
 
 ## 88. Extension calls that crash ooRexx
 
@@ -718,12 +719,17 @@ the null string was produced. ooRexx takes a null string from some builtins
 as an omitted `tablei`. The [TRANSLATE page](r:bif.translate.deviation.94)
 states it.
 
-## 95. A native handle used after its call
+## 95. A native handle used after its object is collected
 
-An extension that keeps a local object reference past the native call that
-received it, and uses it in a later call, ends the program with exit code
-120 and a message that the handle is no longer held. The API does not
-define such a use; ooRexx may still reach the object or one that replaced it.
+An extension may keep a local object reference past the native call that
+received it and use it in a later call: the reference names the same object
+for as long as the object exists, as on ooRexx. A reference to an integer,
+a string of at most 7 bytes or `.nil` that the reference itself carries
+always names it. A reference whose object has since been collected ends
+the program with exit code 120 and a message that the handle names no live
+object. The API does not define such a use; ooRexx may reach the object that
+replaced it. An address that is no reference at all may read as such a carried
+value rather than be refused; ooRexx does not define that use either.
 
 ## 96. Version and library banners
 
@@ -1389,9 +1395,10 @@ one. ooRexx accepts a tab after the word that names a command, and raises
 
 ## 169. Withdrawn
 
-The fallback to the object's name replaces the unconditional SYNTAX error.
-[Deviation 30](#30-a-string-method-answering-a-non-string) covers comparison
-with the pinned ooRexx revision.
+The `SYNTAX 98.973` that a clause reading the bytes of such an answer raised:
+the answer counts as none, and the clause reads the default string value
+([the answer rule](r:conv.string.answer)). Withdrawn by the owner on
+2026-11-24 (ooRexx r13624, upstream #1743).
 
 ## 170. Withdrawn
 
@@ -1518,10 +1525,18 @@ rather than NOSTRING. When no tone can be sounded, BEEP writes a bell
 character to standard output. `.RexxInfo~languageLevel`, and the level in
 `PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
 argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
-interrexx. ooRexx is at level 6.07: the three are builtins there, with argument
-errors of the 40.xxx family, BEEP writes no bell, ERRORTEXT takes a second
-argument of values for an error code's message, and the level reads 6.07. Ruled by the owner on 2026-11-17
-(#796).
+interrexx. Neither is the THROW instruction of level 6.07: a clause that starts
+with THROW is a command, a condition object has no `THROWN` entry, and the
+native interface's interface versions are those of level 6.06. Its function
+tables have the `Throw` and `ThrowObject` members, so that code written for
+level 6.07 builds, but a call of one ends the process with a message naming
+the member. ooRexx is at level
+6.07: the three are builtins there, with argument errors of the 40.xxx family,
+BEEP writes no bell, ERRORTEXT takes a second argument of values for an error
+code's message, THROW raises a condition that goes from caller to caller until
+it is caught, every condition object has a `THROWN` entry, and the level reads
+6.07. Ruled by the owner on 2026-11-17 (#796), and for THROW on 2026-11-24
+(#804).
 
 The same difference applies to the [required language level in compiled
 images](r:env.invocation.rexxc.required-level). ooRexx records 6.07 when a
@@ -1632,3 +1647,17 @@ creates a class at run time. ooRexx creates the subclass, then raises
 `SYNTAX 41.1` when `NEW` first instantiates it. A class declared with
 `::CLASS ... SUBCLASS TraceObject` can be instantiated on both interpreters
 ([example](r:class.traceobject.deviation.184)). Ruled by the owner in #1036.
+
+## 185. A macro's search position
+
+The native API's `RexxAddMacro` and `RexxReorderMacro` take only the two
+search positions a macro can have, `RXMACRO_SEARCH_BEFORE` (1) and
+`RXMACRO_SEARCH_AFTER` (2). Any other answers `RXMACRO_INVALID_POSITION` (8)
+and changes nothing, and a saved macrospace file with a macro of another
+position loads as a file cut short at that macro does. So `RexxQueryMacro`
+answers only 1 or 2 for a macro it finds. ooRexx stores any position with a
+return code of 0, and its `RexxQueryMacro` answers the stored position through
+an `unsigned short`, so a macro added at 65537 reads back as 1. A position other
+than 1 or 2 names no place in the search for a routine, so such a macro is
+reported as present but no call finds it. The RexxUtil functions take `B` and
+`A` only, on both interpreters. Ruled by the owner in #1054.

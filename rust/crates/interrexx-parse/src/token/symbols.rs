@@ -1,5 +1,6 @@
 //! Symbol interning: `SymbolId`, and the `SymbolTable` that hands them out.
 
+use interrexx_cast::{CastFrom, CastTruncate};
 use rustc_hash::FxBuildHasher;
 use std::hash::BuildHasher;
 
@@ -14,7 +15,7 @@ impl SymbolId {
     /// occupy exactly `0..n` and `SymbolTable::len` is the length a caller
     /// needs to size a `Vec`.
     pub fn index(self) -> usize {
-        self.0 as usize
+        usize::cast_from(self.0)
     }
 
     /// The id whose [`Self::index`] is `index`, where one can be.
@@ -64,7 +65,7 @@ struct Slot {
 /// The hash an upcased spelling's bytes are indexed by.
 fn hash_of(key: &[u8]) -> u32 {
     // The low half: the index never has 2^32 slots.
-    FxBuildHasher.hash_one(key) as u32
+    u32::cast_truncate(FxBuildHasher.hash_one(key))
 }
 
 impl SymbolTable {
@@ -133,7 +134,7 @@ impl SymbolTable {
             self.slots = vec![Slot::default(); 16];
         }
         let mask = self.slots.len() - 1;
-        let mut at = hash as usize & mask;
+        let mut at = usize::cast_from(hash) & mask;
         loop {
             let slot = self.slots[at];
             if slot.id_plus_one == 0 {
@@ -153,7 +154,7 @@ impl SymbolTable {
         let old = std::mem::replace(&mut self.slots, doubled);
         let mask = self.slots.len() - 1;
         for slot in old.into_iter().filter(|slot| slot.id_plus_one != 0) {
-            let mut at = slot.hash as usize & mask;
+            let mut at = usize::cast_from(slot.hash) & mask;
             while self.slots[at].id_plus_one != 0 {
                 at = (at + 1) & mask;
             }
@@ -164,7 +165,7 @@ impl SymbolTable {
     /// The upcased spelling. Panics on an id from a different table, which is
     /// a parser bug rather than a source error.
     pub fn name(&self, id: SymbolId) -> &str {
-        let index = id.0 as usize;
+        let index = usize::cast_from(id.0);
         match self.base {
             Some(base) if index < base.names.len() => &base.names[index],
             _ => &self.names[index - self.base_len()],

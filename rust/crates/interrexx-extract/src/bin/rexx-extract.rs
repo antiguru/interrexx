@@ -1,6 +1,7 @@
 //! Walks a checked-out ooTest suite, extracts standalone assertions from every
 //! `.testGroup` file it finds, and reports the extractable fraction.
 
+use interrexx_cast::CastLossy;
 use interrexx_extract::{TestMethod, extract};
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -126,7 +127,7 @@ fn percentage(part: usize, whole: usize) -> f64 {
     if whole == 0 {
         0.0
     } else {
-        100.0 * part as f64 / whole as f64
+        100.0 * f64::cast_lossy(part) / f64::cast_lossy(whole)
     }
 }
 

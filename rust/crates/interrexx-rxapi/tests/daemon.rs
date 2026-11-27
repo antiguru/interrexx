@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
+use interrexx_cast::CastFrom;
 use interrexx_rxapi::daemon::{self, Exit, Options};
 use interrexx_rxapi::message::code::*;
 use interrexx_rxapi::message::wire::{self, PROTOCOL_VERSION};
@@ -550,7 +551,10 @@ fn a_connection_from_another_user_is_dropped() {
 
 #[cfg(target_os = "linux")]
 fn limit_threads(pid: u32, limit: Rlimit) {
-    let pid = Pid::from_raw(pid as i32).expect("a positive pid");
+    let pid = i32::try_from(pid)
+        .ok()
+        .and_then(Pid::from_raw)
+        .expect("a positive pid");
     prlimit(Some(pid), Resource::Nproc, limit).expect("prlimit");
 }
 
@@ -625,7 +629,7 @@ fn a_client_that_stops_reading_stops_being_read() {
         .take_while(|_| stalled.write_all(&resolve).is_ok())
         .count();
 
-    assert!((sent as u64) < REQUESTS, "the service read them all");
+    assert!(u64::cast_from(sent) < REQUESTS, "the service read them all");
     open(&held, "others are served");
     for _ in 0..sent {
         assert!(matches!(

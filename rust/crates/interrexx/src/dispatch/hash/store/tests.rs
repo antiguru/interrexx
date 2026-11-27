@@ -532,3 +532,27 @@ fn duplicates_of_one_index_take_one_slot() {
         assert_eq!(filed, [2, 100], "{class}");
     }
 }
+
+/// A slot whose chain loses its last entry is marked deleted, so the slot
+/// index names only live entries, and the next new chain whose probe passes
+/// it takes it. Nothing a program can see depends on this, since a probe
+/// passes over a slot naming a hole as it does over a deleted one, but a
+/// slot left naming the hole would never be reused before a rebuild, and
+/// every probe that passes it would take a step more.
+#[test]
+fn a_chain_that_loses_its_last_entry_frees_its_slot() {
+    let mut interp = Interp::new();
+    let emptied = run_returning(
+        &mut interp,
+        "t = .table~new\nt['a'] = 1\nt~remove('a')\nreturn t\n",
+    );
+    assert_eq!(filed_slots(&mut interp, emptied), Vec::<usize>::new());
+
+    let mut interp = Interp::new();
+    let refilled = run_returning(
+        &mut interp,
+        "t = .table~new\nt['a'] = 1\nt~remove('a')\nt['a'] = 2\nreturn t\n",
+    );
+    // The same index probes the same slots, so it takes the freed one.
+    assert_eq!(filed_slots(&mut interp, refilled), [1]);
+}

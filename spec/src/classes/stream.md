@@ -2,7 +2,7 @@
 element: "Stream"
 kind: class
 rexxref: "Builtin Classes > Stream Classes > Stream Class; Builtin Classes > Stream Classes > Stream Class > new (Inherited Class Method); Builtin Classes > Stream Classes > Stream Class > arrayIn; Builtin Classes > Stream Classes > Stream Class > arrayOut; Builtin Classes > Stream Classes > Stream Class > charIn; Builtin Classes > Stream Classes > Stream Class > charOut; Builtin Classes > Stream Classes > Stream Class > chars; Builtin Classes > Stream Classes > Stream Class > close; Builtin Classes > Stream Classes > Stream Class > command; Builtin Classes > Stream Classes > Stream Class > description; Builtin Classes > Stream Classes > Stream Class > flush; Builtin Classes > Stream Classes > Stream Class > init; Builtin Classes > Stream Classes > Stream Class > lineIn; Builtin Classes > Stream Classes > Stream Class > lineOut; Builtin Classes > Stream Classes > Stream Class > lines; Builtin Classes > Stream Classes > Stream Class > makeArray; Builtin Classes > Stream Classes > Stream Class > open; Builtin Classes > Stream Classes > Stream Class > position; Builtin Classes > Stream Classes > Stream Class > qualify; Builtin Classes > Stream Classes > Stream Class > query; Builtin Classes > Stream Classes > Stream Class > say; Builtin Classes > Stream Classes > Stream Class > seek; Builtin Classes > Stream Classes > Stream Class > state; Builtin Classes > Stream Classes > Stream Class > string; Builtin Classes > Stream Classes > Stream Class > supplier; Builtin Classes > Stream Classes > Stream Class > uninit"
-deviations: [30, 34, 55, 58, 59, 62, 109, 135, 139, 140, 142, 183]
+deviations: [34, 55, 58, 59, 62, 109, 135, 139, 140, 142, 183]
 ---
 
 # Stream
@@ -778,18 +778,17 @@ count is read through the `makeString` method of the object, or through its
 arguments](r:class.stream.args.numbers) says: an object that answers 2 for a
 count is a count of 2, and `.nil` and an object whose string value is no
 number, such as a plain `Object`, raise `SYNTAX 88.907`; so does an object
-whose `string` method answers an object with no string value, which fails the
-check of its kind as [the kind rule](r:conv.string.argument-kind) says. The option that
+whose `string` method answers an object with no string value, which is read
+as its default string value ([the answer rule](r:conv.string.answer)). The option that
 `open`, `lines`, `seek` and `position` take is read as a string argument,
 through `makeString` alone: an object that has no such method, `.nil` and an
 object that has only `string` among them, raises `SYNTAX 88.909`. The argument
 of `query` and of `command` is read through its string value with the fallback
 to `string`: when `REQUEST('STRING')` supplies no string or returns without an
-answer, the argument's `string` answer is used. The example with a request
-that returns without an answer is skipped on the oracle because pinned
-ooRexx can crash on that input. `.nil` is read as `The NIL object`, which no word or
-command starts with. The [non-string answer rule](r:class.stream.deviation.30)
-gives the errors when `string` yields no usable value.
+answer, the argument's `string` answer is used. `.nil` is read as `The NIL object`, which no word or
+command starts with, and so is an object whose `string` method answers an
+object with no string value, which is read as its default string value: `query`
+raises `SYNTAX 93.0` and `command` `SYNTAX 93.914` for it.
 The option that `arrayIn`, `makeArray` and `arrayOut` take is read as a
 string argument as that of `open` is, through `makeString` alone, so an object
 with no such method, `.nil` among them, raises `SYNTAX 88.909` at its position,
@@ -910,7 +909,7 @@ call sysfiledelete f
   return option
 ```
 
-```output no-oracle
+```output
 3
 3
 ```
@@ -948,35 +947,6 @@ s~charout("x", o) => 88.907
 s~lineout("x", o) => 88.907
 s~lineout(o, 1) => 88.909
 s~open(o) => 88.909
-```
-
-r[class.stream.deviation.30]
-When `string` answers an object with no string value, `query` raises
-`SYNTAX 93.0` and `command` raises `SYNTAX 93.914`, as for an unrecognized
-word. The result of such an answer on ooRexx is unreliable
-([Deviation 30](../deviations.md#30-a-string-method-answering-a-non-string)).
-
-```rexx
-s = .stream~new('spec-stream-bad-string.tmp')
-call try 's~query(.badString~new)'
-call try 's~command(.badString~new)'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=>' r
-  return
-bad:
-  say arg(1) '=>' condition('o')~code
-  return
-::class badString
-::method string
-  return .object~new
-```
-
-```output
-s~query(.badString~new) => 93.0
-s~command(.badString~new) => 93.914
 ```
 
 r[class.stream.deviation.183]

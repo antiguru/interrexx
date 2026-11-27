@@ -9,7 +9,7 @@
 # directions by `tests/extract_docs.rs`: a row that stops being derived
 # is as red as one that appears.
 #
-# derived-at: oodocs/rexxref/en-US r13532
+# derived-at: oodocs/rexxref/en-US r13624
 
 typcla	0	75	-	Types of Classes
 objcla	1	84	typcla	Object Classes

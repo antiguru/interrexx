@@ -66,8 +66,9 @@ The library holds native methods used only by `rxregexp.cls`, whose public class
   read the way `atoi` reads it). Atoms: `?` any byte, `\b` the byte literally, `(...)` a group, a
   `[...]` set, or any other byte as itself. There are no anchors and no case folding.
 * **Sets** may be negated with a leading `^`, and hold escaped bytes, `:NAME:` classes (ASCII C
-  locale), ranges and literal bytes. A range `b0-b1` compares the bytes as signed values and adds
-  those strictly above the lower end up to the upper, so `[c-a]` is `{c,b}`.
+  locale), ranges and literal bytes. A range `b0-b1` holds the bytes, as values 0 to 255, from
+  the lower end to the upper, both included, so `[c-a]` is `{a,b,c}`; after a class name the
+  range starts at its closing colon, which is left out unless the other end is below it.
 * **Parsing stops quietly** at the first byte that cannot continue a complete expression: `a)`
   compiles as `a`, and a second quantifier ends the pattern (`a**` is `a*`).
 * **Compile errors** are codes 1 to 6 (unexpected symbol, missing `)`, bad set, unexpected end, bad
@@ -75,8 +76,8 @@ The library holds native methods used only by `rxregexp.cls`, whose public class
   returns the code. After an error the object matches everything at position 0.
 * **Repetition counts** whose automaton would pass 2,000,000 states are error 5 (a Deviation).
 * **Meaning.** Alternation and repetition have their standard meaning, and every pattern compiles
-  and matches in bounded time and memory. ooRexx differs here (a Deviation): it treats `X*R|Z` as
-  `X*(R|Z)` and `X+Y*` as `XY*`, and loops forever on `(a*)*` or a set range ending at `'7F'x`.
+  and matches in bounded time and memory. ooRexx uses memory until it is killed on a count too
+  large to build, where interrexx answers error 5 (Deviation 87).
 * **match** in MAXIMAL mode needs the whole subject (a NUL in the subject also ends it); in MINIMAL
   mode any prefix, `position` being the shortest. On failure `position` is the longest prefix any
   partial match consumed.

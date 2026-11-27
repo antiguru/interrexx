@@ -43,7 +43,7 @@
 # module is `src/docs/classes.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #
-# derived-at: oodocs/rexxref/en-US r13532
+# derived-at: oodocs/rexxref/en-US r13624
 
 Class	class	clsClass	fundclasses.xml:51	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Object~subclass('k')	-	-
 Message	class	clsMessage	fundclasses.xml:1093	covered	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle	.Message~new(.Object~new, 'STRING')	-	-

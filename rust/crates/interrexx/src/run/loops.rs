@@ -10,11 +10,12 @@ use super::{
 };
 use crate::clause::{ClauseEntry, DeadlineCounted};
 use crate::ir::Chunk;
+use interrexx_cast::CastFrom;
 use interrexx_num::Scaled;
 
 /// The expression slot a `DO`/`LOOP`'s `WHILE` or `UNTIL` condition is
 /// addressed by, past every header slot `loop_header_plan` hands out.
-pub(crate) const LOOP_CONDITION_SLOT: u32 = u16::MAX as u32;
+pub(crate) const LOOP_CONDITION_SLOT: u32 = interrexx_cast::u32_from_u16(u16::MAX);
 
 /// [`FlatLoop::op_test`] for a loop whose condition is not in the stream.
 const NO_TEST: u32 = u32::MAX;
@@ -133,17 +134,30 @@ impl PassTest {
         }
     }
 
+    /// The test's bits: its discriminant.
+    fn bits(self) -> u8 {
+        match self {
+            PassTest::Plain => 0,
+            PassTest::Until => 1,
+            PassTest::General => 2,
+            PassTest::UntilGeneral => 3,
+            PassTest::StreamedUntil => 5,
+            PassTest::StreamedGeneral => 6,
+            PassTest::StreamedUntilGeneral => 7,
+        }
+    }
+
     fn until(self) -> bool {
-        self as u8 & 1 != 0
+        self.bits() & 1 != 0
     }
 
     fn general(self) -> bool {
-        self as u8 & 2 != 0
+        self.bits() & 2 != 0
     }
 
     /// Whether the condition is in a test region.
     fn streamed(self) -> bool {
-        self as u8 & 4 != 0
+        self.bits() & 4 != 0
     }
 
     /// This, for a loop whose condition is in a test region.
@@ -277,8 +291,13 @@ pub(crate) enum QuickTest {
 #[cfg(feature = "jit")]
 pub(crate) enum QuickKind {
     /// The control variable in `slot`, by `step`, while it has not passed
-    /// `to`.
-    Controlled { slot: usize, step: i64, to: i64 },
+    /// `to` or counted out its `FOR` budget.
+    Controlled {
+        slot: usize,
+        step: i64,
+        to: i64,
+        for_remaining: Option<u64>,
+    },
     /// `DO expr`: one fewer of `remaining`, while any are left.
     Count { remaining: u64 },
     /// `DO FOREVER`: nothing but the header clause.
@@ -403,7 +422,7 @@ impl FlatLoop {
 
 /// [`FlatLoop::object_key`] for the boxed state itself.
 fn object_key(ctl: &ObjectControl) -> usize {
-    std::ptr::from_ref(ctl) as usize
+    std::ptr::from_ref(ctl).addr()
 }
 
 /// A `DO WITH` loop's supplier and the names it binds.
@@ -627,7 +646,7 @@ fn header_expr_for(kind: &LoopKind, role: HeaderRole) -> Option<&Expr> {
 /// addressing, where a slot is a position in [`HeaderPlan::roles`].
 pub(crate) fn loop_header_slot(body: &Loop, slot: u32) -> Option<&Expr> {
     let plan = loop_header_plan(body);
-    let role = *plan.roles().get(slot as usize)?;
+    let role = *plan.roles().get(usize::cast_from(slot))?;
     header_expr_for(&body.kind, role)
 }
 
@@ -803,8 +822,8 @@ impl Interp {
         if let Some(supplier) = answered {
             self.roots.activity_mut().push_temp(supplier);
             let class = self.class_of_value(supplier);
-            let wanted = self.classes().lookup("Supplier");
-            if let (Some(class), Some(wanted)) = (class, wanted)
+            let wanted = self.object_model().supplier;
+            if let Some(class) = class
                 && self.classes().is_a(class, wanted)
             {
                 return Ok(supplier);
@@ -1459,7 +1478,7 @@ impl Interp {
     /// clause it runs in is a plain `END` with nothing to echo: what compiled
     /// code needs to take that pass itself (`crate::ir::drive::jit_host`).
     /// Such a pass is a countdown tick, the clause line and indent, and the
-    /// control variable's read, add, write and compare, and nothing else.
+    /// control variable's read, add, write and compare, and its `FOR` budget.
     /// A loop whose `WHILE` or `UNTIL` runs from `Chunk::conditions` and
     /// echoes nothing has one too, with the test besides (`QuickPass::test`).
     #[cfg(feature = "jit")]
@@ -1487,7 +1506,7 @@ impl Interp {
             LoopState::Controlled {
                 at: Some(slot),
                 current: ControlValue::Small(_),
-                for_remaining: None,
+                for_remaining,
                 cached_digits,
                 to,
                 to_int,
@@ -1516,6 +1535,7 @@ impl Interp {
                     slot: *slot,
                     step: *step,
                     to,
+                    for_remaining: *for_remaining,
                 }
             }
             LoopState::Count { remaining } => QuickKind::Count {
@@ -1533,11 +1553,10 @@ impl Interp {
         })
     }
 
-    /// Records `value` as where the innermost flat loop's compiled passes
-    /// left it: the running control value they wrote to the variable, or the
-    /// passes a count has left.
+    /// Copies the innermost loop's control value and `FOR` budget back from
+    /// generated code. A `DO expr` keeps its remaining passes in `value`.
     #[cfg(feature = "jit")]
-    pub(crate) fn quick_passes_reached(&mut self, value: i64) {
+    pub(crate) fn quick_passes_reached(&mut self, value: i64, remaining: u64) {
         match self
             .activity
             .flat_top
@@ -1546,9 +1565,15 @@ impl Interp {
         {
             Some(LoopState::Controlled {
                 current: ControlValue::Small(running),
+                for_remaining,
                 ..
-            }) => *running = value,
-            Some(LoopState::Count { remaining }) => *remaining = value as u64,
+            }) => {
+                *running = value;
+                if let Some(count) = for_remaining {
+                    *count = remaining;
+                }
+            }
+            Some(LoopState::Count { remaining }) => *remaining = value.cast_unsigned(),
             _ => {}
         }
     }

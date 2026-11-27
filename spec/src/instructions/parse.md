@@ -4,7 +4,7 @@ kind: instruction
 syntax: "PARSE [UPPER | LOWER] [CASELESS] source [template_list]"
 ansi: "6.3.2.71, 8.3.17"
 rexxref: "Keyword Instructions > PARSE"
-deviations: [77]
+deviations: [77, 179]
 ---
 
 # PARSE
@@ -296,10 +296,12 @@ NOVALUE Y.4 [NOTHING_HERE][]
 
 r[instr.parse.version]
 PARSE VERSION reads a string of five words. The first is one word that names
-the interpreter and its version, the second is the language level as a
-decimal number, and the last three are a date: the day as a whole number, the
-month as a three-letter name and the year as four digits. The values of the
-words are not specified, and neither is the date.
+the interpreter and its version, the second is the [language
+level](../introduction.md#language-level) as a decimal number, and the last
+three are a date: the day as a whole number, the month as a three-letter
+name and the year as four digits. The language level is the one [Deviation
+179](r:instr.parse.version.deviation.179) gives. The value of the first word
+is not specified, and neither is the date.
 
 ```rexx
 parse version v
@@ -402,4 +404,18 @@ ns: say 'nostring' condition('d')
 
 ```output
 parsed [T.][]
+```
+
+r[instr.parse.version.deviation.179]
+The language level that PARSE VERSION reads is `6.06`, the level interrexx
+implements ([Deviation 179](../deviations.md)). ooRexx, at level 6.07, reads
+`6.07`.
+
+```rexx
+parse version . level .
+say level
+```
+
+```output
+6.06
 ```

@@ -75,7 +75,15 @@ const BUILD_LEVEL: i64 = 0;
 
 /// The largest value a whole-number conversion can produce, and the ceiling on
 /// `NUMERIC DIGITS` itself.
-const MAX_WHOLENUMBER: i64 = 10i64.pow(interrexx_num::ARGUMENT_DIGITS as u32) - 1;
+const MAX_WHOLENUMBER: i64 = {
+    let mut power: i64 = 1;
+    let mut digits = 0;
+    while digits < interrexx_num::ARGUMENT_DIGITS {
+        power *= 10;
+        digits += 1;
+    }
+    power - 1
+};
 
 /// A whole number as the object a `new_integer` answers, falling back to the
 /// digits when it is wider than a tagged small integer.
@@ -137,7 +145,7 @@ fn library_path(
 ) -> Result<Option<ObjRef>, Failure> {
     let directory = executable_path().and_then(|path| {
         let mut bytes = path.parent()?.as_os_str().as_encoded_bytes().to_vec();
-        bytes.push(std::path::MAIN_SEPARATOR as u8);
+        bytes.extend_from_slice(std::path::MAIN_SEPARATOR_STR.as_bytes());
         Some(bytes)
     });
     file_object(interp, directory)
@@ -194,7 +202,9 @@ fn digits(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let digits = interrexx_num::Settings::default().digits();
-    Ok(Some(interp.counted(digits as usize)))
+    Ok(Some(interp.counted(
+        usize::try_from(digits).expect("the default nine"),
+    )))
 }
 
 fn directory_separator(
@@ -236,7 +246,9 @@ fn fuzz(
     _args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
     let fuzz = interrexx_num::Settings::default().fuzz();
-    Ok(Some(interp.counted(fuzz as usize)))
+    Ok(Some(
+        interp.counted(usize::try_from(fuzz).expect("the default zero")),
+    ))
 }
 
 /// [`interrexx_num::ARGUMENT_DIGITS`], the precision an argument is converted

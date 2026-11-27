@@ -519,7 +519,9 @@ trailing blank matters, and numbers are not compared as numbers, so `1` and
 `1.0` are not equal. The argument is required (`SYNTAX 93.903`) and a second
 raises `93.902`. The argument is converted by the [required-string
 protocol](r:conv.string.object). `.nil` compares unequal to every string.
-If conversion falls back to the object's name, equality compares that name.
+An object whose `string` method answers something with no string value, such
+as `.nil`, a `Directory`, an `Object` or the object itself, is compared by its
+default string value, as [the answer rule](r:conv.string.answer) gives it.
 
 ```rexx
 say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
@@ -572,12 +574,15 @@ e: say condition('o')~code
 ```rexx
 o = .unreadable~new
 say 'abc'~equals(o) ''~equals(o) 'The NIL object'~caselessEquals(o)
+say 'an UNREADABLE'~equals(o) 'AN unreadable'~caselessEquals(o)
 say 'The NIL object'~equals(.nil) 'The NIL object'~caselessEquals(.nil)
 say 'abc'~equals(.readable~new) 'ABC'~caselessEquals(.readable~new)
+say 'a NILER'~equals(.niler~new) 'a DIRR'~equals(.dirr~new),
+  'a SELFER'~equals(.selfer~new) 'a niler'~caselessEquals(.niler~new)
 signal on nostring name missing
 say 'abc'~equals(o)
 exit
-missing: say condition('c')
+missing: say condition('c') condition('d')
 ::class unreadable
 ::method string
   say 'string called'
@@ -585,6 +590,15 @@ missing: say condition('c')
 ::class readable
 ::method string
   return 'abc'
+::class niler
+::method string
+  return .nil
+::class dirr
+::method string
+  return .directory~new
+::class selfer
+::method string
+  return self
 ```
 
 ```output
@@ -592,10 +606,14 @@ string called
 string called
 string called
 0 0 0
+string called
+string called
+1 1
 0 0
 1 1
+1 1 1 1
 string called
-NOSTRING
+NOSTRING an UNREADABLE
 ```
 
 r[class.string.compareto]

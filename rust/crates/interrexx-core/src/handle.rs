@@ -2,6 +2,8 @@
 
 use std::marker::PhantomData;
 
+use interrexx_cast::{CastFrom, u8_truncate_u64, u32_truncate_u64, u64_from_u8, u64_from_u32};
+
 const TAG_BITS: u32 = 2;
 const TAG_MASK: u64 = 0b11;
 const TAG_HEAP: u64 = 0b00;
@@ -74,7 +76,7 @@ impl std::ops::Deref for InlineText {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
-        &self.buf[..self.len as usize]
+        &self.buf[..usize::from(self.len)]
     }
 }
 
@@ -93,16 +95,46 @@ pub enum Decoded {
 impl ObjRef {
     pub const NIL: ObjRef = ObjRef(TAG_NIL, PhantomData);
 
+    /// A handle equal to no handle a program can hold, for a list of handles
+    /// that needs a marker: nil's tag with a payload. The field is private to
+    /// this module, and each constructor here sets its own tag, nil's alone
+    /// with no payload; the code generated for a frame builds handles only as
+    /// small integers, nil and the two logicals, and otherwise copies handles
+    /// it was given. Never handed to a program, so it is never decoded.
+    pub(crate) const MARKER: ObjRef = ObjRef(TAG_NIL | (1 << TAG_BITS), PhantomData);
+
     /// The handle's own bits, for a caller that has to *index* by identity
     /// rather than compare two handles.
     pub const fn bits(self) -> u64 {
         self.0
     }
 
+    /// The heap reference `bits` are, if they carry the heap tag: what an
+    /// extension's handle names once the table that minted it is gone. The
+    /// slot may be free or reused; the heap's own lookup decides.
+    pub fn heap_bits(bits: u64) -> Option<Self> {
+        (bits & TAG_MASK == TAG_HEAP).then_some(ObjRef(bits, PhantomData))
+    }
+
+    /// The value `bits` carries, if they are exactly the bits of an integer,
+    /// a short string or `.nil` held in the handle itself; `None` for a heap
+    /// reference and for bits no constructor produces. Such a value names no
+    /// heap object, so it is the same value wherever the bits come from.
+    pub fn carried(bits: u64) -> Option<Self> {
+        let candidate = ObjRef(bits, PhantomData);
+        let canonical = match candidate.decode() {
+            Decoded::Heap { .. } => return None,
+            Decoded::SmallInt(value) => ObjRef::small_int(value)?,
+            Decoded::Text(text) => ObjRef::inline_text(&text)?,
+            Decoded::Nil => ObjRef::NIL,
+        };
+        (canonical == candidate).then_some(candidate)
+    }
+
     pub const fn heap(slot: u32, generation: u32) -> Self {
         debug_assert!(generation <= GENERATION_MAX);
         ObjRef(
-            ((generation as u64) << GEN_SHIFT) | ((slot as u64) << SLOT_SHIFT) | TAG_HEAP,
+            (u64_from_u32(generation) << GEN_SHIFT) | (u64_from_u32(slot) << SLOT_SHIFT) | TAG_HEAP,
             PhantomData,
         )
     }
@@ -112,7 +144,7 @@ impl ObjRef {
             return None;
         }
         Some(ObjRef(
-            (((value as u64) << TAG_BITS) & !TAG_MASK) | TAG_INT,
+            ((value.cast_unsigned() << TAG_BITS) & !TAG_MASK) | TAG_INT,
             PhantomData,
         ))
     }
@@ -125,7 +157,7 @@ impl ObjRef {
         }
         let data = pack_short(bytes);
         Some(ObjRef(
-            (data << TEXT_DATA_SHIFT) | ((bytes.len() as u64) << TEXT_LEN_SHIFT) | TAG_TEXT,
+            (data << TEXT_DATA_SHIFT) | (u64::cast_from(bytes.len()) << TEXT_LEN_SHIFT) | TAG_TEXT,
             PhantomData,
         ))
     }
@@ -133,7 +165,7 @@ impl ObjRef {
     /// The inline-text handle for a single byte, as a constant.
     pub const fn inline_byte(byte: u8) -> Self {
         ObjRef(
-            ((byte as u64) << TEXT_DATA_SHIFT) | (1 << TEXT_LEN_SHIFT) | TAG_TEXT,
+            (u64_from_u8(byte) << TEXT_DATA_SHIFT) | (1 << TEXT_LEN_SHIFT) | TAG_TEXT,
             PhantomData,
         )
     }
@@ -149,12 +181,12 @@ impl ObjRef {
     pub const fn decode(self) -> Decoded {
         match self.0 & TAG_MASK {
             TAG_HEAP => Decoded::Heap {
-                slot: ((self.0 >> SLOT_SHIFT) & SLOT_MASK) as u32,
-                generation: (self.0 >> GEN_SHIFT) as u32,
+                slot: u32_truncate_u64((self.0 >> SLOT_SHIFT) & SLOT_MASK),
+                generation: u32_truncate_u64(self.0 >> GEN_SHIFT),
             },
-            TAG_INT => Decoded::SmallInt((self.0 as i64) >> TAG_BITS),
+            TAG_INT => Decoded::SmallInt(self.0.cast_signed() >> TAG_BITS),
             TAG_TEXT => {
-                let len = ((self.0 >> TEXT_LEN_SHIFT) & TEXT_LEN_MASK) as u8;
+                let len = u8_truncate_u64((self.0 >> TEXT_LEN_SHIFT) & TEXT_LEN_MASK);
                 let full = (self.0 >> TEXT_DATA_SHIFT).to_le_bytes();
                 Decoded::Text(InlineText {
                     len,
@@ -238,5 +270,18 @@ mod inline_byte_tests {
             };
             assert_eq!(&*text, &source[..len]);
         }
+    }
+}
+
+#[cfg(test)]
+mod marker_tests {
+    use super::*;
+
+    /// The marker is nil's tag with a payload, which makes it unequal to nil,
+    /// the one handle with that tag a program can hold.
+    #[test]
+    fn the_marker_is_not_nil() {
+        assert_ne!(ObjRef::MARKER, ObjRef::NIL);
+        assert_eq!(ObjRef::MARKER.bits() & TAG_MASK, TAG_NIL);
     }
 }

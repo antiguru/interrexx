@@ -145,3 +145,100 @@ or short Windows spelling of an existing file or directory. A relative name
 is interpreted against the interpreter's current directory and answered as a
 relative name. An absolute name is answered as an absolute name. A missing
 entry or a failed Windows name query answers the null string.
+
+## Windows code pages
+
+r[util.windows.code-pages]
+`SysToUnicode(text, [codepage], [flags], stem)` converts the text to
+UTF-16 little-endian bytes. `SysFromUnicode(wide, [codepage], [flags],
+[replacement], stem)` converts such bytes to the chosen code page. The
+code page can be an integer or one of `ACP`, `OEMCP`, `SYMBOL`,
+`THREAD_ACP`, `UTF7` or `UTF8`. An omitted or empty code page means
+`OEMCP`. Empty input produces an empty result. UTF-7 and UTF-8 ignore
+the replacement character.
+On success both calls write the converted bytes to `!TEXT` and answer
+zero. `SysFromUnicode` also writes `!USEDDEFAULTCHAR`, which is one
+when Windows used the replacement character and zero otherwise. On
+failure the functions answer a Windows system error code.
+
+## Windows profile files
+
+r[util.windows.ini]
+`SysIni(file, section, key[, value])` reads a key or sets it when a value
+is given. `DELETE:` as the value deletes a key and as the key deletes a
+section. With `ALL:` in place of a section or key, the next argument is
+a stem or array that receives the names at that level. A successful
+write, deletion or enumeration answers the null string. A missing key
+or failed profile operation answers `ERROR:`. Omitting the filename
+or passing an empty name uses `WIN.INI`. Windows resolves a relative
+profile file against its Windows directory. File names, section and key
+names, and values are UTF-8. The key is required for a section-specific
+call. An empty key answers `ERROR:`.
+
+## Windows console cursor and text
+
+r[util.windows.console-cursor]
+`SysCurPos()` answers the current cursor position as row and column,
+starting at zero. With both coordinates given, it returns the previous
+position and moves the cursor when the new position is in the buffer. `SysCurState('ON')` and
+`SysCurState('OFF')` show or hide the cursor.
+`SysTextScreenRead(row, column[, length])` reads screen characters
+starting at the specified cell. With no length, it reads to the end of
+the screen buffer. A read outside the buffer or with a nonpositive length
+answers the null string. The length counts cells: a full-width
+character fills two cells and is read once. The result is UTF-8, so its
+byte length can differ from the number of cells read.
+
+## Windows printers
+
+r[util.windows.printers]
+`SysWinGetPrinters(stemarray)` fills a stem or array with the installed
+printer descriptions. Each description includes the printer, driver and
+port names, separated by commas. The call answers zero on success and
+one on failure. `SysWinGetDefaultPrinter()` answers the description of
+the default printer, or the null string when none is available. A known
+default without driver or port information is returned as its name
+followed by two commas.
+`SysWinSetDefaultPrinter(name)` accepts a printer name or a description. Text is UTF-8, with input
+bytes that are not UTF-8 read using the active Windows ANSI code page.
+It answers zero on success or a Windows system error code on failure.
+
+## Windows interaction
+
+r[util.windows.interaction]
+`RxMessageBox` displays the supplied text and returns the selected
+button's Windows identifier. These interaction routines take UTF-8 text
+and read other input bytes using the active Windows ANSI code page.
+`SysSwitchSession` looks up a top-level
+window by title and asks Windows to bring it forward.
+`SysWaitNamedPipe(name[, timeout])` waits for an available server
+instance. It uses the server's default timeout for zero and waits
+without a deadline for minus one. It answers zero for an available
+pipe or the Windows system error code. `SysGetKey` reads one character
+from the Windows keyboard with optional echo. A keyboard, pipe or
+message-box wait parks its calling Rexx activity. Halting the activity
+waiting for a message box closes that dialog.
+
+## Windows processes
+
+r[util.windows.process]
+On Windows `SysQueryProcess` accepts `PID`, `TID`, `PPRIO`,
+`TPRIO`, `PTIME` and `TTIME`. The default selector is `PID`, and any other
+selector raises `SYNTAX 40.1`. `PTIME` and `TTIME` answer the creation date
+and time of the process or thread as `YYYY-MM-DD hh:mm:ss`, then the time it
+ran in kernel mode and the time it ran in user mode, each in seconds with
+seven decimal places, separated by blanks.
+`SysSetPriority` selects a process priority class and a thread
+priority and answers a Windows status. Unlike [the argument
+rule](r:util.syssetpriority.args) on Unix-like systems, the class may be `0`
+to `3` or one of `IDLE`, `NORMAL`, `HIGH` and `REALTIME`, and the delta a
+whole number from `-15` to `15` or one of `IDLE`, `LOWEST`, `BELOW_NORMAL`,
+`NORMAL`, `ABOVE_NORMAL`, `HIGHEST` and `TIME_CRITICAL`. Another class
+answers `307` and another delta `87`. `RxWinExec` starts a Windows
+program from a command line with the requested window style. It
+answers the process ID on success. Windows errors through 32 are returned
+as positive numbers, and errors above 32 as negative numbers. `SysShutdownSystem` requests
+shutdown or reboot through Windows using the caller's token. The command
+line of `RxWinExec` and the computer name and message of
+`SysShutdownSystem` are UTF-8, with bytes that are not UTF-8 read in the
+active Windows ANSI code page.

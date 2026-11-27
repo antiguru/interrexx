@@ -5,11 +5,12 @@
 //! above its own runs waits for that loop to return, so a buried sleeper can
 //! wake after a later deadline: a recorded divergence, counted as a late wake.
 
+use interrexx_cast::CastFrom;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
 use std::time::Instant;
 
-use interrexx_core::{ActivityRoots, ObjRef};
+use interrexx_core::{ActivityRoots, FrameArena, FrameBlock, ObjRef};
 use rustc_hash::FxHashMap;
 
 use crate::activity::Activity;
@@ -47,7 +48,7 @@ pub(crate) struct ActivityId(u32);
 impl ActivityId {
     /// The handle's offset in the activity table.
     pub(crate) fn index(self) -> usize {
-        self.0 as usize
+        usize::cast_from(self.0)
     }
 }
 
@@ -69,7 +70,7 @@ impl TimerId {
     }
 
     pub(crate) fn address(self) -> usize {
-        self.0 as usize
+        usize::cast_from(self.0)
     }
 }
 
@@ -367,6 +368,11 @@ pub(crate) struct Activities {
     /// The numbers of ended activities a new one takes first, oldest first: a
     /// pool of idle threads, whose threads keep their numbers, including none.
     pooled: VecDeque<Option<u32>>,
+    /// Register frame arenas of ended activities, each with a block and no
+    /// frame reserved, which a new activity adopts before it makes its own.
+    /// An arena moves here only on the baton and only from an activity that
+    /// has ended, so no two activities ever use one block at once.
+    frame_arenas: Vec<FrameArena>,
     /// The last number assigned.
     last_number: u32,
     /// The next [`crate::NativeFrame`] number, wrapping: one counter for
@@ -475,7 +481,24 @@ const STACK_MARGIN: usize = 32 * 1024 * 1024;
 /// An ended activity is pooled while the pool holds no more than this.
 const MAX_POOLED: usize = 5;
 
+/// The most frame arenas the pool holds. Each keeps one block of at most
+/// [`FrameBlock::DEFAULT`]'s size, so the pool's memory is bounded whatever
+/// block size an embedding picks.
+const MAX_POOLED_ARENAS: usize = 4;
+
 impl Activities {
+    /// Pools the frame arena of the ended activity whose roots are `roots`,
+    /// where it can serve another ([`ActivityRoots::take_idle_frames`]) and
+    /// its block is no larger than [`FrameBlock::DEFAULT`].
+    fn pool_frames(&mut self, roots: &mut ActivityRoots) {
+        if self.frame_arenas.len() < MAX_POOLED_ARENAS
+            && roots.frames().size().cells() <= FrameBlock::DEFAULT.cells()
+            && let Some(arena) = roots.take_idle_frames()
+        {
+            self.frame_arenas.push(arena);
+        }
+    }
+
     /// Drops the sender and waiter-identity records of messages `live` no
     /// longer answers for.
     pub(crate) fn prune_messages(&mut self, live: impl Fn(ObjRef) -> bool) {
@@ -512,6 +535,7 @@ impl Activities {
             retired: Vec::new(),
             thread_table,
             pooled: VecDeque::new(),
+            frame_arenas: Vec::new(),
             last_number: 0,
             next_native: 0,
             late_failures: Vec::new(),
@@ -769,10 +793,10 @@ impl Scheduler for Interp {
             Some(index) => ActivityId(index),
             None => {
                 table.idle.push(None);
-                ActivityId((table.idle.len() - 1) as u32)
+                ActivityId(u32::try_from(table.idle.len() - 1).expect("fewer than 2^32 activities"))
             }
         };
-        table.idle[id.0 as usize] = Some(idle);
+        table.idle[id.index()] = Some(idle);
         table.ready.push_back(id);
         if self.sim.is_some() {
             self.sim_spawned(id.index());
@@ -1068,17 +1092,41 @@ impl Interp {
         token
     }
 
-    /// A record for a new activity, with an empty arena of the running one's
-    /// block size and the oldest pooled number.
+    /// A record for a new activity, with an arena of the running one's block
+    /// size and no frame reserved, a pooled one where there is one, and the
+    /// oldest pooled number.
     pub(crate) fn new_activity(&mut self) -> Box<Idle> {
+        self.activity_record(true)
+    }
+
+    /// A record for a new activity, as [`Interp::new_activity`] makes one but
+    /// taking no pooled number: one that delivers a trace line
+    /// (`r[instr.trace.delivery.thread]`).
+    pub(crate) fn unnumbered_activity(&mut self) -> Box<Idle> {
+        self.activity_record(false)
+    }
+
+    fn activity_record(&mut self, pooled: bool) -> Box<Idle> {
         let mut activity = Activity::new();
-        activity.number = self.activities.pooled.pop_front().flatten();
+        if pooled {
+            activity.number = self.activities.pooled.pop_front().flatten();
+        }
         #[cfg(feature = "sharing")]
         {
             activity.sharing_tag = self.heap.sharing_tag();
         }
         let mut roots = ActivityRoots::new();
-        roots.set_frame_block(self.roots.activity().frames().size());
+        let size = self.roots.activity().frames().size();
+        // A pooled arena of another size is dropped, so none keeps a slot it
+        // cannot serve from.
+        match self.activities.frame_arenas.pop() {
+            Some(arena) if arena.size() == size => roots.adopt_frames(arena),
+            _ => roots.set_frame_block(size),
+        }
+        #[cfg(test)]
+        if roots.frames().blocks() != 0 {
+            ADOPTED_ARENAS.with(|adopted| adopted.set(adopted.get() + 1));
+        }
         Box::new(Idle { activity, roots })
     }
 
@@ -1157,7 +1205,7 @@ impl Interp {
     }
 
     fn swap_idle(&mut self, id: ActivityId) {
-        let Some(idle) = self.activities.idle[id.0 as usize].as_deref_mut() else {
+        let Some(idle) = self.activities.idle[id.index()].as_deref_mut() else {
             unreachable!("an idle handle names an idle activity");
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
@@ -1238,7 +1286,21 @@ impl Interp {
 
     /// The running activity's number, which `.context~thread` answers: main is
     /// 1 and an activity is numbered when first asked, as threads are numbered.
+    /// A delivering activity answers the number of the activity that wrote
+    /// its line, and has none of its own (`r[instr.trace.delivery.thread]`).
     pub(crate) fn activity_number(&mut self) -> u32 {
+        if self.activity.delivering
+            && let Some(owner) = self.activity.delivers_for
+            && let Some(idle) = self.activities.idle[owner.index()].as_mut()
+        {
+            if let Some(number) = idle.activity.number {
+                return number;
+            }
+            self.activities.last_number += 1;
+            let number = self.activities.last_number;
+            idle.activity.number = Some(number);
+            return number;
+        }
         if let Some(number) = self.activity.number {
             return number;
         }
@@ -1359,7 +1421,7 @@ impl Interp {
         if activity == self.activities.running {
             return Some(&self.activity);
         }
-        (self.activities.idle.get(activity.0 as usize))
+        (self.activities.idle.get(activity.index()))
             .and_then(Option::as_ref)
             .map(|idle| &idle.activity)
     }
@@ -1472,7 +1534,7 @@ impl Interp {
             self.activity.guard_posted = true;
             return;
         }
-        let Some(Some(idle)) = self.activities.idle.get_mut(watcher.0 as usize) else {
+        let Some(Some(idle)) = self.activities.idle.get_mut(watcher.index()) else {
             return;
         };
         idle.activity.guard_posted = true;
@@ -1500,7 +1562,7 @@ impl Interp {
     /// retired where it has `ended`.
     fn switch_to(&mut self, next: ActivityId, ended: bool) {
         let table = &mut self.activities;
-        let Some(mut idle) = table.idle[next.0 as usize].take() else {
+        let Some(mut idle) = table.idle[next.index()].take() else {
             unreachable!("a ready handle names an idle activity");
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
@@ -1514,13 +1576,16 @@ impl Interp {
         let outgoing = std::mem::replace(&mut table.running, next);
         table.switches += 1;
         if ended {
+            table.pool_frames(&mut idle.roots);
             table.retired.extend(idle.activity.thread.take());
             table.free.push(outgoing.0);
-            if table.pooled.len() <= MAX_POOLED {
+            // A delivering activity took no pooled number, so it gives none
+            // back (`r[instr.trace.delivery.thread]`).
+            if !idle.activity.delivering && table.pooled.len() <= MAX_POOLED {
                 table.pooled.push_back(idle.activity.number);
             }
         } else {
-            table.idle[outgoing.0 as usize] = Some(idle);
+            table.idle[outgoing.index()] = Some(idle);
         }
         // A slice belongs to the activity it was set for.
         self.timer.requests().clear(SLICE);
@@ -1604,7 +1669,7 @@ impl Interp {
         }
         let mut free = vec![false; handles];
         for &handle in &table.free {
-            if let Some(mark) = free.get_mut(handle as usize) {
+            if let Some(mark) = free.get_mut(usize::cast_from(handle)) {
                 *mark = true;
             }
         }
@@ -1740,6 +1805,10 @@ impl Interp {
         #[cfg(test)]
         self.note_cancelled_wait();
         self.activity.when_parked = false;
+        #[cfg(windows)]
+        {
+            self.activity.windows_util_wait = None;
+        }
         #[cfg(unix)]
         {
             self.activity.socket_wait = None;
@@ -1806,7 +1875,7 @@ impl Interp {
     /// expression level raises 11.1 rather than risk the thread's end.
     #[inline(always)]
     pub(crate) fn stack_exhausted<T>(&self, here: *const T) -> bool {
-        self.stack_base.abs_diff(here as usize) > self.stack_room
+        self.stack_base.abs_diff(here.addr()) > self.stack_room
     }
 
     /// A new timer, not posted, which ends with a wait on it where
@@ -2421,7 +2490,7 @@ impl Interp {
         }
         self.activities
             .idle
-            .get_mut(activity.0 as usize)
+            .get_mut(activity.index())
             .and_then(Option::as_mut)
             .map(|idle| &mut idle.activity)
     }
@@ -2469,7 +2538,7 @@ impl Interp {
             Recaller::Call { activity, frame } => {
                 self.activities
                     .idle
-                    .get(activity.0 as usize)
+                    .get(activity.index())
                     .and_then(Option::as_ref)
                     .is_some_and(|idle| {
                         idle.activity
@@ -2553,7 +2622,7 @@ impl Interp {
                 let record = if activity == self.activities.running {
                     Some(&self.activity)
                 } else {
-                    (self.activities.idle.get(activity.0 as usize))
+                    (self.activities.idle.get(activity.index()))
                         .and_then(Option::as_ref)
                         .map(|idle| &idle.activity)
                 };
@@ -2573,7 +2642,7 @@ impl Interp {
                 let (activity, record) = match self.context_owner(address) {
                     Some(owner) => (
                         owner,
-                        (self.activities.idle.get(owner.0 as usize))
+                        (self.activities.idle.get(owner.index()))
                             .and_then(Option::as_ref)
                             .map(|idle| &idle.activity),
                     ),
@@ -2597,7 +2666,7 @@ impl Interp {
         let record = if activity == self.activities.running {
             Some(&self.activity)
         } else {
-            (self.activities.idle.get(activity.0 as usize))
+            (self.activities.idle.get(activity.index()))
                 .and_then(Option::as_ref)
                 .map(|idle| &idle.activity)
         };
@@ -2723,7 +2792,7 @@ impl Interp {
             pool::posting_panics(&inbox, &baton, || {
                 let probe = 0u8;
                 let mut lent = crate::island::Lent::wait(&baton);
-                lent.interp().serve_vacancy(&raw const probe as usize);
+                lent.interp().serve_vacancy((&raw const probe).addr());
             });
         }));
         Some(server)
@@ -2836,7 +2905,7 @@ impl Interp {
     /// without a switch's other work.
     fn swap_running(&mut self, next: ActivityId, running: ActivityId) {
         let table = &mut self.activities;
-        let Some(mut idle) = table.idle[next.0 as usize].take() else {
+        let Some(mut idle) = table.idle[next.index()].take() else {
             unreachable!("a recalled handle names an idle activity");
         };
         std::mem::swap(&mut self.activity, &mut idle.activity);
@@ -2847,7 +2916,7 @@ impl Interp {
         self.shared_key_for = None;
         #[cfg(feature = "sharing")]
         self.heap.share_as(self.activity.sharing_tag);
-        table.idle[running.0 as usize] = Some(idle);
+        table.idle[running.index()] = Some(idle);
         table.running = next;
     }
 
@@ -2939,7 +3008,7 @@ impl Interp {
         loop {
             self.run_others(false)?;
             let table = &self.activities;
-            let me = table.running.0 as usize;
+            let me = table.running.index();
             // An attached activity idle between its callbacks does not hold
             // the end (`r[native.threads.end]`). One running a callback holds
             // the baton, so the end comes after it.
@@ -3089,7 +3158,7 @@ impl Interp {
     fn root_ended(&self, activity: ActivityId) -> bool {
         self.activities
             .idle
-            .get(activity.0 as usize)
+            .get(activity.index())
             .and_then(Option::as_ref)
             .is_some_and(|idle| idle.activity.root_end.is_some())
     }
@@ -3222,7 +3291,7 @@ impl Interp {
                 return Ok(Some(ready));
             }
             #[cfg(feature = "pinning")]
-            if let Some(Some(idle)) = self.activities.idle.get(ready.0 as usize) {
+            if let Some(Some(idle)) = self.activities.idle.get(ready.index()) {
                 late_wake!(self, idle.activity);
             }
             self.activities.set_aside.push((ready, level));
@@ -3453,6 +3522,15 @@ impl Interp {
             {
                 let deadline = self.now() + crate::dispatch::queue_methods::WAIT_POLL;
                 Some(ParkReason::Sleep { deadline })
+            }
+            #[cfg(windows)]
+            ParkReason::Sleep { .. }
+                if !self.activity.woken_by_halt
+                    && crate::builtin::rexxutil::windows_interaction::waiting(self) =>
+            {
+                Some(crate::builtin::rexxutil::windows_interaction::next_poll(
+                    self,
+                ))
             }
             #[cfg(any(unix, windows))]
             ParkReason::Sleep { .. } if !self.activity.woken_by_halt => {
@@ -3891,7 +3969,7 @@ impl Interp {
     fn yield_after_notifier_failure(&mut self) -> Result<(), Failure> {
         let probe = 0u8;
         if !self.any_ready()
-            || self.stack_base.abs_diff(&raw const probe as usize) > self.stack_room / 2
+            || self.stack_base.abs_diff((&raw const probe).addr()) > self.stack_room / 2
         {
             return Ok(());
         }
@@ -4096,7 +4174,7 @@ impl Interp {
         let record = if activity == table.running {
             &mut self.activity
         } else {
-            match table.idle.get_mut(activity.0 as usize) {
+            match table.idle.get_mut(activity.index()) {
                 Some(Some(idle)) => &mut idle.activity,
                 _ => return,
             }
@@ -4222,6 +4300,9 @@ fn request_halt(
 
 #[cfg(test)]
 thread_local! {
+    /// How many new activities on this thread started with an arena that
+    /// has a block, which only a pooled one has.
+    static ADOPTED_ARENAS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
     /// How many driver exits for a native call this thread has made.
     static NATIVE_EXITS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
     /// How many abandoned calls' frames the last run on this thread still
@@ -4275,6 +4356,12 @@ thread_local! {
 #[cfg(test)]
 pub(crate) fn vacates() -> u64 {
     VACATES.with(std::cell::Cell::get)
+}
+
+/// [`ADOPTED_ARENAS`]'s count.
+#[cfg(test)]
+pub(crate) fn adopted_arenas() -> u64 {
+    ADOPTED_ARENAS.with(std::cell::Cell::get)
 }
 
 /// [`NATIVE_EXITS`]'s count.

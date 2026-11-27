@@ -1,0 +1,101 @@
+name: "ooSQLite nightly"
+on:
+  # Once a night, on `main`: ooSQLite's example programs on a release build of interrexx and on
+  # the oracle, through scripts/run-oosqlite.sh (docs/design/testing.md, The ooSQLite examples).
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+  # A change to this workflow, the script or its lists runs it on its pull request.
+  pull_request:
+    paths:
+      - .github/workflows/oosqlite-nightly.yml
+      - scripts/run-oosqlite.sh
+      - ci/oosqlite-examples.txt
+      - ci/oosqlite-expected-differences.txt
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    working-directory: .
+
+jobs:
+  oosqlite:
+    name: ooSQLite examples
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    env:
+      # No symbols: the release profile's debug info changes no code and only slows the build.
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+      OOSQLITE_SOURCES: ${{ github.workspace }}/oosqlite/sources
+      OOSQLITE_WORK: ${{ github.workspace }}/oosqlite/work
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          cache-workspaces: rust
+          # This job's own release build; only main saves it.
+          cache-key: oosqlite-release
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - id: key
+        # The key `test.yml`'s third-party job saves the oracle under.
+        run: echo "key=third-party-ubuntu-26.04-$(git rev-parse HEAD:third_party/ooRexx)-${{ hashFiles('scripts/setup-third-party.sh') }}" >> "$GITHUB_OUTPUT"
+      - id: oracle
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            third_party/oracle
+            build
+            ootest
+            oodocs
+          key: ${{ steps.key.outputs.key }}
+      - name: Install svn and the oracle's build dependencies
+        # Retried, as a mirror can fail for a moment.
+        run: |
+          for attempt in 1 2 3; do
+            sudo apt-get update && sudo apt-get install -y subversion cmake libxml2-dev libncurses-dev && exit 0
+            echo "apt-get failed (attempt $attempt)"
+            sleep 15
+          done
+          exit 1
+      - name: Build the oracle
+        if: steps.oracle.outputs.cache-hit != 'true'
+        run: scripts/setup-third-party.sh
+      - id: source
+        name: Pinned ooSQLite sources
+        run: |
+          id=$(scripts/run-oosqlite.sh --source-id)
+          test -n "$id"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+      - id: sources
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.OOSQLITE_SOURCES }}
+          key: oosqlite-sources-${{ steps.source.outputs.id }}
+      - id: fetch
+        name: Export the ooSQLite sources
+        if: steps.sources.outputs.cache-hit != 'true'
+        run: scripts/run-oosqlite.sh --fetch
+      - uses: actions/cache/save@v6
+        # Saved as soon as the export succeeds, so a failing run later in the job keeps it.
+        if: steps.fetch.outcome == 'success'
+        with:
+          path: ${{ env.OOSQLITE_SOURCES }}
+          key: oosqlite-sources-${{ steps.source.outputs.id }}
+      - name: Release build
+        working-directory: rust
+        # rexx, and the rxapi it starts for the API service, as the BSF4ooRexx job builds them.
+        run: cargo build --locked --release -p interrexx -p interrexx-rxapi
+      - name: ooSQLite examples
+        run: scripts/run-oosqlite.sh
+      - uses: actions/upload-artifact@v7
+        if: failure() || cancelled()
+        with:
+          name: oosqlite-outputs
+          path: ${{ env.OOSQLITE_WORK }}/out
+          retention-days: 7
+          if-no-files-found: ignore

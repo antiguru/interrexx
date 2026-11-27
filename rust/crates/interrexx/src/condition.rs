@@ -1,6 +1,7 @@
 //! The condition object a trap holds, whose copy `CONDITION('O')` answers: the
 //! Directory with the entries the raised condition's own kind carries.
 
+use interrexx_cast::CastFrom;
 use interrexx_core::ObjRef;
 
 use crate::Interp;
@@ -516,7 +517,7 @@ impl Interp {
         } else if raised.position != 0 && !reraised {
             // Captured at the raise, which is the only correct source when
             // the raising activation has since unwound.
-            Some(self.counted(raised.position as usize))
+            Some(self.counted(usize::cast_from(raised.position)))
         } else {
             match (unwound_origin, frame_line) {
                 (Some((_, line)), _) => line.map(|line| self.counted(line)),

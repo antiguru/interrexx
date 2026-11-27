@@ -1,5 +1,19 @@
 /* SPDX-License-Identifier: MIT OR Apache-2.0 */
 use strict arg root
+/* All Windows-only entries in the project inventory must be callable. */
+windowsRoutines = 'RxMessageBox RxWinExec SysBootDrive SysCurPos SysCurState SysDriveInfo SysDriveMap',
+  'SysFileSystemType SysFromUnicode SysGetLongPathName SysGetShortPathName SysIni',
+  'SysIsFileCompressed SysIsFileEncrypted SysIsFileNotContentIndexed SysIsFileOffline',
+  'SysIsFileSparse SysIsFileTemporary SysShutdownSystem SysSwitchSession',
+  'SysSystemDirectory SysTextScreenRead SysTextScreenSize SysToUnicode SysVolumeLabel',
+  'SysWaitNamedPipe SysWinDecryptFile SysWinEncryptFile SysWinGetPrinters',
+  'SysWinGetDefaultPrinter SysWinSetDefaultPrinter SysWinVer'
+do routine over windowsRoutines~makeArray(' ')
+  if RxFuncQuery(routine) <> 0 then do
+    say 'Missing Windows RexxUtil routine' routine
+    exit 145
+  end
+end
 /* spec: util.windows.version */
 windowsVersion = value('REXX_TEST_WINDOWS_VERSION', , 'ENVIRONMENT')
 if SysVersion() \== windowsVersion | SysWinVer() \== windowsVersion then exit 47
@@ -109,6 +123,27 @@ if caseParent \== '' then do
   call stream shortCase, 'c', 'close'
   call directory savedDirectory
 end
+/* spec: util.sysfiletree.windows */
+if SysMkDir(dir || '\tree') <> 0 then exit 87
+treeFile = dir || '\tree\Mixed.TXT'
+if charout(treeFile, 'data') <> 0 then exit 88
+call stream treeFile, 'c', 'close'
+if SysSetFileDateTime(treeFile, '2024-02-03', '14:05:06') <> 0 then exit 89
+if SysFileTree(dir || '\*.txt', 'matches.', 'FSO') <> 0 then exit 90
+if matches.0 <> 1 | matches.1 \== treeFile then exit 91
+treeResults = .array~of('old-1', 'old-2')
+if SysFileTree(dir || '\tree\*.*', treeResults, 'FLH') <> 0 then exit 92
+if treeResults~items <> 1 then exit 93
+if left(treeResults[1], 19) \== '2024-02-03 14:05:06' then exit 94
+if word(treeResults[1], 3) \== '4' then exit 95
+if right(treeResults[1], length(treeFile)) \== treeFile then exit 96
+if SysFileTree(treeFile, 'matches.', 'FO', , '**+**') <> 0 then exit 97
+if SysFileTree(treeFile, 'matches.', 'FO', '**+**') <> 0 then exit 98
+if matches.0 <> 1 | matches.1 \== treeFile then exit 99
+if SysFileTree(treeFile, 'matches.', 'F', , '**-**') <> 0 then exit 100
+if SysFileTree(treeFile, 'matches.', 'FO', '**+**') <> 0 then exit 101
+if matches.0 <> 0 then exit 102
+if SysFileDelete(treeFile) <> 0 | SysRmDir(dir || '\tree') <> 0 then exit 103
 if SysRmDir(dir) <> 0 then exit 8
 missing = dir || '\missing'
 if SysIsFileCompressed(missing) | SysIsFileEncrypted(missing) then exit 9
@@ -152,3 +187,97 @@ if size == '0 0' then do
 end
 if SysTextScreenSize('BUFFERSIZE', 32768, 80) <> 87 then exit 71
 if SysTextScreenSize('WINDOWRECT', 0, 0, 24, 32768) <> 87 then exit 72
+
+/* spec: util.windows.code-pages */
+converted = .stem~new
+if SysToUnicode('41C3A900'x, 'UTF8', 'ERR_INVALID_CHARS', converted) <> 0 then exit 110
+if converted['!TEXT'] \== '4100E9000000'x then exit 111
+if SysFromUnicode(converted['!TEXT'], 'UTF8', '0', , 'back.') <> 0 then exit 112
+if back.!TEXT \== '41C3A900'x | back.!USEDDEFAULTCHAR <> 0 then exit 113
+if SysToUnicode('FF'x, 'UTF8', 'ERR_INVALID_CHARS', converted) <> 1113 then exit 114
+if converted['!TEXT'] \== '4100E9000000'x then exit 115
+if SysFromUnicode('0026'x, 1252, , '!', 'back.') <> 0 then exit 116
+if back.!TEXT \== '!' | back.!USEDDEFAULTCHAR <> 1 then exit 117
+if SysToUnicode('', 'UTF8', , converted) <> 0 | converted['!TEXT'] \== '' then exit 118
+if SysFromUnicode('', 'UTF8', , , 'back.') <> 0 then exit 119
+if back.!TEXT \== '' | back.!USEDDEFAULTCHAR <> 0 then exit 162
+if SysFromUnicode('4100'x, 'UTF8', , '?', 'back.') <> 0 then exit 163
+if back.!TEXT \== 'A' | back.!USEDDEFAULTCHAR <> 0 then exit 164
+
+/* spec: util.windows.ini */
+iniFile = SysTempFileName(root || '\rexxutil-ini-????.ini')
+if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 120
+if SysIni(iniFile, 'interrexx', 'test', 'value') \== '' then exit 121
+signal on syntax name missingIniKey
+call SysIni iniFile, 'interrexx'
+exit 165
+missingIniKey:
+if condition('O')~code <> 88.901 then exit 166
+signal off syntax
+if SysIni(iniFile, 'interrexx', '') \== 'ERROR:' then exit 167
+if SysIni(iniFile, 'INTERREXX', 'TEST') \== 'value' then exit 122
+if SysIni(iniFile, 'ALL:', 'sections.') \== '' then exit 123
+if sections.0 <> 1 | sections.1 \== 'interrexx' then exit 124
+keys = .array~of('old1', 'old2')
+if SysIni(iniFile, 'interrexx', 'ALL:', keys) \== '' then exit 125
+if keys~items <> 1 | keys[1] \== 'test' then exit 126
+if SysIni(iniFile, 'interrexx', 'test', 'DELETE:') \== '' then exit 127
+if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 128
+if SysIni(iniFile, 'ALL:', 'sections.', '') \== '' then exit 169
+/* Deleting a section's last key leaves its header; the section can still be deleted. */
+if SysIni(iniFile, 'INTERREXX', 'DELETE:') \== '' then exit 170
+if SysIni(iniFile, 'ALL:', 'sections.') \== 'ERROR:' | sections.0 <> 0 then exit 171
+if SysIni(iniFile, 'interrexx', 'DELETE:') \== 'ERROR:' then exit 172
+/* A missing key is reported before the file name is converted. */
+signal on syntax name missingKeyBadFile
+call SysIni 'caf' || 'E9'x || '.ini', 'interrexx'
+exit 173
+missingKeyBadFile:
+if condition('O')~code <> 88.901 then exit 174
+signal off syntax
+if SysFileDelete(iniFile) <> 0 then exit 129
+
+/* spec: util.windows.console-cursor */
+if words(SysCurPos()) <> 2 then exit 130
+if SysTextScreenRead(0, 0, 0) \== '' then exit 131
+if SysTextScreenRead(-1, 0, 1) \== '' then exit 132
+
+/* spec: util.windows.printers */
+printerRc = SysWinGetPrinters('printers.')
+if printerRc <> 0 & printerRc <> 1 then exit 140
+if printerRc = 1 & printers.0 <> 0 then exit 141
+do i = 1 to printers.0
+  if countstr(',', printers.i) < 2 then exit 142
+end
+if SysWinSetDefaultPrinter('') = 0 then exit 144
+
+/* spec: util.windows.interaction */
+pipe = value('REXX_TEST_NAMED_PIPE', , 'ENVIRONMENT')
+if pipe == '' then exit 150
+if SysWaitNamedPipe(pipe, 200) <> 0 then exit 151
+if SysWaitNamedPipe(pipe || '-missing', 200) <> 2 then exit 152
+if SysSwitchSession(pipe || '-missing') = 0 then exit 153
+/* spec: util.windows.process */
+if SysQueryProcess() <= 0 | SysQueryProcess('TID') <= 0 then exit 156
+if SysQueryProcess() <> SysQueryProcess('PID') then exit 157
+if SysSetPriority('NORMAL', 'NORMAL') <> 0 then exit 158
+if SysQueryProcess('PPRIO') \== 'NORMAL' | SysQueryProcess('TPRIO') \== 'NORMAL' then exit 168
+if SysSetPriority('not-a-class', 'NORMAL') <> 307 then exit 159
+signal on syntax name unknownSelector
+call SysQueryProcess 'X'
+exit 175
+unknownSelector:
+if condition('O')~code <> 40.1 then exit 176
+signal off syntax
+times = SysQueryProcess('PTIME')
+parse var times day clock kernel user
+if words(times) <> 4 | length(day) <> 10 | substr(day, 5, 1) \== '-' | length(clock) <> 8,
+  | \datatype(kernel, 'N') | \datatype(user, 'N') then exit 177
+if RxWinExec('"' || systemDir || '\interrexx-does-not-exist-961.exe"', 'HIDE') <> 2 then exit 160
+command = '"' || systemDir || '\cmd.exe" /D /C exit 0'
+if RxWinExec(command, 'HIDE') <= 32 then exit 161
+signal on syntax name rejected
+call RxMessageBox 'unopened', , 'invalid-button'
+exit 154
+rejected:
+if condition('O')~code <> 40.920 then exit 155

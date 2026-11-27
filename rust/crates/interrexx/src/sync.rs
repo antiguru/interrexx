@@ -5,17 +5,21 @@
 //! so only `tests/loom.rs` selects `loom`.
 
 #[cfg(all(loom, test))]
-pub(crate) use loom::sync::atomic::{AtomicU32, Ordering};
+pub(crate) use loom::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(all(loom, test))]
 pub(crate) use loom::sync::{Arc, Condvar, Mutex, MutexGuard};
 #[cfg(all(loom, test))]
 pub(crate) use loom::thread;
+#[cfg(all(loom, test))]
+pub(crate) use loom::thread_local;
 #[cfg(not(all(loom, test)))]
-pub(crate) use std::sync::atomic::{AtomicU32, Ordering};
+pub(crate) use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(not(all(loom, test)))]
 pub(crate) use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 #[cfg(not(all(loom, test)))]
 pub(crate) use std::thread;
+#[cfg(not(all(loom, test)))]
+pub(crate) use std::thread_local;
 
 use std::sync::PoisonError;
 

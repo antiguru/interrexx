@@ -12,6 +12,7 @@ description = "Builtin function and error message tables for interrexx"
 interrexx-upstream.workspace = true
 
 [dev-dependencies]
+interrexx-cast.workspace = true
 # Reads `data/errors.tsv` for the arity tests.
 interrexx-upstream.workspace = true
 

@@ -4,6 +4,7 @@
 //! string. Each case holds its operand and its answer and nothing more; the
 //! corpus runs this crate in-process, where no such peak can be read.
 
+use interrexx_cast::CastLossy;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -58,7 +59,7 @@ fn a_large_operand_is_read_where_it_is() {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("a scratch directory");
     let base = peak_kib(&dir, 'a', "nop");
-    let copy_kib = LENGTH as f64 / 1024.0;
+    let copy_kib = f64::cast_lossy(LENGTH) / 1024.0;
     let mut cases = 0;
     datadriven::walk("tests/large_string_copies", |file| {
         file.run(|case| {
@@ -66,7 +67,8 @@ fn a_large_operand_is_read_where_it_is() {
             assert_eq!(case.directive, "copies");
             let fill: char = case.take_arg("fill").expect("a fill");
             let program = case.input.trim_end();
-            let extra = peak_kib(&dir, fill, program).saturating_sub(base) as f64 / copy_kib;
+            let extra =
+                f64::cast_lossy(peak_kib(&dir, fill, program).saturating_sub(base)) / copy_kib;
             format!("{:.2}\n", (extra * 4.0).round() / 4.0)
         });
     });

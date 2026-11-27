@@ -1244,6 +1244,7 @@ caught:
   co = condition('o')
   say label co~code co~rc (co~errortext == errortext(co~rc)) -
     (co~message == message) co~additional~items '['co~description']'
+  if co~code == 98.941 then say '  naming' co~additional[1]
   return
 ::class t
 ::method boom
@@ -1263,6 +1264,7 @@ mutable 93.900 93 1 0 1 []
 subclass 93.900 93 1 0 1 []
 nocode 93.900 93 1 0 1 []
 unknown 98.941 98 1 0 1 []
+  naming 42.999
 removed 42.3 42 1 1 0 []
 described 42.3 42 1 1 0 [why]
 ```

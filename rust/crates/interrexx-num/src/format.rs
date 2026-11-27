@@ -1,6 +1,7 @@
 //! `NUMERIC FORM ENGINEERING`, and the `FORMAT`/`TRUNC` builtins.
 
-use crate::{Digits, Form, Number};
+use crate::{Digits, Form, Number, signed_count, signed_len};
+use interrexx_cast::CastFrom;
 use std::borrow::Cow;
 use std::fmt::Write;
 
@@ -120,14 +121,14 @@ impl Number {
     /// parsing it back yields this number's digits and exponent unchanged.
     pub fn write_short_fraction(&self, digits: u64, out: &mut [u8]) -> Option<usize> {
         let count = self.digits.len();
-        if self.exponent >= 0 || count as u64 > digits {
+        if self.exponent >= 0 || u64::cast_from(count) > digits {
             return None;
         }
-        let places = self.exponent.unsigned_abs() as usize;
+        let places = usize::cast_from(self.exponent.unsigned_abs());
         // `format_with`'s exponential trigger for a value below one: more
         // places after the point than twice DIGITS.
-        let adjusted = i64::from(self.exponent) + count as i64 - 1;
-        if adjusted < 0 && places as u64 > digits.saturating_mul(2) {
+        let adjusted = i64::from(self.exponent) + signed_len(count) - 1;
+        if adjusted < 0 && u64::cast_from(places) > digits.saturating_mul(2) {
             return None;
         }
         let whole = count.saturating_sub(places);
@@ -205,7 +206,8 @@ impl Number {
         let initial_eng_exp = initial_exponent(Shape::of(&n1), form, expt);
         if let Some(width) = expp {
             if let Some(exp0) = initial_eng_exp {
-                let needed = exp0.unsigned_abs().to_string().len() as u32;
+                let needed = u32::try_from(exp0.unsigned_abs().to_string().len())
+                    .expect("a u32 has at most ten digits");
                 if needed > width {
                     return Err(FormatError::ExponentOversize {
                         mantissa: reframe(&n1, exp0),
@@ -355,7 +357,7 @@ impl Shape {
 
     /// The exponent of the most significant digit.
     fn adjusted(self) -> i32 {
-        self.exponent + self.len as i32 - 1
+        self.exponent + signed_count(self.len) - 1
     }
 
     /// The shape [`reframe`] produces: rescaling a value to read as
@@ -378,7 +380,7 @@ fn initial_exponent(shape: Shape, form: Form, expt: Option<i64>) -> Option<i32> 
     // bare `digits` (see `trigger`), and doubling that must stay huge rather
     // than wrap.
     let triggered =
-        a as i64 >= expt || (a < 0 && (shape.exponent as i64).abs() > expt.saturating_mul(2));
+        i64::from(a) >= expt || (a < 0 && i64::from(shape.exponent).abs() > expt.saturating_mul(2));
     triggered.then(|| group(form, a))
 }
 
@@ -418,7 +420,7 @@ fn resolve_exponential_shape(
         // magnitude back below the trigger); a number that started plain can
         // only newly trigger via the upper (adjusted >= expt) arm.
         let new_eng_exp = match expt {
-            Some(expt) if eng_exp.is_some() || true_adjusted as i64 >= expt => {
+            Some(expt) if eng_exp.is_some() || i64::from(true_adjusted) >= expt => {
                 Some(group(form, true_adjusted))
             }
             _ => None,
@@ -487,7 +489,7 @@ fn post_carry_exponent_error(
         return None; // `after` already covers every decimal place present
     }
     let excess = adjusted_decimals - i64::from(after);
-    let len = pre_round.digits.len() as i64;
+    let len = signed_len(pre_round.digits.len());
     if excess >= len {
         // The interpreter's own "rounds away to a single digit or zero"
         // branch, which does not redo the trigger/width check at all.
@@ -497,7 +499,7 @@ fn post_carry_exponent_error(
     // is the rounding here; `round_to_places` (used for the successful render)
     // grows the digit vector instead. See this function's doc comment for why
     // that difference matters here specifically.
-    let rounded = pre_round.into_round((len - excess) as u64);
+    let rounded = pre_round.into_round((len - excess).unsigned_abs());
     // Back to true scale: `rounded` is still relative to `eng_exp0`.
     let true_scale = Number {
         negative: rounded.negative,
@@ -510,14 +512,15 @@ fn post_carry_exponent_error(
             expt,
             // `saturating_mul` for the same reason as the other two
             // triggers: `expt` may be a saturated huge `digits` default.
-            Some(expt) if adjusted2 as i64 >= expt
-                || (adjusted2 < 0 && (true_scale.exponent as i64).abs() > expt.saturating_mul(2))
+            Some(expt) if i64::from(adjusted2) >= expt
+                || (adjusted2 < 0 && i64::from(true_scale.exponent).abs() > expt.saturating_mul(2))
         );
     if !triggered {
         return None;
     }
     let exp2 = group(form, adjusted2);
-    let needed = exp2.unsigned_abs().to_string().len() as u32;
+    let needed =
+        u32::try_from(exp2.unsigned_abs().to_string().len()).expect("a u32 has at most ten digits");
     if needed <= width {
         return None;
     }
@@ -558,9 +561,9 @@ fn math_round_places(n: Number, places: u32) -> Number {
         return n;
     }
     let excess = adjusted_decimals - i64::from(places);
-    let len = n.digits.len() as i64;
+    let len = signed_len(n.digits.len());
     if excess < len {
-        return n.into_round((len - excess) as u64);
+        return n.into_round((len - excess).unsigned_abs());
     }
     if excess == len && n.digits[0] >= 5 {
         // `excess < adjusted_decimals` always holds here, and
@@ -568,7 +571,7 @@ fn math_round_places(n: Number, places: u32) -> Number {
         return Number {
             negative: n.negative,
             digits: Digits::single(1),
-            exponent: -(places as i32),
+            exponent: -i32::try_from(places).expect("below the decimals"),
         };
     }
     Number::zero()
@@ -597,8 +600,9 @@ fn round_to_places(n: &Number, places: u32) -> Number {
     // it is squeezed into `(n.exponent, 0]` here -- which always fits `i32`.
     // A `places` large enough to overflow can therefore never reach this
     // branch; it always takes the early return above instead.
-    let target_exponent = target_exponent_wide as i32;
-    let drop = (target_exponent - n.exponent) as usize;
+    let target_exponent =
+        i32::try_from(target_exponent_wide).expect("between the exponent and zero");
+    let drop = usize::cast_from((target_exponent - n.exponent).unsigned_abs());
     let len = n.digits.len();
     if drop > len {
         // The cut falls to the left of every stored digit -- the digit that
@@ -669,8 +673,9 @@ fn truncate_to_places(n: &Number, places: u32) -> Number {
     if i64::from(n.exponent) >= target_exponent_wide {
         return n.clone();
     }
-    let target_exponent = target_exponent_wide as i32;
-    let drop = (target_exponent - n.exponent) as usize;
+    let target_exponent =
+        i32::try_from(target_exponent_wide).expect("between the exponent and zero");
+    let drop = usize::cast_from((target_exponent - n.exponent).unsigned_abs());
     let len = n.digits.len();
     if drop >= len {
         // Everything gets dropped -- same underflow as `round_to_places`,
@@ -764,7 +769,7 @@ impl PlainLayout {
 
 /// The number of decimal digits `value` is written with, without writing it.
 fn decimal_width(value: u32) -> usize {
-    value.checked_ilog10().unwrap_or(0) as usize + 1
+    usize::cast_from(value.checked_ilog10().unwrap_or(0)) + 1
 }
 
 /// Everything a rendering carries after its mantissa, decided once so that
@@ -795,7 +800,7 @@ impl ExponentField {
             // and with ENGINEERING grouping an adjusted exponent of 1 or 2
             // down to a displayed 0 the same way.
             return match expp {
-                Some(width) => ExponentField::Reserved(width as usize + 2),
+                Some(width) => ExponentField::Reserved(usize::cast_from(width) + 2),
                 None => ExponentField::Absent,
             };
         }
@@ -806,7 +811,9 @@ impl ExponentField {
         // `length(format(1e10,,,65535))` is 65538 and
         // `length(format(1e10,,,65536))` is 65539.
         let zeros = match expp {
-            Some(width) => (width as usize).saturating_sub(decimal_width(exp.unsigned_abs())),
+            Some(width) => {
+                usize::cast_from(width).saturating_sub(decimal_width(exp.unsigned_abs()))
+            }
             None => 0,
         };
         ExponentField::Present { exp, zeros }
@@ -844,11 +851,11 @@ impl ExponentField {
 /// supplies none -- which is what a number's ordinary display is -- with no
 /// `Result` carrying a `Number` to construct and drop.
 fn plain_layout(shape: Shape, after: Option<u32>) -> PlainLayout {
-    let point = shape.len as i32 + shape.exponent;
+    let point = signed_count(shape.len) + shape.exponent;
     let int_len = if shape.exponent >= 0 {
-        shape.len + shape.exponent as usize
+        shape.len + usize::cast_from(shape.exponent.unsigned_abs())
     } else if point > 0 {
-        point as usize
+        usize::cast_from(point.unsigned_abs())
     } else {
         1 // the "0" before the point
     };
@@ -858,9 +865,9 @@ fn plain_layout(shape: Shape, after: Option<u32>) -> PlainLayout {
     let natural_dec = if shape.exponent >= 0 {
         None
     } else if point > 0 {
-        Some(shape.len - point as usize)
+        Some(shape.len - usize::cast_from(point.unsigned_abs()))
     } else {
-        Some((-point) as usize + shape.len)
+        Some(usize::cast_from(point.unsigned_abs()) + shape.len)
     };
     // The decimal part as (natural digits, trailing zeros `after` adds).
     let dec = match after {
@@ -868,7 +875,7 @@ fn plain_layout(shape: Shape, after: Option<u32>) -> PlainLayout {
         Some(0) => None,
         Some(places) => {
             let natural = natural_dec.unwrap_or(0);
-            let extra = u64::from(places).saturating_sub(natural as u64) as usize;
+            let extra = usize::cast_from(places).saturating_sub(natural);
             Some((natural, extra))
         }
     };
@@ -899,13 +906,13 @@ fn pad_to_before(
     let Some(before) = before else {
         return Ok(layout);
     };
-    let needed = layout.int_len as i64;
+    let needed = signed_len(layout.int_len);
     // Widened to `i64`: `before` is a legitimate `u32` up to `u32::MAX` (the
     // interpreter accepts `FORMAT(1, 3000000000)` and returns the
     // three-billion-character result), and casting it to `i32` first can turn
     // it negative, producing a spurious oversize error instead of the huge
     // space-padding the interpreter actually shows.
-    let available = i64::from(before) - layout.sign as i64;
+    let available = i64::from(before) - signed_len(layout.sign);
     if available < needed {
         return Err(FormatError::BeforeOversize {
             reported: reported
@@ -917,7 +924,8 @@ fn pad_to_before(
         });
     }
     Ok(PlainLayout {
-        pad: (available - needed) as usize,
+        // At most `before`, a `u32`.
+        pad: usize::try_from(available - needed).expect("at most a u32"),
         ..layout
     })
 }
@@ -933,9 +941,12 @@ fn emit_plain(out: &mut String, n: &Number, layout: PlainLayout) {
     }
     if n.exponent >= 0 {
         push_digits(out, n.digits.as_slice());
-        push_repeated(out, '0', n.exponent as usize);
+        push_repeated(out, '0', usize::cast_from(n.exponent.unsigned_abs()));
     } else if point > 0 {
-        push_digits(out, &n.digits.as_slice()[..point as usize]);
+        push_digits(
+            out,
+            &n.digits.as_slice()[..usize::cast_from(point.unsigned_abs())],
+        );
     } else {
         out.push('0');
     }
@@ -946,9 +957,12 @@ fn emit_plain(out: &mut String, n: &Number, layout: PlainLayout) {
         // and then the whole decimal part is the zeros below.
         if n.exponent < 0 {
             if point > 0 {
-                push_digits(out, &n.digits.as_slice()[point as usize..]);
+                push_digits(
+                    out,
+                    &n.digits.as_slice()[usize::cast_from(point.unsigned_abs())..],
+                );
             } else {
-                push_repeated(out, '0', (-point) as usize);
+                push_repeated(out, '0', usize::cast_from(point.unsigned_abs()));
                 push_digits(out, n.digits.as_slice());
             }
         }

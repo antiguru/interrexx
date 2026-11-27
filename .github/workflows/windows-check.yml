@@ -104,6 +104,13 @@ jobs:
           sdk\bin\sdk-smoke.exe || exit /b 1
           target\debug\rxapi-smoke.exe || exit /b 1
           del sdk\bin\sdk-smoke.exe
+          cl /nologo /W4 /WX /TC ..\ci\windows-rexxutil-console.c /Fe:target\debug\rexxutil-console.exe /link user32.lib || exit /b 1
+          target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-rexxutil-console.rex"
+          if errorlevel 1 (
+            echo RexxUtil console fixture failed at check %ERRORLEVEL%
+            exit /b 1
+          )
+          echo RexxUtil console input, cursor, screen, and dialog cancellation passed.
 
       - uses: actions/upload-artifact@v7
         with:
@@ -167,6 +174,9 @@ jobs:
           $caseRoot = Join-Path $env:RUNNER_TEMP 'rexxutil-case-probe'
           [IO.File]::WriteAllText($probe, 'test data')
           New-Item -ItemType Directory -Path $caseRoot | Out-Null
+          $pipeName = 'interrexx-smoke-' + [Guid]::NewGuid().ToString()
+          $pipe = [IO.Pipes.NamedPipeServerStream]::new($pipeName)
+          $env:REXX_TEST_NAMED_PIPE = '\\.\pipe\' + $pipeName
           try {
             try {
               [IO.File]::Encrypt($probe)
@@ -188,9 +198,15 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "RexxUtil smoke failed at check $LASTEXITCODE" }
             if ($env:REXX_TEST_CASE_PARENT) { Write-Host 'The case-sensitive NTFS sibling check passed.' }
           } finally {
+            $pipe.Dispose()
             Remove-Item -LiteralPath $probe
             Remove-Item -LiteralPath $caseRoot -Recurse
           }
+
+      - name: Exercise RexxUtil with a Windows print queue
+        shell: pwsh
+        timeout-minutes: 2
+        run: ../ci/windows-rexxutil-printers.ps1
 
       - name: Verify Windows file timestamps across daylight saving time
         shell: pwsh

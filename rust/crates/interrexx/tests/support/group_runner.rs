@@ -373,9 +373,31 @@ fn without_build_date(line: &str) -> &str {
     }
 }
 
+/// What [`without_language_level`] puts in place of the language level.
+const LEVEL_MASK: &str = "<level>";
+
+/// `line`, a version line without its build date, with the language level it
+/// ends with, `n.nn`, replaced by [`LEVEL_MASK`]; a line that does not end with
+/// a word of that shape is kept whole. The two sides answer different levels
+/// by decision (Deviation 179; `docs/design/decisions.md`, the language level
+/// is the one interrexx implements), so the level is not compared; every other
+/// word of the line is.
+fn without_language_level(line: &str) -> std::borrow::Cow<'_, str> {
+    let Some((rest, level)) = line.rsplit_once(' ') else {
+        return line.into();
+    };
+    let digits = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
+    match level.split_once('.') {
+        Some((major, minor)) if digits(major) && digits(minor) => {
+            format!("{rest} {LEVEL_MASK}").into()
+        }
+        _ => line.into(),
+    }
+}
+
 /// `stdout` with what differs between any two runs of one side masked: each
-/// timing line's duration, each detail header's timestamp and the build date
-/// the version line ends with. The lines of an error report and the built-in
+/// timing line's duration, each detail header's timestamp, and the build date
+/// and language level the version line ends with. The lines of an error report and the built-in
 /// levels of a traceback are cut as well, since the message text and the
 /// built-in levels are not specified: ooTest, the program here, writes the
 /// traceback of an error its tests meet to stdout, and it is not this
@@ -386,17 +408,18 @@ pub fn masked(stdout: &[u8]) -> Vec<u8> {
 
 fn mask_timings(stdout: &[u8]) -> Vec<u8> {
     let text = String::from_utf8_lossy(stdout);
-    let lines: Vec<&str> = text
+    let lines: Vec<std::borrow::Cow<'_, str>> = text
         .split('\n')
         .map(|line| {
             if line.starts_with(VERSIONED) {
-                return without_build_date(line.trim_end());
+                return without_language_level(without_build_date(line.trim_end()));
             }
             TIMINGS
                 .iter()
                 .chain(STAMPED)
                 .find(|prefix| line.starts_with(**prefix))
                 .map_or(line, |prefix| *prefix)
+                .into()
         })
         .collect();
     lines.join("\n").into_bytes()

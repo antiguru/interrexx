@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_cast::CastFrom;
 
 fn lines(bytes: &[u8]) -> Vec<Vec<u8>> {
     let mut input = Input::new(ProgramInput::Bytes(bytes.to_vec()));
@@ -253,7 +254,7 @@ fn lines_in(bytes: &[u8], position: u64) -> u64 {
     let left = bytes
         .get(usize::try_from(position).unwrap_or(usize::MAX)..)
         .unwrap_or_default();
-    let ends = left.iter().filter(|byte| **byte == b'\n').count() as u64;
+    let ends = u64::cast_from(left.iter().filter(|byte| **byte == b'\n').count());
     ends + u64::from(left.last().is_some_and(|byte| *byte != b'\n'))
 }
 
@@ -266,7 +267,7 @@ fn a_file_console_counts_lines_once() {
     bytes.push_str("tail");
     let (mut c, path) = console("count", bytes.as_bytes());
     let mut step = 0;
-    while c.position() <= bytes.len() as u64 {
+    while c.position() <= u64::cast_from(bytes.len()) {
         let offset = c.position() - 1;
         assert_eq!(
             c.lines_left(),
@@ -274,7 +275,7 @@ fn a_file_console_counts_lines_once() {
             "at {offset}"
         );
         assert_eq!(c.open.line_total(), Some(301), "counted once");
-        assert_eq!(c.counted_size, Some(bytes.len() as u64));
+        assert_eq!(c.counted_size, Some(u64::cast_from(bytes.len())));
         if step % 3 == 1 {
             c.read_bytes(5);
         } else {

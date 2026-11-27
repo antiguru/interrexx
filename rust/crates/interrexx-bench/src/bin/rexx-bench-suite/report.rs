@@ -6,6 +6,8 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use interrexx_cast::CastLossy;
+
 use interrexx_bench::child::{ADDRESS_SPACE_LIMIT_KIB, Counters, Side, Wrapper, run};
 use interrexx_bench::timing::{MedianInterval, median_interval_indices};
 
@@ -54,7 +56,9 @@ pub(super) fn interval_for(n: usize) -> MedianInterval {
         coverage: if n == 0 {
             0.0
         } else {
-            1.0 - 2.0 * 0.5f64.powi(n as i32)
+            // A count past `i32::MAX` takes the same power as `i32::MAX`: both
+            // are zero in an `f64`.
+            1.0 - 2.0 * 0.5f64.powi(i32::try_from(n).unwrap_or(i32::MAX))
         },
     })
 }
@@ -256,7 +260,7 @@ pub(super) fn write_offset(report: &mut String, name: &str, paired: &Paired) {
 
 /// Median of one counter across a side's sampled runs.
 fn counter_median(readings: &[Counters], pick: fn(&Counters) -> u64) -> f64 {
-    let mut values: Vec<f64> = readings.iter().map(|r| pick(r) as f64).collect();
+    let mut values: Vec<f64> = readings.iter().map(|r| f64::cast_lossy(pick(r))).collect();
     Stats::of(&mut values).median
 }
 
@@ -305,7 +309,7 @@ pub(super) fn write_counters(report: &mut String, rows: &[AxisRow]) {
             }
             let cycles = counter_median(readings, |r| r.cycles);
             let instructions = counter_median(readings, |r| r.instructions);
-            let iterations = row.iterations as f64;
+            let iterations = f64::cast_lossy(row.iterations);
             let _ = writeln!(
                 report,
                 "| `{}` | {label} | {:.0} | {:.0} | {:.2} | {:.1} | {:.1} |",
@@ -393,8 +397,8 @@ pub(super) fn write_axes(report: &mut String, rows: &[AxisRow], offset: &Paired)
                 stats.low,
                 stats.high,
                 stats.spread() * 100.0,
-                row.iterations as f64 / stats.median,
-                row.iterations as f64 / (stats.median - side_offset),
+                f64::cast_lossy(row.iterations) / stats.median,
+                f64::cast_lossy(row.iterations) / (stats.median - side_offset),
             );
         }
     }
@@ -532,13 +536,13 @@ pub(super) fn write_rexxcps(report: &mut String, paired: &Paired) {
         .oracle_stdout
         .iter()
         .filter_map(|run| parse_cps(run))
-        .map(|cps| cps as f64)
+        .map(f64::cast_lossy)
         .collect();
     let mut rust_cps: Vec<f64> = paired
         .rust_stdout
         .iter()
         .filter_map(|run| parse_cps(run))
-        .map(|cps| cps as f64)
+        .map(f64::cast_lossy)
         .collect();
     if oracle_cps.len() != paired.oracle.len() || rust_cps.len() != paired.rust.len() {
         let _ = writeln!(

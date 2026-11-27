@@ -1,6 +1,7 @@
 //! Windows console interrupts and cancellation of a thread's blocking I/O.
 #![allow(unsafe_code)]
 
+use interrexx_cast::CastFrom;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
 use std::sync::{
     OnceLock,
@@ -39,7 +40,7 @@ pub(crate) fn take_pending() -> bool {
 
 pub(crate) fn current_thread() -> usize {
     // SAFETY: no caller preconditions.
-    unsafe { GetCurrentThreadId() as usize }
+    unsafe { usize::cast_from(GetCurrentThreadId()) }
 }
 
 pub(crate) fn flush_c_streams() {

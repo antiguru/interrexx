@@ -378,7 +378,7 @@ pub(crate) fn decode_base64_bytes(source: &[u8]) -> Option<Vec<u8>> {
         }
         // Left-align what was taken into the low three bytes, so the digits
         // sit where they would had the quartet been full.
-        accumulated <<= 6 * (4 - taken) as u32;
+        accumulated <<= 6 * (4 - taken);
         let bytes = accumulated.to_be_bytes();
         let emitted = taken.saturating_sub(1);
         out.extend_from_slice(&bytes[1..1 + emitted]);

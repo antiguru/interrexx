@@ -367,6 +367,14 @@ fn a_native_call_in_the_simulation_mode_spawns_no_pool_thread() {
 /// so replay runs the same worker and delivers its completion at that boundary.
 #[test]
 fn simulated_pool_delivers_native_completions_at_seeded_clauses() {
+    // Alone in its own process (#1099): a replay takes exactly its recording's
+    // handle key and is refused while another simulated interpreter in this
+    // process holds it, and the tests beside this one run seeds of their own.
+    if !crate::test_process::alone(
+        "scheduler::tests::native::simulated_pool_delivers_native_completions_at_seeded_clauses",
+    ) {
+        return;
+    }
     let source = "m = .worker~new~start('work')\nsay 'main' TestGetArguments(5)[1]\nsay m~result\n\
                   ::requires 'orxfunction' library\n::class worker\n::method work\n  \
                   do i = 1 to 8\n    say 'tick' i\n  end\n  return TestIntArg(7)\n";

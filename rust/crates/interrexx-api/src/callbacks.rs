@@ -6,6 +6,7 @@
 //! serving it, or a host with no [`Surface`], which records the member as
 //! refused.
 
+use interrexx_cast::CastFrom;
 use interrexx_core::ObjRef;
 
 #[cfg(test)]
@@ -1251,7 +1252,7 @@ impl Activation<'_> {
     pub fn new_array_sized(&self, size: usize) -> RexxObjectPtr {
         const SLOT: &str = "RexxThreadInterface.NewArray";
         const MAX_FIXED_ARRAY_SIZE: u64 = 100_000_000_000_000_000;
-        if size as u64 > MAX_FIXED_ARRAY_SIZE {
+        if u64::cast_from(size) > MAX_FIXED_ARRAY_SIZE {
             self.with_surface(SLOT, (), |cx| {
                 let limit = cx
                     .host

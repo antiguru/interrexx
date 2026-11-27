@@ -184,12 +184,29 @@ RexxRoutine1(CSTRING, FxRaise, CSTRING, message)
     return "returned";
 }
 
+// Raises SYNTAX error `number`, `major * 1000 + sub`, with no substitutions, then answers
+// `returned`.
+// Serves r[native.calls.raise].
+RexxRoutine1(CSTRING, FxRaiseNumber, wholenumber_t, number)
+{
+    context->RaiseException0((size_t)number);
+    return "returned";
+}
+
 // Raises the condition `name` with the description `description` and the extra object `extra`,
 // then answers `returned`.
 // Serves r[native.calls.condition].
 RexxRoutine3(CSTRING, FxCondition, CSTRING, name, CSTRING, description, RexxObjectPtr, extra)
 {
     context->RaiseCondition(name, context->String(description), extra, NULLOBJECT);
+    return "returned";
+}
+
+// Raises the condition the condition object `condition` describes, then answers `returned`.
+// Serves r[native.calls.condition-object].
+RexxRoutine1(CSTRING, FxConditionObject, RexxObjectPtr, condition)
+{
+    context->RaiseConditionObject((RexxDirectoryObject)condition);
     return "returned";
 }
 
@@ -520,7 +537,9 @@ static RexxRoutineEntry fixtureRoutines[] =
     REXX_TYPED_ROUTINE(FxName, FxName),
     REXX_TYPED_ROUTINE(FxNothing, FxNothing),
     REXX_TYPED_ROUTINE(FxRaise, FxRaise),
+    REXX_TYPED_ROUTINE(FxRaiseNumber, FxRaiseNumber),
     REXX_TYPED_ROUTINE(FxCondition, FxCondition),
+    REXX_TYPED_ROUTINE(FxConditionObject, FxConditionObject),
     REXX_TYPED_ROUTINE(FxSend, FxSend),
     REXX_TYPED_ROUTINE(FxConditionCode, FxConditionCode),
     REXX_TYPED_ROUTINE(FxSetVar, FxSetVar),

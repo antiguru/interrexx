@@ -179,10 +179,13 @@ pub fn command(
     command: ObjRef,
     redirector: &Redirector,
 ) -> Result<Option<ObjRef>, Failure> {
+    // Through `register_local`, as every handle a call is handed: the host
+    // records that native code holds the object, which a handle the handler
+    // keeps for a later command relies on.
     let (address, command) = {
         let mut conversion = cx.conversion();
-        let locals = conversion.host.locals();
-        (locals.register(address), locals.register(command))
+        let host = &mut conversion.host;
+        (host.register_local(address), host.register_local(command))
     };
     let exit = contexts.exit();
     let mut io = RedirectorContext::new(redirector);
@@ -210,10 +213,12 @@ pub fn exit(
     cx: &Activation<'_>,
     request: ExitRequest<'_, Option<ObjRef>>,
 ) -> Result<ExitOutcome<Option<ObjRef>>, Failure> {
+    // Through `register_local`, as `command` registers its objects.
     let request = {
         let mut conversion = cx.conversion();
-        let locals = conversion.host.locals();
-        request.map(|object| object.map_or(std::ptr::null_mut(), |object| locals.register(object)))
+        let host = &mut conversion.host;
+        request
+            .map(|object| object.map_or(std::ptr::null_mut(), |object| host.register_local(object)))
     };
     let exit = contexts.exit();
     let (outcome, refused) =

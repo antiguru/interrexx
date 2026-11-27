@@ -5,9 +5,9 @@
 //!   subject, tab-separated, with `%hh` standing for a byte. The output line
 //!   is `parse` rc@position, then `match` and `pos`, each @position, on one
 //!   `RegularExpression`. Every expected line is the oracle's.
-//! * `deviation`: the same, for patterns Deviation 87 rules this crate answers
-//!   by the grammar. The expected lines are this crate's; the case comment
-//!   gives the oracle's.
+//! * `deviation`: the same, for a pattern too large to compile (Deviation 87).
+//!   The expected lines are this crate's; the case comment says what the
+//!   oracle does.
 //! * `ours`: the input is a whole program, for Deviation 88, whose oracle
 //!   answer is a crash.
 //! * `program`: the input is a whole program; the case records the oracle's
