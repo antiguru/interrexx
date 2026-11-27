@@ -459,6 +459,7 @@ pub(crate) struct DeferredLevel {
     /// level may be pushed.
     pub(crate) caller: Option<crate::activation::ActivationId>,
     pub(crate) name: &'static [u8],
+    pub(crate) resolution: Option<crate::dispatch::Resolution>,
     pub(crate) receiver: ObjRef,
     pub(crate) arguments: [Option<ObjRef>; DeferredLevel::MAX_ARGUMENTS],
     pub(crate) count: usize,

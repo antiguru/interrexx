@@ -389,6 +389,30 @@ fn an_eager_level_inside_a_deferred_one_goes_on_above_it() {
     assert!(names(&interp).is_empty());
 }
 
+/// Comparing a string with a stored object can run the object's Rexx
+/// REQUEST under the collection primitive's level, as on the oracle.
+#[test]
+fn a_compared_method_lists_its_level_during_an_items_request() {
+    let source = "o = .k~new\n\
+                  say 'index' .array~of(o)~index('abc')\n\
+                  l = .list~new\n\
+                  l~append(o)\n\
+                  say 'has' l~hasItem('abc')\n\
+                  .myarr~define('find', .array~method('index'))\n\
+                  say 'alias' .myarr~of(o)~find('abc')\n\
+                  exit\n\
+                  ::class myarr subclass array\n\
+                  ::class k\n\
+                  ::method request\n\
+                  frames = .context~stackFrames\n\
+                  say frames[1]~name frames[2]~name frames[2]~type\n\
+                  return 'abc'\n";
+    let out = "REQUEST INDEX METHOD\nindex 1\n\
+               REQUEST HASITEM METHOD\nhas 1\n\
+               REQUEST FIND METHOD\nalias 1\n";
+    assert_eq!(run_source(source), (0, out.to_string(), String::new()));
+}
+
 /// Runs `source` and hands back `(exit code, stdout, stderr)`.
 fn run_source(source: &str) -> (i32, String, String) {
     let outcome = crate::run_program(
