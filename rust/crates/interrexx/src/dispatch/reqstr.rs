@@ -46,6 +46,17 @@ enum StringConversion {
 }
 
 impl Interp {
+    /// The string read by a comparison. A bare stem supplies the rendering
+    /// of its default through NOSTRING (r[expr.comparison.stem]).
+    #[inline]
+    pub(crate) fn comparison_string_value(&mut self, value: ObjRef) -> Result<ObjRef, Failure> {
+        if self.is_stem_object(value) {
+            let readable = self.stem_string_value_text(value)?;
+            return self.fallback_string_value(value, readable);
+        }
+        self.required_string_value(value)
+    }
+
     /// Requests a string value, falling back to the receiver's readable
     /// string representation and offering NOSTRING when conversion fails.
     #[inline]
@@ -181,6 +192,15 @@ impl Interp {
         } else {
             self.string_value_text(value)?
         };
+        self.fallback_string_value(value, readable)
+    }
+
+    /// Offers NOSTRING before returning the readable replacement.
+    fn fallback_string_value(
+        &mut self,
+        value: ObjRef,
+        readable: Vec<u8>,
+    ) -> Result<ObjRef, Failure> {
         // Gated on the trap rather than raised unconditionally, the shape
         // `Interp::novalue_raised` describes: an untrapped NOSTRING resumes
         // with the readable rendering, so a raise nothing can take would

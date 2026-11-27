@@ -41,7 +41,9 @@ for it. Sending the message `STRING` to the object raises nothing, because the
 object is then not converted. Which other positions convert, such as the
 arguments of method calls, is not specified. What a builtin does with such an
 argument when no trap answers is [the object rule of the
-conventions](r:conv.string.object). The table below has one row for each
+conventions](r:conv.string.object). The [comparison rule](r:expr.comparison.stem)
+also describes the NOSTRING condition for a right operand that is an instance
+of `Stem` itself. The table below has one row for each
 object and one column for each of six uses, `N` where NOSTRING is raised and
 `-` where it is not.
 

@@ -647,7 +647,7 @@ pub(super) fn equals_argument(
     if value == ObjRef::NIL {
         return Ok(None);
     }
-    let text = interp.required_string_value(value)?;
+    let text = interp.comparison_string_value(value)?;
     Ok(Some(interp.to_text(text).into_owned()))
 }
 
