@@ -1096,8 +1096,21 @@ impl Interp {
     /// size and no frame reserved, a pooled one where there is one, and the
     /// oldest pooled number.
     pub(crate) fn new_activity(&mut self) -> Box<Idle> {
+        self.activity_record(true)
+    }
+
+    /// A record for a new activity, as [`Interp::new_activity`] makes one but
+    /// taking no pooled number: one that delivers a trace line
+    /// (`r[instr.trace.delivery.thread]`).
+    pub(crate) fn unnumbered_activity(&mut self) -> Box<Idle> {
+        self.activity_record(false)
+    }
+
+    fn activity_record(&mut self, pooled: bool) -> Box<Idle> {
         let mut activity = Activity::new();
-        activity.number = self.activities.pooled.pop_front().flatten();
+        if pooled {
+            activity.number = self.activities.pooled.pop_front().flatten();
+        }
         #[cfg(feature = "sharing")]
         {
             activity.sharing_tag = self.heap.sharing_tag();
@@ -1273,7 +1286,21 @@ impl Interp {
 
     /// The running activity's number, which `.context~thread` answers: main is
     /// 1 and an activity is numbered when first asked, as threads are numbered.
+    /// A delivering activity answers the number of the activity that wrote
+    /// its line, and has none of its own (`r[instr.trace.delivery.thread]`).
     pub(crate) fn activity_number(&mut self) -> u32 {
+        if self.activity.delivering
+            && let Some(owner) = self.activity.delivers_for
+            && let Some(idle) = self.activities.idle[owner.index()].as_mut()
+        {
+            if let Some(number) = idle.activity.number {
+                return number;
+            }
+            self.activities.last_number += 1;
+            let number = self.activities.last_number;
+            idle.activity.number = Some(number);
+            return number;
+        }
         if let Some(number) = self.activity.number {
             return number;
         }
@@ -1552,7 +1579,9 @@ impl Interp {
             table.pool_frames(&mut idle.roots);
             table.retired.extend(idle.activity.thread.take());
             table.free.push(outgoing.0);
-            if table.pooled.len() <= MAX_POOLED {
+            // A delivering activity took no pooled number, so it gives none
+            // back (`r[instr.trace.delivery.thread]`).
+            if !idle.activity.delivering && table.pooled.len() <= MAX_POOLED {
                 table.pooled.push_back(idle.activity.number);
             }
         } else {
