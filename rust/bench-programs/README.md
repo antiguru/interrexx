@@ -34,7 +34,7 @@ One `.rex` file per performance dimension, each sized to run roughly 0.5-2s unde
 | `hashcopy.rex` | 6,000 `copy` calls of a 10,000-entry Table. |
 | `stemchurn.rex` | 50,000 stem tails, 4,000,000 `drop`/re-assign cycles over them, one `DO OVER`. |
 | `pkglocal.rex` | An environment symbol read once the running package has a local entry: one `~local` write, then 2,000,000 reads of `.stdout`, which the search reaches after the package local misses. |
-| `intcall.rex` | Internal package routines, which run no activation: `FILESPEC` of the REXX package and `SysFileExists` of rexxutil, 150,000 passes each. Sized against this crate (0.2s). The oracle takes 1.7s |
+| `intcall.rex` | Internal package routines, which run no activation: `SysUtilVersion` and `SysFileExists` of rexxutil, 150,000 passes each. Sized against this crate (0.2s). The oracle takes 1.7s |
 | `churn.rex` | Body-byte churn over a live set: 20,000 objects held while 100,000 strings of 10,000 bytes are made and dropped, so each collection marks the live set and the byte trigger sets how often one runs. Sized against this crate (0.1s). The oracle takes 2.1s |
 | `interpret.rex` | `INTERPRET` of a fragment holding a literal longer than a handle carries inline, 20,000 passes, so each compiles a chunk that interns a heap string. Measured 0.45s on this crate and 0.09s on the oracle |
 | `define.rex` | `Class~define` replaces one method 3,000 times, with allocation between defines and some instances held live. Collections release replaced methods that are no longer named or running. Sized against this crate (0.3s) |
