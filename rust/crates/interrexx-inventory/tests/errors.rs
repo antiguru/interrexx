@@ -3,8 +3,8 @@ use interrexx_inventory::errors;
 
 #[test]
 fn every_message_of_the_table_is_present() {
-    // 56 majors + 668 submessages = 724, the rows of `data/errors.tsv`.
-    assert_eq!(errors::MESSAGES.len(), 724);
+    // 56 majors + 678 submessages = 734, the rows of `data/errors.tsv`.
+    assert_eq!(errors::MESSAGES.len(), 734);
     assert_eq!(errors::MESSAGES.iter().filter(|m| m.sub == 0).count(), 56);
 }
 

@@ -1,8 +1,9 @@
-//! Trace destinations the oracle cannot run, under a bound: one whose
-//! `LINEOUT` fails deep in a recursion, under the address-space cap the corpus
-//! gives the oracle (`corpus/oracle-crashes.txt` entries 51 and 52), and one
-//! whose own clauses are traced (entry 14). The oracle crashes on both, so
-//! there is no differential to run.
+//! Trace destinations under a bound: one whose `LINEOUT` fails deep in a
+//! recursion, under the address-space cap the corpus gives the oracle, and one
+//! whose own clauses are traced. What is tested is this crate's memory bound,
+//! which a differential does not measure. The oracle no longer crashes on
+//! either (`corpus/oracle-crashes.txt` entries 51, 52 and 14, dropped); on the
+//! first it ends the program at rc 214 with the same 42.3.
 
 #![expect(clippy::disallowed_methods, reason = "this harness bounds a real run")]
 

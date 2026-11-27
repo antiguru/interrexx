@@ -1,5 +1,12 @@
-//! String conversion of builtin arguments and direct method arguments. The
-//! cases exercise the fallback text, argument checks and trapped errors.
+//! A builtin argument whose user `STRING` method answers an object with no
+//! string value, which reads as its default string value
+//! (`r[conv.string.answer]`). Each `call` case runs `say <call>` with `o` an
+//! instance whose `STRING` answers the `string=` object; `program` runs its
+//! input as the whole program. A case records the oracle's rc, stdout and
+//! stderr. `checked` runs `say` over the call with `o`'s `STRING` answering
+//! `.object~new` and the error trapped, and records the code of the error,
+//! with the argument's position for 88.909, the oracle's unless the case's
+//! comment gives the oracle's as another.
 
 use interrexx::Invocation;
 
@@ -19,18 +26,13 @@ fn call_program(call: &str, answer: &str) -> String {
     )
 }
 
-/// The program a `refuses` case runs with the error trapped: it prints the
-/// code, and for 88.909 the position of the argument, the item that
-/// `r[conv.string.builtin-argument]` fixes as `ADDITIONAL[1]`.
-fn trapped_program(call: &str, answer: &str) -> String {
-    format!(
-        "o = .q~new\nsignal on syntax\nsay {call}\nsay \"after\"\nexit\nsyntax: c = condition('o')\nif c~code == 88.909 then say c~code c~additional[1]\nelse say c~code\nexit\n::class q\n::method string\n  return {answer}\n"
-    )
-}
-
-/// Runs one argument check with a non-convertible STRING answer.
+/// The program a `checked` case runs: it prints the result, or the code of
+/// the error the call raises, and for 88.909 the position of the argument,
+/// its `ADDITIONAL[1]`.
 fn checked_program(call: &str) -> String {
-    trapped_program(&format!("'value=[' || ({call}) || ']'"), ".object~new")
+    format!(
+        "o = .q~new\nsignal on syntax\nsay 'value=[' || ({call}) || ']'\nsay \"after\"\nexit\nsyntax: c = condition('o')\nif c~code == 88.909 then say c~code c~additional[1]\nelse say c~code\nexit\n::class q\n::method string\n  return .object~new\n"
+    )
 }
 
 /// `rc`, stdout and stderr as the case file records them.
@@ -48,7 +50,6 @@ fn transcript(text: String) -> String {
     )
 }
 
-// spec: conv.string.builtin-argument, conv.string.argument-kind
 #[test]
 fn string_answers_at_builtin_argument_positions() {
     let mut cases = 0;
@@ -57,23 +58,13 @@ fn string_answers_at_builtin_argument_positions() {
             cases += 1;
             let input = case.input.trim_end();
             match case.directive.as_str() {
-                "call" | "refuses" => {
+                "call" => {
                     let answer = match case.args.get("string").map(|v| v[0].as_str()) {
                         Some("object") => ".object~new",
                         Some("directory") => ".directory~new",
                         other => panic!("unknown string= {other:?}"),
                     };
-                    let mut out = transcript(call_program(input, answer));
-                    if case.directive == "refuses" {
-                        let trapped = watchdog::run_bounded(
-                            PATH,
-                            trapped_program(input, answer).into_bytes(),
-                            Invocation::none(),
-                        );
-                        out.push_str("[trapped]\n");
-                        out.push_str(&String::from_utf8_lossy(&trapped.stdout));
-                    }
-                    out
+                    transcript(call_program(input, answer))
                 }
                 "checked" => {
                     let outcome = watchdog::run_bounded(

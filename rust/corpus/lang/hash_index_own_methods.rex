@@ -1,0 +1,79 @@
+/* An instance of a built-in class that has methods of its own answers
+   HASHCODE, == and REQUEST with them, wherever a collection or a loop sends
+   those: a Table or Set index, an Array item, DO OVER, a method source.
+   Methods of its own come from enhanced, from setMethod sent by a method the
+   object runs, and from a subclass or a program class named like the
+   built-in one; a plain instance has none. */
+m = .directory~new
+m~hashcode = "say '  own hashcode' self~class~id; return 'X'"
+m['=='] = "say '  own ==' self~class~id; return 0"
+m~makearray = "say '  own makearray' self~class~id; return .array~of('say 9')"
+m~request = "say '  own request' arg(1) self~class~id; return self~makearray"
+vals = .array~new
+vals~append(.environment['STRING']~enhanced(m, 'abc'))
+vals~append(.environment['STRING']~enhanced(m, '7'))
+vals~append(.array~enhanced(m, 2))
+vals~append(.directory~enhanced(m))
+vals~append(.table~enhanced(m))
+vals~append(.object~enhanced(m))
+vals~append(.mutablebuffer~enhanced(m, 'say 5'))
+d = .directory~new
+d~setMethod('POKE', "self~setMethod:.object('HASHCODE', 'say ''  given hashcode''; return ''X''')")
+d~poke
+vals~append(d)
+vals~append(.sub~new)
+vals~append(.string~new)
+vals~append(.environment['STRING']~new('plain'))
+vals~append(.directory~new)
+do v over vals
+  call probe v
+end
+exit
+
+probe:
+  use arg v
+  say v~class~id
+  t = .table~new
+  t[v] = 1
+  say '  table' t~hasIndex(v)
+  s = .set~new
+  s~put(v)
+  say '  set' s~hasIndex(v)
+  say '  hasItem' .array~of(1, v)~hasItem(v)
+  call over v
+  call source v
+  return
+
+over:
+  signal on syntax name over_error
+  do x over arg(1)
+    say '  over' x
+  end
+  return
+over_error:
+  say '  over error' condition('o')~code
+  return
+
+source:
+  signal on syntax name source_error
+  say '  method' .method~new('m', arg(1))~source~items
+  return
+source_error:
+  say '  method error' condition('o')~code
+  return
+
+::class sub subclass directory
+::method hashcode
+  say '  sub hashcode'
+  return 'S'
+
+::class string
+::method hashcode
+  say '  program class hashcode'
+  return 'Q'
+::method '=='
+  say '  program class =='
+  return 0
+::method makearray
+  say '  program class makearray'
+  return .array~of('say 1')

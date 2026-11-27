@@ -881,9 +881,12 @@ impl Surface for Interp {
                     }
                 },
             };
-            if interrexx_inventory::errors::lookup(major, 0).is_none() {
-                let code = format!("{major}.{minor}").into_bytes();
-                self.hold_raised(Raised::syntax(98, 941, vec![code]), None, None, None);
+            // r[native.calls.condition-object]: a code no error has is 98.941, as RAISE
+            // SYNTAX raises it.
+            if interrexx_inventory::errors::lookup(major, minor).is_none() {
+                let code = u64::from(major) * 1000 + u64::from(minor);
+                let raised = crate::run::raised_for_code(code, Vec::new());
+                self.hold_raised(raised, None, None, None);
                 return true;
             }
             Raised {

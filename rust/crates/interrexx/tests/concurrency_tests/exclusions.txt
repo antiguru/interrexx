@@ -6,6 +6,24 @@ base/class/RexxQueue.testGroup TEST_LINEIN_WAITS_PULL_DOESNT -- RexxQueue
 base/class/Stream.testGroup TEST_STREAM_STDIN_SOCKET_2173 -- rxapi persistent state
 base/keyword/FINALLY.testGroup TEST_REPLY_FROM_CATCH_CLAUSE -- language level 6.07
 base/keyword/FINALLY.testGroup TEST_REPLY -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_RETURN -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_EXIT -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_SIGNAL -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_SIGNAL_VALUE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_NESTED -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_RAISE_RETURN -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_RAISE_EXIT -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_RAISE_EXIT_IN_INTERNAL_ROUTINE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_RAISE_RETURN_IN_INTERNAL_ROUTINE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_REPLY -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_REPLY_IN_INTERNAL_ROUTINE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_LEAVE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_EXIT_IN_INTERNAL_ROUTINE -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_EXIT_IN_INTERNAL_FUNCTION -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_EXIT_DEEPER -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_IMPLICIT_EXIT -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_CALLS_ALLOWED -- language level 6.07
+base/keyword/FINALLY.testGroup TEST_RULE_INTERPRET_OWN_FINALLY -- language level 6.07
 extensions/rxsock/socketClass.testGroup TEST_005 -- native extension
 extensions/rxsock/socketClass.testGroup TEST_006 -- native extension
 extensions/rxsock/socketClass.testGroup TEST_007 -- native extension

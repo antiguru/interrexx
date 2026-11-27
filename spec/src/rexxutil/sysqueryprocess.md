@@ -194,25 +194,24 @@ ms: procedure
 r[util.sysqueryprocess.pmem]
 `PMEM` answers a line of text of the form `Max_Memory_RSS: ` and a whole
 number: the most main memory, counted in kilobytes, that the process has held
-at one time so far. Memory that a command that ADDRESS runs holds is not
-counted: in the example a command holds 256 megabytes, and the number grows by
-far less.
+at one time so far. The exact number is unspecified, as host measurements
+can account for different parts of the process's lifetime. The number does
+not decrease between calls. Memory that a command that ADDRESS runs holds is
+not counted: in the example a command holds 256 megabytes, and the number
+grows by far less.
 
 ```rexx
 t = SysQueryProcess('PMEM')
 parse var t head n extra
 say head '['extra']' datatype(n, 'W') (n > 0)
-address system "awk '/^VmHWM:/ {print $2}' /proc/$PPID/status" with output stem h.
-say (n * 2 > h.1) (n < h.1 * 2)
-address system "dd if=/dev/zero of=/dev/null bs=256M count=1 status=none; echo done" with output stem a.
+address system "dd if=/dev/zero of=/dev/null bs=256M count=1 status=none && echo done" with output stem a.
 parse value SysQueryProcess('PMEM') with . n2
-say a.1 (n2 - n < 150000)
+say a.1 (n2 >= n) (n2 - n < 150000)
 ```
 
 ```output
 Max_Memory_RSS: [] 1 1
-1 1
-done 1
+done 1 1
 ```
 
 r[util.sysqueryprocess.prcvdsig]

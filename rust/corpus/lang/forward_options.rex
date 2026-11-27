@@ -3,9 +3,10 @@
    unnamed, so the default it takes is the thing the line reports: `to` alone
    keeps the message name and the arguments, `message` alone keeps the
    receiver and the arguments, and `arguments`/`array` keep both while
-   replacing what the callee sees. A bare FORWARD, which would take every
-   default at once, is the shape corpus/oracle-crashes.txt names and is not
-   here. */
+   replacing what the callee sees. A bare FORWARD takes every default at
+   once, so it sends the same message to the same receiver and resolves back
+   to the method it is in, which recurses until the control stack is full:
+   11.1, trapped so that only the code is compared. */
 t = .Target~new
 o = .K~new
 say 'to' o~m(t)
@@ -14,6 +15,14 @@ say 'arguments' o~replaced(9)
 say 'trimmed' o~trimmed(9)
 say 'array' o~arrayed(9)
 say 'omitted' o~omitted
+say 'bare' bare()
+exit
+
+bare: procedure
+  signal on syntax name bareforwarded
+  return .Selfish~new~m
+bareforwarded:
+  return condition('o')~code
 
 ::CLASS Target
 ::METHOD m
@@ -35,3 +44,7 @@ say 'omitted' o~omitted
   forward message('SEEN') array(6,,8)
 ::METHOD seen
   return 'seen' arg() '['arg(1)']' '['arg(2)']' '['arg(3)']'
+
+::CLASS Selfish
+::METHOD m
+  forward

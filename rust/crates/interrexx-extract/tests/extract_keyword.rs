@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 /// The ooTest revision every absolute literal below was measured at. Named
 /// in each failure message so a red count is diagnosable as `svn up` rather
 /// than as a regression in this repository.
-const OOTEST_REVISION: &str = "r13532";
+const OOTEST_REVISION: &str = "r13624";
 
 /// What a red absolute-literal test most likely means, appended to every
 /// such failure.
@@ -66,7 +66,7 @@ fn measure() -> Vec<(String, usize, usize, usize)> {
 /// The absolute committed literals: per-group row counts, and the four
 /// totals. Measured at [`OOTEST_REVISION`].
 const PER_GROUP: &[(&str, usize, usize)] = &[
-    ("ADDRESS", 238, 19),
+    ("ADDRESS", 241, 19),
     ("ASSIGNMENT", 265, 265),
     ("Assignments", 0, 0),
     ("CALL", 139, 50),
@@ -95,13 +95,14 @@ const PER_GROUP: &[(&str, usize, usize)] = &[
     ("NOP", 3, 3),
     ("NUMERIC", 68, 63),
     ("PARSE", 792, 778),
-    ("RAISE", 6, 2),
+    ("RAISE", 13, 2),
     ("REPLY", 11, 0),
     ("SAY", 3, 0),
     ("SELECT", 12, 8),
     ("SIGNAL", 27, 0),
     ("SelectCase", 5, 1),
     ("ShortCircuitAnd", 0, 0),
+    ("THROW", 40, 1),
     ("TRACE", 57, 13),
     ("TRACE_TraceObject", 11, 0),
     ("USE", 20, 0),
@@ -110,13 +111,13 @@ const PER_GROUP: &[(&str, usize, usize)] = &[
 ];
 
 /// `.testGroup` files scanned.
-const TOTAL_FILES: usize = 41;
+const TOTAL_FILES: usize = 42;
 /// Exact-spelling `self~assertSame` occurrences across all of them.
-const TOTAL_CALLS: usize = 2580;
+const TOTAL_CALLS: usize = 2630;
 /// Calls carried by a body this extractor turned into a runnable program.
-const TOTAL_ROWS: usize = 1809;
+const TOTAL_ROWS: usize = 1810;
 /// Calls in a method this extractor could not turn into one.
-const TOTAL_DROPPED: usize = 771;
+const TOTAL_DROPPED: usize = 820;
 
 /// **Criterion 2, the absolute literals.** Everything a percentage would
 /// hide: the file count, the independently-counted call total, the row and
@@ -214,7 +215,7 @@ fn the_drop_reasons_account_for_every_call_outside_the_population() {
         (DropReason::ContinuedLine, 2, 3),
         (DropReason::AssertSameList, 0, 0),
         (DropReason::OtherAssertion, 138, 169),
-        (DropReason::MessageSend, 147, 586),
+        (DropReason::MessageSend, 176, 635),
         (DropReason::UnparsedCallShape, 0, 0),
         (DropReason::NotAClause, 0, 0),
     ];
@@ -523,7 +524,7 @@ fn calls_outside_a_test_prefixed_method_are_accounted_as_drops() {
 }
 
 /// An assertion used as an operand rather than as a clause cannot become a
-/// `SAY`. Nothing in `base/keyword` writes one -- all 2,441 calls sit at a
+/// `SAY`. Nothing in `base/keyword` writes one -- every call sits at a
 /// clause boundary, measured -- so this is a forward guard against the
 /// corpus growing one, not a case seen today. Without it, such a call would
 /// be spliced into the middle of someone else's clause and the body would

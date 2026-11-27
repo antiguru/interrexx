@@ -45,3 +45,5 @@
 25	937	"&1" keyword on ::&2 directive must not be combined with "&3".
 25	938	::OPTIONS FORM must be followed by one of the keywords SCIENTIFIC or ENGINEERING; found "&1".
 25	939	CATCH must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOMETHOD, NOSTRING, NOTREADY, NOVALUE, SYNTAX, USER, or ANY; found "&1".
+25	940	THROW must be followed by one of the keywords ERROR, FAILURE, HALT, LOSTDIGITS, NOMETHOD, NOSTRING, NOTREADY, NOVALUE, PROPAGATE, SYNTAX, or USER; found "&1".
+25	941	Invalid sub-keyword on THROW; found "&1".

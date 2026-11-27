@@ -41,6 +41,10 @@ CAST = (
     "ours casts each descriptor value to the parameter type, so a C method can take OSELF "
     "(decisions.md, the header fixes)"
 )
+THROW_API = (
+    "the interface versions stay those of level 6.06: the Throw and ThrowObject entry points they "
+    "announce belong to THROW, a level 6.07 feature, and refuse (decisions.md, the language level)"
+)
 EXCEPTIONS = [
     ("upstream", "macro REXXAPIDEFS_INCLUDED", GUARD),
     ("upstream", "macro REXXAPITYPES_INCLUDED", GUARD),
@@ -110,9 +114,27 @@ EXCEPTIONS = [
     (
         "both",
         "macro REXX_CURRENT_LANGUAGE_LEVEL",
-        "interrexx implements level 6.06; 6.07 adds CATCH and FINALLY, which it does not have "
+        "interrexx implements level 6.06; 6.07 adds CATCH, FINALLY and THROW, which it does not have "
         "(decisions.md, the language level)",
     ),
+    *[
+        ("both", f"macro {name}", THROW_API)
+        for name in (
+            "CALL_INTERFACE_VERSION",
+            "EXIT_INTERFACE_VERSION",
+            "METHOD_INTERFACE_VERSION",
+            "THREAD_INTERFACE_VERSION",
+            "THREAD_INTERFACE_VERSION_5_3_0",
+        )
+    ],
+    *[
+        ("upstream", f"macro {name}", THROW_API)
+        for name in (
+            "CALL_INTERFACE_VERSION_5_3_0",
+            "EXIT_INTERFACE_VERSION_5_3_0",
+            "METHOD_INTERFACE_VERSION_5_3_0",
+        )
+    ],
 ]
 
 # The headers of a tree, relative to its root, that are listed but not compiled: the platform

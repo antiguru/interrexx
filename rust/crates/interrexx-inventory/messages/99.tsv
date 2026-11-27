@@ -50,3 +50,4 @@
 99	949	Invalid class "&1".
 99	950	USE ARG variable reference must not have a default value.
 99	951	&1 must not transfer control out of the FINALLY clause on line &2.
+99	952	FORWARD on line &1 requires CONTINUE in a block with a FINALLY clause.

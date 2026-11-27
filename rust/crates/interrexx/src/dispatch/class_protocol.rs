@@ -306,10 +306,14 @@ pub(super) fn method_source_lines(
         interp.roots.activity_mut().push_temp(wanted);
         let caller = interp.caller();
         let answered = interp.send_message(source, b"REQUEST", None, &[Some(wanted)], caller)?;
-        // Any answer but `.nil` is the line, as its string value: a
-        // `MAKESTRING` answering an `Array` compiles the line `an Array`.
-        if let Some(line) = answered.filter(|line| *line != ObjRef::NIL) {
-            return Ok(vec![interp.string_value_text(line)?]);
+        // An answer with a string value under the primitive conversion is the
+        // line, and any other is no answer, with nothing sent to it
+        // (`r[class.method.new.sends]`): a `MAKESTRING` answering an `Array`
+        // compiles its items joined by a newline.
+        if let Some(line) = answered
+            && let Some(text) = interp.primitive_answer_text(line)?
+        {
+            return Ok(vec![text]);
         }
     }
     Err(match taker {

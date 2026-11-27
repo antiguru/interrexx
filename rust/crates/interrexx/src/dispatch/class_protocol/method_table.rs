@@ -77,6 +77,6 @@ pub(super) fn method_table_pairs(
 /// which the walk reads directly.
 fn is_supplier(interp: &mut Interp, value: ObjRef) -> bool {
     let class = interp.class_of_value(value);
-    let wanted = interp.classes().lookup("Supplier");
-    matches!((class, wanted), (Some(class), Some(wanted)) if interp.classes().is_a(class, wanted))
+    let wanted = interp.object_model().supplier;
+    class.is_some_and(|class| interp.classes().is_a(class, wanted))
 }

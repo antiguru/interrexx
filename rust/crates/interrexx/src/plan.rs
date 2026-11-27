@@ -389,6 +389,7 @@ pub(crate) struct Plan {
     /// The spelling an `EXPOSE` binds each symbol under, made once and shared
     /// by every binding of it.
     exposed_names: BySymbol<std::cell::OnceCell<Rc<[u8]>>>,
+    literal_parses: Vec<(usize, Vec<(u32, interrexx_core::ObjRef)>)>,
     last_chunk: LastChunk,
 }
 
@@ -518,13 +519,18 @@ impl Plan {
             ..Plan::default()
         };
         let mut trace_events = Vec::with_capacity(body.instructions.len());
-        for instruction in &body.instructions {
+        for (index, instruction) in body.instructions.iter().enumerate() {
             // Set again in front of each instruction and read back after it,
             // because `note_instruction` only ever clears the flag: the walk
             // would otherwise report every instruction after the first
             // retracing one as retracing too.
             plan.keeps_the_trace_setting = true;
             plan.note_instruction(&instruction.kind, symbols);
+            if let InstructionKind::Parse(parse) = &instruction.kind
+                && let Some(writes) = crate::parse_template::literal_writes(parse, &plan, symbols)
+            {
+                plan.literal_parses.push((index, writes));
+            }
             trace_events.push(match (plan.keeps_the_trace_setting, &instruction.kind) {
                 (true, _) => TraceEvent::Keeps,
                 (false, InstructionKind::Trace(setting)) => {
@@ -566,6 +572,14 @@ impl Plan {
                 .collect();
         }
         plan
+    }
+
+    pub(crate) fn literal_parse(&self, index: usize) -> Option<&[(u32, interrexx_core::ObjRef)]> {
+        let at = self
+            .literal_parses
+            .binary_search_by_key(&index, |(at, _)| *at)
+            .ok()?;
+        Some(&self.literal_parses[at].1)
     }
 
     /// Registers every name one instruction's own fields could read -- the
@@ -1160,6 +1174,19 @@ impl Interp {
         for entry in compiled.by_symbol.iter_mut() {
             *entry = entry.map(|local_slot| enclosing[local_slot]);
         }
+        // Prepared writes use the same local numbering and must move with
+        // the ordinary stores. Fall back to the template walk if a caller
+        // slot cannot fit in the prepared op's u32 operand.
+        compiled.literal_parses.retain_mut(|(_, writes)| {
+            writes.iter_mut().all(|(slot, _)| {
+                let local_slot = usize::cast_from(*slot);
+                let Ok(enclosing_slot) = u32::try_from(enclosing[local_slot]) else {
+                    return false;
+                };
+                *slot = enclosing_slot;
+                true
+            })
+        });
         compiled.result_slot = compiled.result_slot.map(|slot| enclosing[slot]);
         compiled.sigl_slot = compiled.sigl_slot.map(|slot| enclosing[slot]);
         compiled.self_slot = compiled.self_slot.map(|slot| enclosing[slot]);

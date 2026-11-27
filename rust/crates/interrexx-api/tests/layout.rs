@@ -505,13 +505,23 @@ fn refusing_members() -> BTreeSet<String> {
     refusing
 }
 
+/// The members of language level 6.07 that refuse at level 6.06: THROW's
+/// entry points (Deviation 179).
+const LATER_LEVEL: [&str; 4] = [
+    "RexxThreadInterface.ThrowObject",
+    "MethodContextInterface.Throw",
+    "CallContextInterface.Throw",
+    "ExitContextInterface.Throw",
+];
+
 /// **No stub remains that a populated table should have replaced**: the
 /// embedding API's members, the last to refuse (ruling R4), are written, so
-/// no member of a populated table refuses, derived from the header's members
-/// rather than from a list.
+/// the members of a populated table that refuse are exactly the later
+/// level's, derived from the header's members rather than from a list.
 #[test]
 fn no_populated_table_member_refuses() {
-    assert_eq!(refusing_members(), BTreeSet::new());
+    let later: BTreeSet<String> = LATER_LEVEL.iter().map(ToString::to_string).collect();
+    assert_eq!(refusing_members(), later);
 }
 
 /// The negative control for the comparison above: a refusing table compared
@@ -700,7 +710,7 @@ fn the_wrapper_scan_follows_one_wrapper_into_another() {
 }
 
 /// **What the test extensions call is filled first**: no member they reach
-/// still refuses.
+/// still refuses, but for the later level's.
 #[test]
 fn the_test_extensions_reach_only_members_that_answer() {
     let refusing = refusing_members();
@@ -712,7 +722,11 @@ fn the_test_extensions_reach_only_members_that_answer() {
     ];
     let reached: BTreeSet<String> = members_the_test_extensions_call()
         .into_iter()
-        .filter(|member| refusing.contains(member) && !OWED.contains(&member.as_str()))
+        .filter(|member| {
+            refusing.contains(member)
+                && !OWED.contains(&member.as_str())
+                && !LATER_LEVEL.contains(&member.as_str())
+        })
         .collect();
     assert!(reached.is_empty(), "reached and refusing: {reached:?}");
 }

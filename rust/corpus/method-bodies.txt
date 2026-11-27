@@ -238,20 +238,20 @@ String	=	instance	answers	rc 163
 String	==	instance	answers	rc 163
 String	<	instance	answers	rc 163
 String	<=	instance	answers	rc 163
-String	<<	instance	uncomparable	the oracle segfaults on this send
-String	<<=	instance	uncomparable	the oracle segfaults on this send
+String	<<	instance	answers	rc 163
+String	<<=	instance	answers	rc 163
 String	<>	instance	answers	rc 163
 String	>	instance	answers	rc 163
 String	>=	instance	answers	rc 163
 String	><	instance	answers	rc 163
-String	>>	instance	uncomparable	the oracle segfaults on this send
-String	>>=	instance	uncomparable	the oracle segfaults on this send
+String	>>	instance	answers	rc 163
+String	>>=	instance	answers	rc 163
 String	\=	instance	answers	rc 163
 String	\==	instance	answers	rc 163
 String	\<	instance	answers	rc 163
-String	\<<	instance	uncomparable	the oracle segfaults on this send
+String	\<<	instance	answers	rc 163
 String	\>	instance	answers	rc 163
-String	\>>	instance	uncomparable	the oracle segfaults on this send
+String	\>>	instance	answers	rc 163
 String	(abuttal)	instance	answers	rc 163
 String	||	instance	answers	rc 163
 String	(blank)	instance	answers	rc 163
@@ -813,8 +813,8 @@ Stem	allItems	instance	answers	rc 0
 Stem	at	instance	answers	rc 0
 Stem	empty	instance	answers	rc 0
 Stem	hasIndex	instance	answers	rc 0
-Stem	hasItem	instance	uncomparable	the oracle segfaults on this send
-Stem	index	instance	uncomparable	the oracle segfaults on this send
+Stem	hasItem	instance	answers	rc 163
+Stem	index	instance	answers	rc 163
 Stem	isEmpty	instance	answers	rc 0
 Stem	items	instance	answers	rc 0
 Stem	makeArray	instance	answers	rc 0

@@ -1,70 +1,85 @@
-# Stream argument checks (r[class.stream.args.objects]).
+# One argument of a Stream method that is read as a number or as a command, with every other
+# argument valid: one fault per call (r[class.stream.args.objects]).
 
+# oracle Error 88.907 (3 of 3 runs)
 checked
 .stream~new('zz_nofile.txt')~charin(o)
 ----
 88.907
 
+# oracle Error 88.907 (3 of 3 runs)
 checked
 .stream~new('zz_nofile.txt')~charin(1, o)
 ----
 88.907
 
+# oracle Error 88.907 (3 of 3 runs)
 checked
 .stream~new('zz_nofile.txt')~linein(o)
 ----
 88.907
 
+# oracle Error 88.907 (3 of 3 runs)
 checked
 .stream~new('zz_nofile.txt')~linein(1, o)
 ----
 88.907
 
+# oracle Error 88.907 (3 of 3 runs)
 checked
 .stream~new('zz_nofile.txt')~charout('x', o)
 ----
 88.907
 
+# oracle Error 88.907 (3 of 3 runs)
 checked
 .stream~new('zz_nofile.txt')~lineout('x', o)
 ----
 88.907
 
+# the code of a query that no word starts
 checked
 .stream~new('zz_nofile.txt')~query(o)
 ----
 93.0
 
+# the code of a command that no word starts
 checked
 .stream~new('zz_nofile.txt')~command(o)
 ----
 93.914
 
+# oracle Error 97.1 (3 of 3 runs), not followed; the option of arrayIn is read as a string (Deviation 183)
 checked
 .stream~new('zz_nofile.txt')~arrayin(o)
 ----
 88.909 1
 
+# oracle Error 97.1 (3 of 3 runs), not followed; the option of makeArray is read as a string (Deviation 183)
 checked
 .stream~new('zz_nofile.txt')~makearray(o)
 ----
 88.909 1
 
+# oracle Error 97.1 (3 of 3 runs), not followed; the option of arrayIn is read as a string (Deviation 183)
 checked
 .stream~new('zz_nofile.txt')~arrayin(.nil)
 ----
 88.909 1
 
+# oracle Error 97.1 (3 of 3 runs), not followed; the option of makeArray is read as a string (Deviation 183)
 checked
 .stream~new('zz_nofile.txt')~makearray(.nil)
 ----
 88.909 1
 
+# oracle Error 97.1 (3 of 3 runs), not followed; the option of arrayOut is read as a string (Deviation 183)
 checked
 .stream~new('zz_nofile.txt')~arrayout(.array~of('x'), o)
 ----
 88.909 2
 
+# oracle Error 97.1 (3 of 3 runs), not followed; the option of arrayOut is read as a string (Deviation 183)
 checked
 .stream~new('zz_nofile.txt')~arrayout(.array~of('x'), .nil)
 ----

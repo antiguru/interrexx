@@ -958,19 +958,53 @@ fn compile_settled(
                 // not. Its operands get no ops, since those carry no echoes.
                 let opening = parse_opening(parse, plan);
                 let runs = !echoes_values && !echoes_keyword;
-                push_template(
-                    &mut ops,
-                    &mut consts,
-                    &mut registers,
-                    &mut hints,
-                    &mut calls,
-                    plan,
-                    parse,
-                    instruction_index(index)?,
-                    src,
-                    opening,
-                    runs,
-                )?;
+                let known_traced = matches!(pool, super::trace_flow::Setting::Known(setting)
+                    if setting.results() || setting.intermediates());
+                if !known_traced
+                    && let Some(scratch) = src
+                    && let Some(writes) = plan.literal_parse(index)
+                {
+                    debug_assert!(
+                        parse
+                            .template
+                            .iter()
+                            .flatten()
+                            .flat_map(|trigger| trigger.targets.iter().flatten())
+                            .map(|target| match target.kind {
+                                ExprKind::Variable(id) => plan.slot_for_symbol(id),
+                                _ => None,
+                            })
+                            .eq(writes.iter().map(|&(slot, _)| Some(usize::cast_from(slot)))),
+                        "prepared PARSE writes disagree with the target slots in this body's plan"
+                    );
+                    ops.push(Op::ParseBegin {
+                        index: instruction_index(index)?,
+                        src: scratch,
+                        base: Op::ARG_OMITTED,
+                        to: 0,
+                        opening: ParseOpening::Literal,
+                        strings: 0,
+                    });
+                    ops.extend(writes.iter().map(|&(slot, value)| Op::ParseStore {
+                        slot,
+                        value,
+                        scratch,
+                    }));
+                } else {
+                    push_template(
+                        &mut ops,
+                        &mut consts,
+                        &mut registers,
+                        &mut hints,
+                        &mut calls,
+                        plan,
+                        parse,
+                        instruction_index(index)?,
+                        src,
+                        opening,
+                        runs,
+                    )?;
+                }
                 close_region(&mut ops, at)?;
                 registers.release(mark);
             }
@@ -1775,12 +1809,14 @@ fn compile_settled(
     assert_exec_regions_hold_nothing_else(&ops);
 
     let consts = consts.values;
-    // Sized from the stream rather than from the program's symbol table, which
-    // `compile` does not have: the widest constant symbol this body actually
-    // names, and nothing for a body that names none. `Chunk::interned_symbols`
-    // has why the gap in front of a high id is the right trade.
+    // Sized from the ops rather than from the program's symbol table, which
+    // `compile` does not have. Both the main stream and side-table conditions
+    // cache constant symbols, so use the widest id either of them names.
+    // `Chunk::interned_symbols` has why the gap in front of a high id is the
+    // right trade.
     let widest_constant_symbol = ops
         .iter()
+        .chain(&conditions)
         .filter_map(|op| match op {
             Op::LoadConstant { symbol, .. } => Some(symbol.index()),
             _ => None,

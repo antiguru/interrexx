@@ -376,9 +376,9 @@ pub(crate) fn create_event_sem(
 }
 
 /// `SysCreateMutexSem([name])`: an unnamed semaphore of value one, by its
-/// handle. The unnamed form is an empty name; with no argument at all the
-/// reference run crashes (oracle defect, `corpus/oracle-crashes.txt` entry 27),
-/// and here it is unnamed too.
+/// handle. The unnamed form is an empty name, and with no argument at all it
+/// is unnamed too, as in the reference run (`corpus/oracle-crashes.txt` entry
+/// 27, dropped).
 pub(crate) fn create_mutex_sem(
     interp: &mut Interp,
     name: &'static [u8],

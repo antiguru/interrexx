@@ -457,9 +457,9 @@ mod tests {
     }
 
     /// **A `~` or `~/x` with `HOME` unset qualifies to the null string**: the
-    /// home is unresolved, as an unknown account's is (SF #2182, r13616; the
-    /// oracle before it crashes, `corpus/oracle-crashes.txt` entry 48). The
-    /// adjacent success is the same names with `HOME` set.
+    /// home is unresolved, as an unknown account's is (SF #2182, r13616;
+    /// `corpus/oracle-crashes.txt` entry 48, dropped). The adjacent success is
+    /// the same names with `HOME` set.
     #[test]
     fn a_tilde_with_home_unset_qualifies_without_a_home() {
         let source = b"call value 'HOME', '/h', 'ENVIRONMENT'\n\

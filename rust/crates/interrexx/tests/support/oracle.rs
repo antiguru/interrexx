@@ -380,13 +380,20 @@ pub enum StderrComparison {
     Multiset,
 }
 
-/// How `stdout` is compared: byte-for-byte, or as a sorted multiset of lines.
+/// How `stdout` is compared: byte-for-byte, as a sorted multiset of lines, or
+/// with the cut `stderr` gets.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum StdoutComparison {
     /// Byte-for-byte. The default.
     Raw,
     /// Byte-for-byte after sorting each side's lines.
     Multiset,
+    /// Byte-for-byte after [`super::error_text::cut_announcement_texts`], for
+    /// a program whose trace output, announcements included, is written to
+    /// standard output: only an announcement's flag is specified
+    /// (`r[instr.trace.tags]`), not its text. Every other line, an error
+    /// report or a traceback level included, is compared whole.
+    TraceCut,
 }
 
 /// One side's `stdout` in the form [`StdoutComparison::Multiset`] compares.
@@ -463,7 +470,7 @@ pub fn descriptor_diff_modes(
     // The message text of an error report is not specified, so each side's
     // error lines on stderr are cut to their code and subcode before any mode
     // compares the channel (`r[conv.error.text]`). Standard output is
-    // compared whole.
+    // compared whole unless `stdout_mode` says otherwise.
     let (rust_stdout, cpp_stdout) = (&rust.stdout, &cpp.stdout);
     let (rust_stderr, cpp_stderr) = (
         super::error_text::cut_error_texts(&rust.stderr),
@@ -474,6 +481,10 @@ pub fn descriptor_diff_modes(
             StdoutComparison::Raw => rust_stdout != cpp_stdout,
             StdoutComparison::Multiset => {
                 stdout_multiset(rust_stdout) != stdout_multiset(cpp_stdout)
+            }
+            StdoutComparison::TraceCut => {
+                super::error_text::cut_announcement_texts(rust_stdout)
+                    != super::error_text::cut_announcement_texts(cpp_stdout)
             }
         },
         stderr: match stderr_mode {
@@ -758,6 +769,73 @@ mod tests {
                 stdout_multiset(LINES),
                 stdout_multiset(mutated),
                 "sorting must still catch {what}, which is not an ordering difference"
+            );
+        }
+    }
+
+    /// The trace-cut mode ignores the text of an announcement on stdout and
+    /// nothing else: its flag, a clause line and the order still count, and
+    /// the raw mode still compares the text.
+    #[test]
+    fn only_the_trace_cut_stdout_mode_ignores_announcement_text() {
+        const OURS: &[u8] = b"    38 *-* x = 1\n       <I< Routine \"R\", package \"p\".\n97.1\n";
+        let compare = |theirs: &[u8], mode| {
+            descriptor_diffs_modes(
+                &stdout_outcome(OURS),
+                &cpp_stdout_outcome(theirs),
+                mode,
+                StderrComparison::Normalized,
+            )
+        };
+        let reworded: &[u8] =
+            b"    38 *-* x = 1\n       <I< Routine \"R\" in package \"p\".\n97.1\n";
+        assert!(compare(reworded, StdoutComparison::TraceCut).is_empty());
+        assert_eq!(compare(reworded, StdoutComparison::Raw), vec!["stdout"]);
+        for other in [
+            &b"    38 *-* x = 1\n       >I> Routine \"R\", package \"p\".\n97.1\n"[..],
+            b"    38 *-* x = 2\n       <I< Routine \"R\", package \"p\".\n97.1\n",
+            b"       <I< Routine \"R\", package \"p\".\n    38 *-* x = 1\n97.1\n",
+            b"    38 *-* x = 1\n       <I< Routine \"R\", package \"p\".\n97.2\n",
+        ] {
+            assert_eq!(
+                compare(other, StdoutComparison::TraceCut),
+                vec!["stdout"],
+                "{}",
+                String::from_utf8_lossy(other)
+            );
+        }
+    }
+
+    /// The trace-cut mode cuts announcements only: an error report, a
+    /// built-in traceback level or a `+++` line on stdout that differs
+    /// between the sides, in text or by being there at all, still fails the
+    /// comparison.
+    #[test]
+    fn the_trace_cut_stdout_mode_compares_error_like_lines_whole() {
+        const OURS: &[u8] = b"       <I< Routine \"R\".\nError 97 running /t/x.rex line 3:  Ours.\nError 97.1:  Ours.\n       *-* Words \"LINEOUT\".\n+++ Words.  Error 42:  Ours.\n97.1\n";
+        let compare = |theirs: &[u8]| {
+            descriptor_diffs_modes(
+                &stdout_outcome(OURS),
+                &cpp_stdout_outcome(theirs),
+                StdoutComparison::TraceCut,
+                StderrComparison::Normalized,
+            )
+        };
+        assert!(
+            compare(b"       <I< Other words.\nError 97 running /t/x.rex line 3:  Ours.\nError 97.1:  Ours.\n       *-* Words \"LINEOUT\".\n+++ Words.  Error 42:  Ours.\n97.1\n").is_empty()
+        );
+        for theirs in [
+            &b"       <I< Routine \"R\".\nError 97 running /t/x.rex line 3:  Theirs.\nError 97.1:  Ours.\n       *-* Words \"LINEOUT\".\n+++ Words.  Error 42:  Ours.\n97.1\n"[..],
+            b"       <I< Routine \"R\".\nError 97 running /t/x.rex line 3:  Ours.\nError 97.1:  Theirs.\n       *-* Words \"LINEOUT\".\n+++ Words.  Error 42:  Ours.\n97.1\n",
+            b"       <I< Routine \"R\".\nError 97 running /t/x.rex line 3:  Ours.\nError 97.1:  Ours.\n       *-* Other \"LINEOUT\".\n+++ Words.  Error 42:  Ours.\n97.1\n",
+            b"       <I< Routine \"R\".\nError 97 running /t/x.rex line 3:  Ours.\nError 97.1:  Ours.\n+++ Words.  Error 42:  Ours.\n97.1\n",
+            b"       <I< Routine \"R\".\nError 97 running /t/x.rex line 3:  Ours.\nError 97.1:  Ours.\n       *-* Words \"LINEOUT\".\n+++ Words.  Error 42:  Theirs.\n97.1\n",
+        ] {
+            assert_eq!(
+                compare(theirs),
+                vec!["stdout"],
+                "{}",
+                String::from_utf8_lossy(theirs)
             );
         }
     }

@@ -5,9 +5,11 @@
 //! parse value 'abcdefghij' with p 5 q <2 r  ->  [abcd][cd]    [cdefghij]
 //! ```
 
+mod literal;
 mod trigger;
 mod walk;
 
+pub(crate) use literal::literal_writes;
 pub(crate) use walk::WALK_REGISTERS;
 
 use crate::error::{Failure, Raised};
