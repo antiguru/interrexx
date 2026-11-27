@@ -25,7 +25,7 @@ pub struct KeywordBody {
     pub group: String,
     pub method: String,
     /// The method's own source, verbatim, with every `self~assertSame`
-    /// replaced by its `SAY`. Comments are **kept** -- see [`rewrite_body`]
+    /// replaced by its `SAY`. Comments are **kept** -- see `rewrite_body`
     /// for the measurement that says removing one changes what the code
     /// around it means.
     pub program: String,

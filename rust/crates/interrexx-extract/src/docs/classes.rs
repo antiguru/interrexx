@@ -261,7 +261,7 @@ pub fn method_waits_on(name: &str) -> &'static str {
 }
 
 /// A passage of the reference saying the user cannot construct a class: the
-/// lines it is on, the [`digest`] of its normalised text (the reference holds
+/// lines it is on, the `digest` of its normalised text (the reference holds
 /// the sentence and this table does not repeat it), and the status it
 /// grounds. Any rewording of the cited lines changes the digest, so the
 /// check in `coverage.rs` asks for a re-read.

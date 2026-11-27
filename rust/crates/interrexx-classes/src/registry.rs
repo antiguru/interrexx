@@ -61,7 +61,7 @@ impl ClassRegistry {
         id
     }
 
-    /// Register `id` (already allocated by [`Self::reserve_id`]) as a class
+    /// Register `id` (already allocated by the caller) as a class
     /// named `name`, and build its graph entry -- `~subclass`/bootstrap
     /// construction plus the environment registration, fused into one call
     /// since this crate models no separate install step.
@@ -487,8 +487,8 @@ impl ClassRegistry {
 
     /// True once `scope` is folded into `class`'s current class-behaviour --
     /// see [`ClassGraph::has_scope_at`] for why this, not a method-presence
-    /// check, is what witnesses [`MethodDict::merge`]'s scope-copying half
-    /// of the metaclass merge.
+    /// check, is what witnesses [`MethodDict::merge`](crate::MethodDict::merge)'s
+    /// scope-copying half of the metaclass merge.
     pub fn class_behaviour_has_scope(&self, class: ObjRef, scope: ObjRef) -> bool {
         self.graph
             .has_scope_at(self.graph.class_behaviour_handle(class), scope)

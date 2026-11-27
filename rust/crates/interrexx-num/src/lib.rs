@@ -563,7 +563,7 @@ impl Number {
         Self::parse_bytes(text.as_bytes())
     }
 
-    /// [`parse`], over the bytes a Rexx string actually is.
+    /// [`parse`](Self::parse), over the bytes a Rexx string actually is.
     pub fn parse_bytes(bytes: &[u8]) -> Option<Self> {
         fn is_blank(byte: u8) -> bool {
             byte == b' ' || byte == b'\t'
@@ -833,7 +833,7 @@ impl Number {
     /// Two answers are not arithmetic's: a value whose digits all round away
     /// into a carry is `1` whatever its sign (`-0.999999999999999999999` is
     /// `1`), and the overflow test can miss a wrap
-    /// ([`wrapping_unsigned_value`]), so `21000000000000000000` is
+    /// (`wrapping_unsigned_value`), so `21000000000000000000` is
     /// `2553255926290448384`.
     pub fn int64_value(&self, digits: usize) -> Option<i64> {
         if self.is_zero() {
@@ -900,7 +900,7 @@ impl Number {
         }
     }
 
-    /// [`into_round`] that also refuses a result whose carry took its
+    /// [`into_round`](Self::into_round) that also refuses a result whose carry took its
     /// exponent past the limit, the way arithmetic does (`Overflow`, SYNTAX
     /// 42.901). The builtins that round their target use this.
     pub fn into_round_checked(self, digits: u64) -> Result<Self, ArithError> {
@@ -909,7 +909,7 @@ impl Number {
         Ok(rounded)
     }
 
-    /// [`round_to`] for a value the caller already owns, where "unchanged"
+    /// [`round_to`](Self::round_to) for a value the caller already owns, where "unchanged"
     /// can hand the value straight back instead of copying it.
     pub fn into_round(self, digits: u64) -> Self {
         self.round_change(digits).unwrap_or(self)

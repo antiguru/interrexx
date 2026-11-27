@@ -7,7 +7,7 @@ use std::cell::{Cell, OnceCell, RefCell};
 
 /// One command's redirected streams, as a handler sees them.
 ///
-/// Every address [`Redirector::read_line`] and [`Redirector::read_buffer`]
+/// Every address `Redirector::read_line` and `Redirector::read_buffer`
 /// answer stays valid until this is dropped.
 pub struct Redirector {
     /// Whether the command carried any `WITH` configuration: a handler is

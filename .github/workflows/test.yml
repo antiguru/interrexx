@@ -375,6 +375,13 @@ jobs:
           test ! -e third_party
           test ! -e build && test ! -L build
       - run: cargo test --locked --workspace --doc
+      - name: Rustdoc builds without warnings
+        # Every library's documentation, the published ones and the tool crates', with
+        # rustdoc's warnings (broken links, links to private items) as errors. The deploy
+        # (`deploy-spec.yml`) builds the published ones and fails on the same warnings.
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked --workspace --no-deps --lib
 
   # The `pinning` feature's reports, which the archive above is not built with: the
   # PinReport witnesses (which Rust frames keep an activity pinned where it parks), the

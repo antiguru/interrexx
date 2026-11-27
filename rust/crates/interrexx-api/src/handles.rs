@@ -302,7 +302,7 @@ fn carried(object: ObjRef) -> Option<usize> {
 /// The handles of one interpreter. On a 64-bit target a handle is the
 /// `ObjRef`'s bits and the space holds nothing.
 ///
-/// On a narrower target an `ObjRef` the address cannot carry ([`carried`]) is
+/// On a narrower target an `ObjRef` the address cannot carry (`carried`) is
 /// given a number, and its handle is that number shifted up, so it is even and
 /// never null. A number is held by each [`Table`] that registered the
 /// `ObjRef`, released handles included, and by each holder the interpreter

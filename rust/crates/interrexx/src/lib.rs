@@ -421,7 +421,7 @@ pub struct Outcome {
     pub failure_level_roots: usize,
     /// How many times the run declined to compile a body because it does not
     /// fit the compiled stream's index widths. Such a body raises
-    /// [`Loud::chunk_refused`]; there is no second engine to run it.
+    /// `Loud::chunk_refused`; there is no second engine to run it.
     pub chunks_refused: usize,
     /// The simulation mode's report, for a run in it.
     pub sim: Option<SimReport>,

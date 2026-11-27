@@ -131,7 +131,7 @@ impl<'a> HostRef<'a> {
 
     /// The host lent with `baton`, for a call whose thread holds the baton
     /// only by lends; each lend's host replaces the last
-    /// ([`HostRef::refresh`]).
+    /// (`HostRef::refresh`).
     ///
     /// # Panics
     /// If `baton` was lent no host.
@@ -190,7 +190,7 @@ impl<'a> std::ops::Deref for HostRef<'a> {
 
 impl<'a> std::ops::DerefMut for HostRef<'a> {
     /// # Panics
-    /// As [`HostRef::deref`].
+    /// As `HostRef::deref`.
     #[inline(always)]
     fn deref_mut(&mut self) -> &mut (dyn Host + 'a) {
         debug_assert!(
@@ -1309,7 +1309,7 @@ impl ThreadContext {
     /// Asks the callback in flight on this context, an attached activity's,
     /// to give the baton back once its send has failed, and to send again
     /// (`r[native.threads.attach.deviation.178]`), answering whether it will.
-    /// It will only where the member in flight sends through [`retrying`]:
+    /// It will only where the member in flight sends through `retrying`:
     /// any other member answers its failure, and nothing is asked of it.
     pub fn ask_retry(&self) -> bool {
         let raw = self.home.0.as_ptr();

@@ -117,7 +117,7 @@ pub struct Knobs {
     pub fail_wait: Option<u64>,
     pub clock: ClockOrigin,
     /// The seconds of real time a command or a native call may take on the
-    /// baton, from [`BLOCK_FLOOR`] to [`BLOCK_LIMIT`].
+    /// baton, from `BLOCK_FLOOR` to `BLOCK_LIMIT`.
     pub block: f64,
     /// The maximum delay in clauses of a native pool completion, if enabled.
     pub native_pool: Option<u64>,
@@ -128,7 +128,7 @@ pub struct Knobs {
     pub hash: Option<u64>,
     /// The live ordinal a recording held where it was not 0, which its handle
     /// key was made from in place of the replay's own, so that a trace replays
-    /// with the handles its recording handed out ([`reserve_handle_key`]).
+    /// with the handles its recording handed out (`reserve_handle_key`).
     pub ordinal: Option<std::num::NonZeroU32>,
 }
 
