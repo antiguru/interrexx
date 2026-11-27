@@ -1058,14 +1058,10 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 } => compare(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
                 Step::ParseGuard { pc } => {
-                    let quick = e.load_native(types::I64, layout::QUICK_VALUES);
-                    let quick = e.b.ins().icmp_imm_u(IntCC::NotEqual, quick, 0);
-                    let intermediates = e.load_native(types::I64, layout::INTERMEDIATES);
-                    let quiet = e.b.ins().icmp_imm_u(IntCC::Equal, intermediates, 0);
-                    let ready = e.b.ins().band(quick, quiet);
+                    let tracing = e.load_native(types::I64, layout::PARSE_TRACED);
                     let slow = e.b.create_block();
                     let join = e.b.create_block();
-                    e.b.ins().brif(ready, join, &[], slow, &[]);
+                    e.b.ins().brif(tracing, slow, &[], join, &[]);
                     e.b.switch_to_block(slow);
                     e.slow_op(clause_pc, pc);
                     e.b.ins().jump(join, &[]);
