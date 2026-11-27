@@ -76,9 +76,14 @@ jobs:
         # a reader of the API needs. Rustdoc writes no top-level index, so
         # `api/<version>/index.html` redirects to the `interrexx` crate, whose sidebar lists
         # the others.
+        #
+        # The runner denies warnings (`build.warnings`; nothing in this repository sets it), and
+        # rustdoc's warnings about intra-doc links would then fail the job and block the spec
+        # deploy with it. They are allowed here, not fixed.
         working-directory: rust
         env:
           VERSION: ${{ steps.version.outputs.name }}
+          CARGO_BUILD_WARNINGS: warn
         run: |
           excludes=$(cargo metadata --locked --no-deps --format-version 1 \
             | jq -r '.packages[] | select(.publish == []) | "--exclude=\(.name)"')
