@@ -1,11 +1,17 @@
-name: "Deploy spec"
-# Builds the language specification (spec/, an mdBook) and publishes it to the
-# gh-pages branch under `spec/`, one directory per version: `spec/main/` for
-# every push to main, `spec/<tag>/` for every `v*` tag. Each deploy replaces
-# only its own directory (keep_files), so earlier versions stay. `spec/` also
-# holds `versions.json`, which the book's version picker reads, and an
-# `index.html` that redirects to the newest tag, or to `main/` while there is
-# none. Other documents get their own top-level directory beside `spec/`.
+name: "Deploy documentation"
+# Builds the language specification (spec/, an mdBook) and the API
+# documentation of the workspace's published libraries (rustdoc) and publishes
+# them to the gh-pages branch under `spec/` and `api/`, one directory per
+# version: `<doc>/main/` for every push to main, `<doc>/<tag>/` for every `v*`
+# tag. The deploy starts from the published branch, deletes the two directories
+# of its own version and writes them afresh, so a page for an item that is gone
+# goes too, while the other versions stay as they are. Each document's
+# `versions.json` lists the version directories it has, which is not the same
+# list for both, since tags deployed before the API documentation have no
+# `api/` directory; the book's version picker reads `spec/versions.json`.
+# `spec/index.html` and `api/index.html` redirect to that document's newest
+# tag, or to `main/` while it has none. Other documents get their own top-level
+# directory beside these.
 on:
   push:
     branches:
@@ -18,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: deploy-spec
+  group: deploy-docs
   cancel-in-progress: false
 
 env:
@@ -26,7 +32,7 @@ env:
 
 jobs:
   deploy:
-    name: Build and publish the spec
+    name: Build and publish the documentation
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
@@ -52,46 +58,86 @@ jobs:
           else
             echo "name=main" >> "$GITHUB_OUTPUT"
           fi
-      - name: Build the book
-        run: mdbook build spec -d "$RUNNER_TEMP/site/spec/${{ steps.version.outputs.name }}"
-      - name: Update the version list and the root redirect
+      - name: Start from the published site
         env:
           VERSION: ${{ steps.version.outputs.name }}
         run: |
           site="$RUNNER_TEMP/site"
-          spec="$site/spec"
+          mkdir -p "$site"
           if git fetch --depth=1 origin gh-pages 2>/dev/null; then
-            git show FETCH_HEAD:spec/versions.json > "$RUNNER_TEMP/old.json" 2>/dev/null || echo '[]' > "$RUNNER_TEMP/old.json"
-          else
-            echo '[]' > "$RUNNER_TEMP/old.json"
+            git archive FETCH_HEAD | tar -x -C "$site"
           fi
-          # main first, then tags newest first by version order.
-          all=$({ jq -r '.[]' "$RUNNER_TEMP/old.json"; echo "$VERSION"; } | sort -u)
-          { printf '%s\n' "$all" | grep -x main || true
-            printf '%s\n' "$all" | grep -vx main | sort -rV || true
-          } | jq -R . | jq -s . > "$spec/versions.json"
-          latest=$(jq -r '[.[] | select(. != "main")][0] // "main"' "$spec/versions.json")
-          cat > "$spec/index.html" <<EOF
+          rm -rf "$site/spec/$VERSION" "$site/api/$VERSION"
+      - name: Build the book
+        run: mdbook build spec -d "$RUNNER_TEMP/site/spec/${{ steps.version.outputs.name }}"
+      - name: Build the API documentation
+        # Libraries only, and only of the crates that are published: the binaries' pages and
+        # the `publish = false` tool crates (bench, oracle, extract, spec, upstream) add nothing
+        # a reader of the API needs. Rustdoc writes no top-level index, so
+        # `api/<version>/index.html` redirects to the `interrexx` crate, whose sidebar lists
+        # the others.
+        working-directory: rust
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          excludes=$(cargo metadata --locked --no-deps --format-version 1 \
+            | jq -r '.packages[] | select(.publish == []) | "--exclude=\(.name)"')
+          # A restored cache could hold pages of crates this run leaves out.
+          rm -rf target/doc
+          # shellcheck disable=SC2086
+          cargo doc --locked --workspace $excludes --no-deps --lib
+          api="$RUNNER_TEMP/site/api/$VERSION"
+          mkdir -p "$(dirname "$api")"
+          cp -r target/doc "$api"
+          cat > "$api/index.html" <<EOF
           <!doctype html>
           <meta charset="utf-8">
-          <title>The interrexx Language Specification</title>
-          <meta http-equiv="refresh" content="0; url=${latest}/">
-          <link rel="canonical" href="${latest}/">
-          <p><a href="${latest}/">The interrexx Language Specification</a></p>
+          <title>interrexx API documentation</title>
+          <meta http-equiv="refresh" content="0; url=interrexx/">
+          <link rel="canonical" href="interrexx/">
+          <p><a href="interrexx/">interrexx API documentation</a></p>
           EOF
-          # The site root lists the documents; the spec is the only one so far.
+      - name: Update the version lists and the redirects
+        run: |
+          site="$RUNNER_TEMP/site"
+          # Each document's versions are the directories it has: main first, then tags newest
+          # first by version order.
+          for doc in spec api; do
+            all=$(find "$site/$doc" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -u)
+            { printf '%s\n' "$all" | grep -x main || true
+              printf '%s\n' "$all" | grep -vx main | sort -rV || true
+            } | jq -R . | jq -s . > "$site/$doc/versions.json"
+          done
+          redirect() { # file, title, target
+            cat > "$1" <<EOF
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>$2</title>
+          <meta http-equiv="refresh" content="0; url=$3/">
+          <link rel="canonical" href="$3/">
+          <p><a href="$3/">$2</a></p>
+          EOF
+          }
+          latest() { jq -r '[.[] | select(. != "main")][0] // "main"' "$site/$1/versions.json"; }
+          redirect "$site/spec/index.html" "The interrexx Language Specification" "$(latest spec)"
+          redirect "$site/api/index.html" "interrexx API documentation" "$(latest api)"
+          # The site root lists the documents.
           cat > "$site/index.html" <<EOF
           <!doctype html>
           <meta charset="utf-8">
           <title>interrexx documentation</title>
-          <meta http-equiv="refresh" content="0; url=spec/">
-          <p><a href="spec/">The interrexx Language Specification</a></p>
+          <ul>
+          <li><a href="spec/">The interrexx Language Specification</a></li>
+          <li><a href="api/">interrexx API documentation</a></li>
+          </ul>
           EOF
           touch "$site/.nojekyll"
-          cat "$spec/versions.json"
+          cat "$site/spec/versions.json" "$site/api/versions.json"
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
+          # The whole branch is replaced with the site, which holds what the branch had except
+          # this version's two directories.
           publish_dir: ${{ runner.temp }}/site
-          keep_files: true
+          keep_files: false
