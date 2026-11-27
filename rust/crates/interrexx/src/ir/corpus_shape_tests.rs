@@ -68,6 +68,7 @@ impl Root {
             | Op::Signal { .. }
             | Op::UseArg(..)
             | Op::ParseBegin { .. }
+            | Op::ParseStore { .. }
             | Op::ParseRun { .. }
             | Op::Clause { .. }
             | Op::CallingClause { .. }

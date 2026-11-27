@@ -188,13 +188,14 @@ in~linein(.nil) 93.963
 
 r[class.commandinput.deviation.183]
 An object whose string conversion gives exactly `0` or `1` supplies that count
-to `lineIn`. ooRexx raises `SYNTAX 93.963` for such an object. A converted
-count with any other spelling, or a `STRING` answer with no string value,
-raises the same argument error as an invalid string.
+to `lineIn`, the default string value that stands in for a `STRING` answer
+with no string value ([the answer rule](r:conv.string.answer)) included. ooRexx
+raises `SYNTAX 93.963` for such an object. A converted count with any other
+spelling raises the same argument error as an invalid string.
 
 ```rexx
 x = .commandhandler~register('spec_ci_linein_count', .reader~new)
-address spec_ci_linein_count 'go' with input using (.array~of('one', 'two'))
+address spec_ci_linein_count 'go' with input using (.array~of('one', 'two', 'three'))
 x = .commandhandler~deregister('spec_ci_linein_count')
 ::class reader inherit CommandHandler
 ::method command
@@ -202,6 +203,7 @@ x = .commandhandler~deregister('spec_ci_linein_count')
   in = caller~input
   say '<'in~lineIn(, .zeroCount~new)'>'
   say in~lineIn(, .oneCount~new)
+  say in~lineIn(, .namedCount~new)
   signal on syntax name bad
   say in~lineIn(, .invalidCount~new)
   return 0
@@ -215,6 +217,11 @@ bad:
 ::class oneCount
 ::method string
   return '1'
+::class namedCount
+::method string
+  return .nil
+::method objectName
+  return '1'
 ::class invalidCount
 ::method string
   return .object~new
@@ -223,8 +230,9 @@ bad:
 ```output
 <>
 one
-93.963
 two
+93.963
+three
 ```
 
 r[class.commandinput.charin]

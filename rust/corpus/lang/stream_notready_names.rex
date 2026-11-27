@@ -3,7 +3,9 @@
    rejects a directory as it rejects a missing file. The condition carries the
    name as written as DESCRIPTION, the Stream object as ADDITIONAL, and the
    value the call answers as RESULT. LINEOUT and CHAROUT with no data run the
-   write setup before they close, which creates a missing file. */
+   write setup before they close, which creates a missing file. Whether such a
+   NOTREADY is PROPAGATED is unspecified (r[cond.information.propagated]), so
+   it is not shown. */
 names = .array~of('/', '*', 'non-existing-file', 'bad' || '80'x || 'name', 'nodir/x')
 ops = .array~of('chars', 'lines', 'linesC', 'linein', 'lineout', 'charout', 'close')
 call on notready name caught
@@ -51,5 +53,5 @@ caught:
   hits = hits + 1
   o = condition('O')
   seen = 'D=' || c2x(condition('D')) 'A=' || o~additional~class~id || ':' || c2x(o~additional~string),
-    'R=[' || o~result || '] I=' || o~instruction 'P=' || o~propagated
+    'R=[' || o~result || '] I=' || o~instruction
   return

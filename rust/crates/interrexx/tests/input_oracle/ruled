@@ -181,3 +181,117 @@ out> removed events: 1
 out> smreq loaded
 out> unchanged smreq.cls
 out> unchanged events: 2
+
+run
+lang/native_routine_argument_marshalling.rex
+----
+rc> 168
+out> beep(.object~new) -> 88.903
+out> beep('abc') -> 88.903
+out> beep(1.5) -> 88.903
+out> beep(40, 'x') -> 88.903
+out> beep(1e20) -> 88.903
+out> beep() -> 88.901
+out> beep(40) -> 88.901
+out> beep(1, 'x') -> 88.903
+out> beep(1, 1) -> 88.907
+out> beep(40, 70000) -> 88.907
+out> beep('4E1', 0) -> 
+out> beep(' 40.0 ', 0) -> 
+out> filespec('name', o) -> 88.909
+out> filespec(o, 'x') -> 88.909
+out> filespec('name', .k~new) -> 88.909
+out> filespec('n') -> 88.901
+out> filespec(.object~new) -> 88.909
+out> filespec('Z', .object~new) -> 88.909
+out> filespec('zz', 'a') -> 40.904
+out> filespec('', 'a') -> 40.904
+out> filespec('n', 'a/b'||'00'x||'c/d') -> 62
+out> filespec('e'||'00'x, 'a.b') -> 62
+out> directory(o) -> 88.909
+out> directory(.k~new) -> 88.909
+out> unwrapped
+err>        *-* Built-in routine "FILESPEC".
+err>     28 *-* say filespec('name', o)
+err> Error 88 running <dir>/native_routine_argument_marshalling.rex line 28:  Invalid argument.
+err> Error 88.909:  Argument 2 must have a string value.
+
+run
+lang/internal_routine_frame.rex
+----
+rc> 168
+out> before    leaf.txt
+out> 1
+err>        *-* Built-in routine "FILESPEC".
+err>     10 *-* say filespec('D')
+err> Error 88 running <dir>/internal_routine_frame.rex line 10:  Invalid argument.
+err> Error 88.901:  Missing argument 2.
+
+run
+lang/library_routine_site_add_routine_filespec.rex
+----
+rc> 0
+out> internal 1 b.c
+out> internal 2 added N
+
+run
+lang/library_routine_site_after_add_package_filespec.rex
+----
+rc> 0
+out> internal 1 b.c
+out> internal 2 pk N
+
+run
+lang/library_routine_site_twice_security_filespec.rex
+----
+rc> 0
+out> declined 1
+out> event CALL FILESPEC
+out> internal b.c
+out> event CALL FILESPEC
+out> internal c
+
+run
+lang/trapped_condition_native_levels_filespec.rex
+----
+rc> 0
+out> 88.901 10 1 trapped_condition_native_levels_filespec.rex 3
+out>       10 *-*   x = filespec('N')
+out>        5 *-* call t3
+out>   ROUTINE FILESPEC The NIL object 0 1
+out>   INTERNALCALL T3 10 0 0
+out>   PROGRAM <dir>/trapped_condition_native_levels_filespec.rex 5 0 0
+
+run
+lang/debug_call_return.rex
+----
+rc> 0
+out> in s
+out> main
+err>        +++ "LINUX COMMAND <dir>/debug_call_return.rex"
+err>      4 *-* x = 1
+err>        >>>   "1"
+err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
+err> T1
+err>      5 *-* say 'main'
+err>        >>>   "main"
+err> T2
+err>      6 *-* exit
+
+run
+lang/scope_debug_pause_routine.rex
+----
+rc> 0
+out> in s
+out> main
+err>        +++ "LINUX COMMAND <dir>/scope_debug_pause_routine.rex"
+err>      5 *-* x = 1
+err>        >>>   "1"
+err> +++ Interactive tracing is on; TRACE OFF ends it and an empty line continues.
+err>        >I> Routine "S", package "<dir>/scope_debug_pause_routine.rex".
+err>        <I< Routine "S", package "<dir>/scope_debug_pause_routine.rex".
+err> T1
+err>      6 *-* say 'main'
+err>        >>>   "main"
+err> T2
+err>      7 *-* exit

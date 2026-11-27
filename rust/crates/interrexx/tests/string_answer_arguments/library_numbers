@@ -1,0 +1,42 @@
+# A TimeSpan number argument whose STRING answer is an array, a buffer, a string,
+# an object whose REQUEST answers a string, a Directory, an object whose REQUEST
+# answers .nil, and an object whose MAKESTRING answers a string, read as a
+# builtin reads it (r[class.index.string], r[conv.string.answer]); the answers
+# with no string value read as the default name. The oracle's answers.
+program
+do a over .array~of(.array~of(5), .mutablebuffer~new('5'), '5', .r~new, .directory~new, .n~new, .q~new)
+  .x~ans = a
+  say try()
+end
+exit
+try: procedure
+  signal on syntax name s
+  t = .timespan~new(.x~new)
+  return 'ok' t
+s: return 'err' condition('o')~code condition('o')~additional~lastItem
+::class x
+::attribute ans class
+::method string
+  return .x~ans
+::class r
+::method request
+  return '5'
+::class n
+::method string
+  return .nil
+::method objectname
+  return '9'
+::class q
+::method makestring
+  return '3'
+----
+rc 0
+[stdout]
+ok 00:00:00.000005
+ok 00:00:00.000005
+ok 00:00:00.000005
+ok 00:00:00.000005
+err 88.903 a X
+err 88.903 a X
+ok 00:00:00.000003
+[stderr]
