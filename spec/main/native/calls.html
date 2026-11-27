@@ -340,7 +340,9 @@ that <code>RAISE SYNTAX</code> with that number and those substitutions would gi
 result of the call is not delivered. The fixture's routine raises <code>40.900</code> and
 then sets a variable of the caller, which shows that it ran on; its method
 raises <code>93.900</code>. An error that nothing traps ends the program as any <code>SYNTAX</code>
-error does, and the traceback names the routine.</p>
+error does, and the traceback names the routine. A number that no error has
+raises <code>SYNTAX 98.941</code>, as <a href="../instructions/raise.html#r-instr.raise.number">RAISE SYNTAX</a> with it would,
+naming the number as the major number, a point and the subcode.</p>
 <pre><code class="language-rexx">after = 'unset'
 signal on syntax name s
 say fxraise('boom')
@@ -360,6 +362,24 @@ m: say condition('o')~code '['condition('o')~additional[1]']'
 ::requires 'specfixture' LIBRARY
 </code></pre>
 <pre><code class="language-output rc=216"></code></pre>
+<pre><code class="language-rexx">do number over .array~of(40999, 93009, 2001, 41001)
+  say number '=&gt;' raised(number)
+end
+exit
+raised: procedure
+  signal on syntax
+  call fxraisenumber arg(1)
+  return 'nothing'
+syntax: o = condition('o')
+  if o~code == 98.941 then return o~code o~additional[1]
+  return o~code
+::requires 'specfixture' LIBRARY
+</code></pre>
+<pre><code class="language-output">40999 =&gt; 98.941 40.999
+93009 =&gt; 98.941 93.9
+2001 =&gt; 98.941 2.1
+41001 =&gt; 41.1
+</code></pre>
 <div class="rule" id="r-native.calls.condition"><a href="#r-native.calls.condition">[native.calls.condition]</a></div>
 <p>A routine may raise a condition by name, with a description and an extra
 object. The routine's result is delivered and the clause that called it goes
@@ -376,6 +396,44 @@ h: say 'handler' condition('c') condition('d') condition('a') condition('i')
 <pre><code class="language-output">returned
 handler USER N2ZQFOO desc extra CALL
 after
+</code></pre>
+<div class="rule" id="r-native.calls.condition-object"><a href="#r-native.calls.condition-object">[native.calls.condition-object]</a></div>
+<p>A routine may also raise a condition from a condition object, a Directory
+whose <code>CONDITION</code> entry names it and whose other entries, such as
+<code>DESCRIPTION</code>, are those of the condition object the condition gets. It is
+raised as <a href="#r-native.calls.condition">the rule above</a> says. A <code>SYNTAX</code>
+condition is raised by its <code>CODE</code>, and a <code>CODE</code> of the form of <a href="../instructions/raise.html#r-instr.raise.number">the number of
+RAISE SYNTAX</a> that no error has raises <code>SYNTAX 98.941</code>,
+as RAISE SYNTAX does, with the same <code>ADDITIONAL</code> item.</p>
+<pre><code class="language-rexx">call on user n2zqobj name h
+d = .directory~new
+d~condition = 'USER N2ZQOBJ'
+d~description = 'desc'
+say fxconditionobject(d)
+do code over .array~of('41.1', '93.9', '40.999', '2.1')
+  d = .directory~new
+  d~condition = 'SYNTAX'
+  d~code = code
+  say code '=&gt;' raised(d)
+end
+exit
+h: say 'handler' condition('c') condition('d')
+  return
+raised: procedure
+  signal on syntax
+  call fxconditionobject arg(1)
+  return 'nothing'
+syntax: o = condition('o')
+  if o~code == 98.941 then return o~code o~additional[1]
+  return o~code
+::requires 'specfixture' LIBRARY
+</code></pre>
+<pre><code class="language-output">returned
+handler USER N2ZQOBJ desc
+41.1 =&gt; 41.1
+93.9 =&gt; 98.941 93.9
+40.999 =&gt; 98.941 40.999
+2.1 =&gt; 98.941 2.1
 </code></pre>
 <div class="rule" id="r-native.calls.send"><a href="#r-native.calls.send">[native.calls.send]</a></div>
 <p>A routine may send a message to an object and receive its result. A condition

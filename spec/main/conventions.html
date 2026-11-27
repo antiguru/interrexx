@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="conventions"><a class="header" href="#conventions">Conventions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D30, D109</p>
+<p class="deviations">Deviations: D109</p>
 <p>The rules on this page hold on every page that links to them. A builtin
 page states what its arguments are (a string, a position, a length, a pad)
 and links here for what that means, instead of restating it.</p>
@@ -206,17 +206,22 @@ say c2x(upper('61007a'x))
 <div class="rule" id="r-conv.string.object"><a href="#r-conv.string.object">[conv.string.object]</a></div>
 <p>An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. The
-replacement is found by sending <code>REQUEST('STRING')</code>. If it supplies a value
-that can be read as a string, that value supplies the replacement. Otherwise
-the interpreter sends <a href="classes/object.html#r-class.object.string"><code>STRING</code></a>. It can use the
-answer's own string value or ask that answer once for a string through
-<code>REQUEST('STRING')</code>. If neither supplies a string, the interpreter uses the
-original object's name. An unusable or missing <code>OBJECTNAME</code> answer leaves
-the object's built-in default name. An absent return value and <code>.nil</code>
-both count as failing to supply a string.
-The <a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends <code>MAKESTRING</code> when
-the object has that method. A class that overrides <code>REQUEST</code> controls that
-step and can forward to its <code>MAKESTRING</code>. An instance of
+replacement is found by sending the object the message <code>REQUEST</code> with the
+argument <code>STRING</code>, and nothing else is sent first. When the answer is a string,
+it is the replacement. When the answer is <code>.nil</code> or another object that is not
+a string, the replacement is the answer of the object's public
+<a href="classes/object.html#r-class.object.string"><code>STRING</code></a> method, and when that answer has no string
+value either, <a href="#r-conv.string.answer">the answer rule</a> gives the replacement. The
+<a href="classes/object.html#r-class.object.request"><code>REQUEST</code></a> of <code>Object</code> sends the object <code>MAKESTRING</code>
+when it has one and answers what that answers, and answers <code>.nil</code> when it has
+none. So an object with a <code>MAKESTRING</code> method is replaced by its answer, as for
+an <a href="classes/array.html#r-class.array.makestring"><code>Array</code></a> or a
+<a href="classes/mutablebuffer.html#r-class.mutablebuffer.makestring"><code>MutableBuffer</code></a>, and an object with only a
+<code>STRING</code> method by the answer of that method. A class that declares its own
+<code>REQUEST</code> method decides the answer itself: its <code>MAKESTRING</code> method is not used
+unless its <code>REQUEST</code> sends it, and a <code>REQUEST</code> that answers a string is used
+even when the class has a <code>STRING</code> method. A <code>MAKESTRING</code> that answers <code>.nil</code>
+or an object that is not a string is like a <code>REQUEST</code> that does. An instance of
 a subclass of <code>String</code> is a string here, whether it is passed directly or is
 what <code>REQUEST</code> answers: the builtin works on its own characters, and no message
 is sent to it for that (<a href="classes/string.html#r-class.string.deviation.109">Deviation 109</a>). A
@@ -325,6 +330,111 @@ makestring
 1
 abab 3 x2
 97.2
+</code></pre>
+<div class="rule" id="r-conv.string.answer"><a href="#r-conv.string.answer">[conv.string.answer]</a></div>
+<p>An answer that has no string value counts as no answer, so that the
+conversion of an object always ends in a string and never raises an error of
+its own. The answer of a <code>STRING</code> method has a string value when it is a
+string, a number or an instance of a subclass of <code>String</code>, when it is an array
+or an instance of a subclass of <code>Array</code>, whose items joined by a newline are
+its string value, or a <code>MutableBuffer</code> or an instance of a subclass of it,
+whatever <code>MAKESTRING</code> such a subclass has. An instance of a subclass of <code>Stem</code>
+has the one its default value would have as such an answer, or its name when
+it has no default value, whatever <code>MAKESTRING</code> the subclass has; where following
+default values from one such instance to the next comes back to one already
+passed, the answer has none. An instance of
+<code>File</code>, <code>DateTime</code>, <code>TimeSpan</code> or <code>TraceObject</code>, an instance of any other class
+that a program defines, other than a subclass of <code>Queue</code>, and a class object
+have the one that the object's <code>REQUEST('STRING')</code> answers. An instance of any other
+class of the interpreter or of a package it provides has none, whatever its
+<code>REQUEST</code> answers: a <code>Stem</code>, a <code>VariableReference</code>, a <code>StackFrame</code> and a
+<code>CircularQueue</code> answer one there, and the others answer <code>.nil</code>. An
+instance of a subclass of <code>Queue</code>, <code>CircularQueue</code> included, has none either,
+even when the subclass has a <code>MAKESTRING</code> of its own. The answer of an
+<code>OBJECTNAME</code> method of the object's own, of a <code>MAKESTRING</code> method and of a
+<code>REQUEST</code> method of the object's own has one when it is one of the first five;
+no message is sent to it. Any other answer, such as <code>.nil</code>, a <code>Directory</code>, an
+<code>Object</code> or the object itself, has none. Where the
+<code>STRING</code> answer has none, the object's string value is the one the <code>STRING</code>
+method of <code>Object</code> answers for it, its <code>OBJECTNAME</code>. Where the <code>OBJECTNAME</code>
+answer has none, it is the object's default name as
+<a href="classes/object.html#r-class.object.defaultname">the default name rule</a> gives it, whatever name
+was set on the object and whatever its own <code>DEFAULTNAME</code> answers. Where the
+<code>MAKESTRING</code> answer, or the answer of a <code>REQUEST</code> method of the object's own,
+has none, or a <code>REQUEST</code> method answers nothing, the object has not
+converted, and its <code>STRING</code> method is sent as
+<a href="#r-conv.string.object">the string rule</a> says. Every clause and every argument
+of a builtin reads that string as it reads any string: a builtin checks it as
+the argument's kind requires, <code>PARSE VALUE</code> parses it, and an operator, a
+comparison and a truth value read it. A <code>NOSTRING</code> trap takes the conversion
+as it takes that of any object converted by its <code>STRING</code> method, with that
+string as its description (<a href="conditions/nostring.html#r-cond.nostring.information">the information rule</a>).</p>
+<pre><code class="language-rexx">o = .weird~new
+say length(o) words(o) 'a'||o
+parse value o with p q
+say q ('a WEIRD' == o) changestr('E', 'xEy', o)
+signal on syntax name s
+say left('abc', o)
+s: say condition('o')~code
+say ('a' || .named~new) ('a' || .badname~new) ('a' || .made~new)
+say .stemmed~new '|' .substemmed~new '|' .queued~new
+say .stemmaker~new '|' .stemrequest~new '|' length(.requester~new)
+t = .table~new; t['OBJECTNAME'] = 'return .nil'
+say .object~enhanced(t) '|' .unnamed
+::class weird
+::method string
+  return .directory~new
+::class named
+::method string
+  return .nil
+::method objectname
+  return 'NAMED'
+::class badname
+::method objectname
+  return .directory~new
+::class made
+::method string
+  return .maker~new
+::class maker
+::method makestring
+  return 'made'
+::class stemmed
+::method string
+  return .stem~new('NM')
+::class substemmed
+::method string
+  return .substem~new('SN')
+::class substem subclass stem
+::class queued
+::method string
+  return .madequeue~new
+::class madequeue subclass queue
+::method makestring
+  return 'MQ'
+::class stemmaker
+::method makestring
+  return .stem~new('Q')
+::class stemrequest
+::method request
+  return .stem~new('Q')
+::method string
+  return 'own'
+::class requester
+::method request
+  return 'rqq'
+::class unnamed
+::method objectname class
+  return .nil
+::method string class
+  return .nil
+</code></pre>
+<pre><code class="language-output">7 2 aa WEIRD
+WEIRD 1 xa WEIRDy
+40.12
+aNAMED aa BADNAME amade
+a STEMMED | SN | a QUEUED
+a STEMMAKER | own | 3
+enhanced Object | The UNNAMED class
 </code></pre>
 <div class="rule" id="r-conv.string.whitespace"><a href="#r-conv.string.whitespace">[conv.string.whitespace]</a></div>
 <p>Whitespace is the blank, <code>'20'x</code>, and the horizontal tab, <code>'09'x</code>, and no
@@ -600,8 +710,8 @@ objects, by sending them <code>STRING</code>, is part of its checks: a call that
 fault sends <code>STRING</code> to each such argument, from left to right, before its
 other checks. When the checks of one operation, which is one operator, one
 call of a builtin or a method, or the checks of one instruction, find one
-fault, the operation raises the error that the rule for that fault gives. When
-they find more
+fault, the operation raises the error that the rule for that fault gives.
+When they find more
 than one, a wrong number of arguments or an omitted required argument among
 them, the operation raises the error of one of them, and which one is
 unspecified. Whether the checks after the first fault found are made, and so
@@ -734,112 +844,6 @@ with no blanks added or removed.</p>
 <pre><code class="language-output">[bc] [ a ]
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
-<div class="rule" id="r-conv.string.deviation.30"><a href="#r-conv.string.deviation.30">[conv.string.deviation.30]</a></div>
-<p>The <a href="#r-conv.string.object">string conversion rule</a> uses the object's name
-when its <code>STRING</code> method provides no usable answer. The ooRexx revision
-pinned for comparisons can give inconsistent results or crash in this case.
-ooRexx r13624 corrected that behavior.</p>
-<pre><code class="language-rexx">o = .weird~new
-say upper(o) length(o)
-say pos(o, 'x a WEIRD')
-signal on syntax name bad
-say 'x a WEIRD'~pos(o)
-bad: say condition('o')~code
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">A WEIRD 7
-3
-88.909
-</code></pre>
-<div class="rule" id="r-conv.string.builtin-argument"><a href="#r-conv.string.builtin-argument">[conv.string.builtin-argument]</a></div>
-<p>Builtins that use the <a href="#r-conv.string.object">full conversion</a> use the
-resulting text at each string position, including where the text is the
-object's name. A method or native routine that requires a string through
-<code>REQUEST('STRING')</code> alone raises <code>SYNTAX 88.909</code> if the argument supplies no
-usable value. The error identifies the position in that method or routine's
-argument list.</p>
-<div class="rule" id="r-conv.string.argument-kind"><a href="#r-conv.string.argument-kind">[conv.string.argument-kind]</a></div>
-<p>An argument interpreted as a number, position, option, or other constrained
-value is checked in that role after conversion. For example, a nonnumeric
-default name fails the normal numeric check. Where several checks fail,
-<a href="#r-conv.error.precedence">the precedence rule</a> applies.</p>
-<pre><code class="language-rexx">o = .weird~new
-a = .array~of('a', 'b')
-m = .array~new(2, 2)
-l = .list~of('a', 'b')
-q = .queue~of('a', 'b')
-call try '.array~new(o)'
-call try '.array~new(1, o)'
-call try 'a~at(o)'
-call try 'a[o]'
-call try 'a~section(o)'
-call try 'a~dimension(o)'
-call try 'm~at(o, 1)'
-call try 'l~insert("x", o)'
-call try 'l~section(o)'
-call try 'q~insert("x", o)'
-say l~allItems~makeString('L', ',') q~allItems~makeString('L', ',')
-say a~at(.numberText~new) q~at(.numberText~new)
-call try '.datetime~fromBaseDate(o)'
-call try '.datetime~fromTicks(o)'
-call try '.datetime~new(o)'
-d = .datetime~new(1, 0)
-call try 'd~addMicroseconds(o)'
-call try 'd~addYears(o)'
-call try '.timespan~new(o)'
-call try '.timespan~new(o, 0)'
-call try '.timespan~new(o, 0, 0, 0)'
-call try '.timespan~fromSeconds(o)'
-call try '.timespan~fromMicroseconds(o)'
-t = .timespan~new(1)
-call try 't~addMicroseconds(o)'
-call try 't * o'
-call try 't % o'
-call try 't // o'
-exit
-try:
-  signal on syntax name bad
-  interpret 'r =' arg(1)
-  say arg(1) '=&gt; ok'
-  return
-bad: say arg(1) '=&gt;' condition('o')~code
-  return
-::class weird
-::method string
-  return .object~new
-::class numberText
-::method string
-  return '2'
-</code></pre>
-<pre><code class="language-output">.array~new(o) =&gt; 93.906
-.array~new(1, o) =&gt; 93.906
-a~at(o) =&gt; 93.907
-a[o] =&gt; 93.907
-a~section(o) =&gt; 93.907
-a~dimension(o) =&gt; 93.907
-m~at(o, 1) =&gt; 93.924
-l~insert("x", o) =&gt; 93.918
-l~section(o) =&gt; 93.918
-q~insert("x", o) =&gt; 93.907
-a,b a,b
-b b
-.datetime~fromBaseDate(o) =&gt; 88.918
-.datetime~fromTicks(o) =&gt; 88.918
-.datetime~new(o) =&gt; 40.19
-d~addMicroseconds(o) =&gt; 88.902
-d~addYears(o) =&gt; 88.903
-.timespan~new(o) =&gt; 88.903
-.timespan~new(o, 0) =&gt; 88.907
-.timespan~new(o, 0, 0, 0) =&gt; 88.904
-.timespan~fromSeconds(o) =&gt; 88.902
-.timespan~fromMicroseconds(o) =&gt; 88.902
-t~addMicroseconds(o) =&gt; 88.902
-t * o =&gt; 41.1
-t % o =&gt; 41.1
-t // o =&gt; 41.1
-</code></pre>
 <div class="rule" id="r-conv.string.deviation.109"><a href="#r-conv.string.deviation.109">[conv.string.deviation.109]</a></div>
 <p>A builtin that takes a string works on the own characters of an instance of a
 subclass of <code>String</code>, and sends it none of <code>REQUEST</code>, <code>MAKESTRING</code> and

@@ -339,11 +339,12 @@ in~linein(.nil) 93.963
 </code></pre>
 <div class="rule" id="r-class.commandinput.deviation.183"><a href="#r-class.commandinput.deviation.183">[class.commandinput.deviation.183]</a></div>
 <p>An object whose string conversion gives exactly <code>0</code> or <code>1</code> supplies that count
-to <code>lineIn</code>. ooRexx raises <code>SYNTAX 93.963</code> for such an object. A converted
-count with any other spelling, or a <code>STRING</code> answer with no string value,
-raises the same argument error as an invalid string.</p>
+to <code>lineIn</code>, the default string value that stands in for a <code>STRING</code> answer
+with no string value (<a href="../conventions.html#r-conv.string.answer">the answer rule</a>) included. ooRexx
+raises <code>SYNTAX 93.963</code> for such an object. A converted count with any other
+spelling raises the same argument error as an invalid string.</p>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_ci_linein_count', .reader~new)
-address spec_ci_linein_count 'go' with input using (.array~of('one', 'two'))
+address spec_ci_linein_count 'go' with input using (.array~of('one', 'two', 'three'))
 x = .commandhandler~deregister('spec_ci_linein_count')
 ::class reader inherit CommandHandler
 ::method command
@@ -351,6 +352,7 @@ x = .commandhandler~deregister('spec_ci_linein_count')
   in = caller~input
   say '&lt;'in~lineIn(, .zeroCount~new)'&gt;'
   say in~lineIn(, .oneCount~new)
+  say in~lineIn(, .namedCount~new)
   signal on syntax name bad
   say in~lineIn(, .invalidCount~new)
   return 0
@@ -364,14 +366,20 @@ bad:
 ::class oneCount
 ::method string
   return '1'
+::class namedCount
+::method string
+  return .nil
+::method objectName
+  return '1'
 ::class invalidCount
 ::method string
   return .object~new
 </code></pre>
 <pre><code class="language-output">&lt;&gt;
 one
-93.963
 two
+93.963
+three
 </code></pre>
 <div class="rule" id="r-class.commandinput.charin"><a href="#r-class.commandinput.charin">[class.commandinput.charin]</a></div>
 <p><code>charIn(start, count)</code> answers the next <code>count</code> characters of the text that

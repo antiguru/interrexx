@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="classes"><a class="header" href="#classes">Classes</a></h1>
 <p class="references">rexxref: Builtin Classes; Objects and Classes &gt; Mixin Classes; Objects and Classes &gt; Overview of Classes Provided by Rexx; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; defaultName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName=; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; string</p>
-<p class="deviations">Deviations: D30, D32, D36, D109</p>
+<p class="deviations">Deviations: D32, D36, D109</p>
 <p>This chapter specifies the classes that every program can use without
 declaring them: the classes of the class library. It has a page for each
 class, or for a few classes that belong together, and a page, <a href="methods.html">the method
@@ -893,8 +893,13 @@ of <code>String</code> is a string, and its string value is its own characters, 
 <code>makeString</code>, <code>request</code> and <code>string</code> it declares: no message is sent to it for
 that
 (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). A <code>string</code> method that
-answers an object that is not a string is covered by
-<a href="#r-class.index.deviation.30">Deviation 30</a>.</p>
+answers an object with no string value counts as one that answered nothing,
+as <a href="../conventions.html#r-conv.string.answer">the answer rule</a> says.
+An argument that a method reads as a number then reads as the object's
+default string value, which is not a number, so the method's own check of the
+argument raises its error, as for any other value that is not a number. So
+does a size or an index of an <code>Array</code>, a <code>List</code> or a <code>Queue</code>, and a number
+that a method of <code>DateTime</code> or <code>TimeSpan</code> creates an instance from or adds.</p>
 <pre><code class="language-rexx">a = .plain~new
 say a '|' a'!' '|' a~string
 a~objectName = 'named'
@@ -978,6 +983,81 @@ bad: say arg(1) '=&gt;' condition('o')~code
 "x"~"||"(.askstr~new) =&gt; x-
 filespec("N", .asknamed~new) =&gt; q
 </code></pre>
+<pre><code class="language-rexx">o = .weird~new
+a = .array~of('a', 'b')
+m = .array~new(2, 2)
+l = .list~of('a', 'b')
+q = .queue~of('a', 'b')
+call try '.array~new(o)'
+call try '.array~new(1, o)'
+call try 'a~at(o)'
+call try 'a[o]'
+call try 'a~section(o)'
+call try 'a~dimension(o)'
+call try 'm~at(o, 1)'
+call try 'l~insert("x", o)'
+call try 'l~section(o)'
+call try 'q~insert("x", o)'
+say l~allItems~makeString('L', ',') q~allItems~makeString('L', ',')
+say a~at(.numberText~new) q~at(.numberText~new)
+call try '.datetime~fromBaseDate(o)'
+call try '.datetime~fromTicks(o)'
+call try '.datetime~new(o)'
+d = .datetime~new(1, 0)
+call try 'd~addMicroseconds(o)'
+call try 'd~addYears(o)'
+call try '.timespan~new(o)'
+call try '.timespan~new(o, 0)'
+call try '.timespan~new(o, 0, 0, 0)'
+call try '.timespan~fromSeconds(o)'
+call try '.timespan~fromMicroseconds(o)'
+t = .timespan~new(1)
+call try 't~addMicroseconds(o)'
+call try 't * o'
+call try 't % o'
+call try 't // o'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class weird
+::method string
+  return .object~new
+::class numberText
+::method string
+  return '2'
+</code></pre>
+<pre><code class="language-output">.array~new(o) =&gt; 93.906
+.array~new(1, o) =&gt; 93.906
+a~at(o) =&gt; 93.907
+a[o] =&gt; 93.907
+a~section(o) =&gt; 93.907
+a~dimension(o) =&gt; 93.907
+m~at(o, 1) =&gt; 93.924
+l~insert("x", o) =&gt; 93.918
+l~section(o) =&gt; 93.918
+q~insert("x", o) =&gt; 93.907
+a,b a,b
+b b
+.datetime~fromBaseDate(o) =&gt; 88.918
+.datetime~fromTicks(o) =&gt; 88.918
+.datetime~new(o) =&gt; 40.19
+d~addMicroseconds(o) =&gt; 88.902
+d~addYears(o) =&gt; 88.903
+.timespan~new(o) =&gt; 88.903
+.timespan~new(o, 0) =&gt; 88.907
+.timespan~new(o, 0, 0, 0) =&gt; 88.904
+.timespan~fromSeconds(o) =&gt; 88.902
+.timespan~fromMicroseconds(o) =&gt; 88.902
+t~addMicroseconds(o) =&gt; 88.902
+t * o =&gt; 41.1
+t % o =&gt; 41.1
+t // o =&gt; 41.1
+</code></pre>
 <h2 id="messages-a-method-sends"><a class="header" href="#messages-a-method-sends">Messages a method sends</a></h2>
 <div class="rule" id="r-class.index.sends"><a href="#r-class.index.sends">[class.index.sends]</a></div>
 <p>A method of a library class that sends a message a program can override, to
@@ -1052,17 +1132,6 @@ e: say arg(1) '=&gt;' condition('o')~code
 .k~mixinclass("O") =&gt; 99.927
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
-<div class="rule" id="r-class.index.deviation.30"><a href="#r-class.index.deviation.30">[class.index.deviation.30]</a></div>
-<p>Conversion uses the object's name when its <code>STRING</code> method answers no usable value. The pinned ooRexx revision can give an unusable result or crash. See the <a href="../conventions.html#r-conv.string.object">conversion rule</a>.</p>
-<pre><code class="language-rexx">say 'before'
-say 'x' .weird~new
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">before
-x a WEIRD
-</code></pre>
 <div class="rule" id="r-class.index.deviation.32"><a href="#r-class.index.deviation.32">[class.index.deviation.32]</a></div>
 <p>When a class-side <code>new</code> reached through <code>enhanced</code> answers an object it did
 not build, interrexx answers that object unchanged; ooRexx marks it enhanced,

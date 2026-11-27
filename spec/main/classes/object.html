@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="object"><a class="header" href="#object">Object</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Object Class; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; Comparison Methods; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; Concatenation Methods; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; class; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; copy; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; defaultName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; hashCode; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; hasMethod; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; identityHash; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; init; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; instanceMethod; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; instanceMethods; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; isA; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; isInstanceOf; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; isNil; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; objectName=; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; request; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; run (Private Method); Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; send; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; sendWith; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; setMethod (Private Method); Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; start; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; startWith; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; string; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; unsetMethod (Private Method)</p>
-<p class="deviations">Deviations: D4, D28, D30, D32, D33, D36, D105, D107, D109, D110, D118, D124, D183</p>
+<p class="deviations">Deviations: D4, D28, D32, D33, D36, D105, D107, D109, D110, D118, D124, D183</p>
 <p><code>Object</code> is the root of the class hierarchy: every class has it among its
 ancestors, so every object understands the methods of this page, and every
 class but those that <code>Class~new</code> makes understands its class method <code>new</code>. The
@@ -2048,20 +2048,6 @@ say 'after'
 ::routine r
 </code></pre>
 <pre><code class="language-output no-oracle rc=120">set
-</code></pre>
-<div class="rule" id="r-class.object.deviation.30"><a href="#r-class.object.deviation.30">[class.object.deviation.30]</a></div>
-<p>An explicit <code>STRING</code> send returns the method's answer. When a clause needs text, the <a href="../conventions.html#r-conv.string.object">conversion rule</a> checks that answer and can use the object's name. The pinned ooRexx revision may fail during that conversion.</p>
-<pre><code class="language-rexx">a = .weird~new
-say a~string~class~id
-say 'before'
-say 'x' a
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">Directory
-before
-x a WEIRD
 </code></pre>
 <div class="rule" id="r-class.object.deviation.32"><a href="#r-class.object.deviation.32">[class.object.deviation.32]</a></div>
 <p>When the class method <code>new</code> of a class answers an object that it did not

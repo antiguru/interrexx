@@ -615,7 +615,9 @@ trailing blank matters, and numbers are not compared as numbers, so <code>1</cod
 <code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
 raises <code>93.902</code>. The argument is converted by the <a href="../conventions.html#r-conv.string.object">required-string
 protocol</a>. <code>.nil</code> compares unequal to every string.
-If conversion falls back to the object's name, equality compares that name.</p>
+An object whose <code>string</code> method answers something with no string value, such
+as <code>.nil</code>, a <code>Directory</code>, an <code>Object</code> or the object itself, is compared by its
+default string value, as <a href="../conventions.html#r-conv.string.answer">the answer rule</a> gives it.</p>
 <pre><code class="language-rexx">say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
 say '1'~equals('1.0') 12~equals('12') 'abc'~equals(.nil)
 say 'an Object'~equals(.object~new)
@@ -657,12 +659,15 @@ e: say condition('o')~code
 </code></pre>
 <pre><code class="language-rexx">o = .unreadable~new
 say 'abc'~equals(o) ''~equals(o) 'The NIL object'~caselessEquals(o)
+say 'an UNREADABLE'~equals(o) 'AN unreadable'~caselessEquals(o)
 say 'The NIL object'~equals(.nil) 'The NIL object'~caselessEquals(.nil)
 say 'abc'~equals(.readable~new) 'ABC'~caselessEquals(.readable~new)
+say 'a NILER'~equals(.niler~new) 'a DIRR'~equals(.dirr~new),
+  'a SELFER'~equals(.selfer~new) 'a niler'~caselessEquals(.niler~new)
 signal on nostring name missing
 say 'abc'~equals(o)
 exit
-missing: say condition('c')
+missing: say condition('c') condition('d')
 ::class unreadable
 ::method string
   say 'string called'
@@ -670,15 +675,28 @@ missing: say condition('c')
 ::class readable
 ::method string
   return 'abc'
+::class niler
+::method string
+  return .nil
+::class dirr
+::method string
+  return .directory~new
+::class selfer
+::method string
+  return self
 </code></pre>
 <pre><code class="language-output">string called
 string called
 string called
 0 0 0
+string called
+string called
+1 1
 0 0
 1 1
+1 1 1 1
 string called
-NOSTRING
+NOSTRING an UNREADABLE
 </code></pre>
 <div class="rule" id="r-class.string.compareto"><a href="#r-class.string.compareto">[class.string.compareto]</a></div>
 <p><code>compareTo</code> compares the receiver with its first argument and answers <code>0</code> when

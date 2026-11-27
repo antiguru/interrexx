@@ -409,9 +409,11 @@ from <code>makeArray</code>, and takes it as <code>.nil</code> if it came from a
 the source's own (<a href="#r-class.method.new.request-answer">the answer rule</a>). An
 instance of a subclass of <code>List</code> is sent <code>request</code> as well (<a href="#r-class.method.deviation.118">Deviation
 118</a>). When it answers <code>.nil</code> the source is sent
-<code>request</code> with the argument <code>STRING</code>: an answer that is a string is the one-line
-source, and for any other answer its <code>objectName</code> is the line, with no
-<code>MAKESTRING</code> or <code>string</code> message sent to it; <code>.nil</code> from both raises <code>SYNTAX 93.961</code>. A string that is an instance of <code>String</code> itself and an array that is an
+<code>request</code> with the argument <code>STRING</code>: an answer that is a string, a number, an
+instance of a subclass of <code>String</code> or a <code>MutableBuffer</code> is the one-line source,
+and so is an array, whose items joined by a newline make that line, as <a href="../conventions.html#r-conv.string.answer">the
+answer rule</a> reads them; any other answer counts as
+<code>.nil</code>, with no message sent to it, and <code>.nil</code> from both raises <code>SYNTAX 93.961</code>. A string that is an instance of <code>String</code> itself and an array that is an
 instance of <code>Array</code> itself are used directly, without a message. The <code>request</code>
 of <code>Object</code> sends <code>makeArray</code> for the argument <code>ARRAY</code> and <code>makeString</code> for
 <code>STRING</code>, as <a href="object.html#r-class.object.request.sends">its rule</a> says, so an object that
@@ -477,10 +479,10 @@ makearray
 .method~new("n", .arrsub~of("return 3"))~source[1] =&gt; return 33
 request ARRAY
 request STRING
-.method~new("n", .src~new(.nil, .loud~new))~source[1] =&gt; a LOUD
+.method~new("n", .src~new(.nil, .loud~new))~source[1] =&gt; 93.961
 request ARRAY
 request STRING
-.method~new("n", .src~new(.nil, .named~new))~source[1] =&gt; return 4
+.method~new("n", .src~new(.nil, .named~new))~source[1] =&gt; 93.961
 request ARRAY
 request STRING
 .method~new("n", .src~new(.nil, 12))~source[1] =&gt; 12

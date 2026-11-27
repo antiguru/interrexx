@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="commandcontext"><a class="header" href="#commandcontext">CommandContext</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; CommandContext Class; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; [ ]=; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; dropVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; environment; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; error; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; getVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; hasVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; input; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isRedirected; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; isValid; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; output; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raise; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseError; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; raiseFailure; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; setVar; Builtin Classes &gt; Utility Classes &gt; CommandContext Class &gt; variables</p>
-<p class="deviations">Deviations: D30, D109, D183</p>
+<p class="deviations">Deviations: D109, D183</p>
 <p>When a command reaches a handler written in Rexx, the interpreter makes a
 <code>CommandContext</code> for that one command and passes it to the method <code>command</code> of
 the <a href="commandhandler.html"><code>CommandHandler</code></a> as the second argument. The context
@@ -1073,8 +1073,9 @@ rule</a> finds it: <code>request</code> with <code>STRING</code> is sent to it
 first, and its <code>string</code> method when that answers no string, so that a class
 with its own <code>request</code> decides the description. The condition holds that
 string; an instance of a subclass of <code>String</code> is a string here (<a href="#r-class.commandcontext.deviation.109">the deviation
-rule</a>). The description uses the object's
-name when <code>STRING</code> supplies no usable value. <code>additional</code> is the <code>ADDITIONAL</code>
+rule</a>). If the <code>string</code> result has no
+string value, the description is the default string value of the object, as
+<a href="../conventions.html#r-conv.string.answer">the answer rule</a> says. <code>additional</code> is the <code>ADDITIONAL</code>
 entry of the condition object, the object as it was given, and when it is
 omitted or <code>.nil</code> the condition object has no such entry. The condition object
 has <code>RC</code>, holding the <code>rc</code> object. <code>condition</code> and <code>rc</code> are required: <code>SYNTAX 93.901</code> when they are fewer than two, <code>SYNTAX 93.903</code> when an omitted place
@@ -1129,6 +1130,62 @@ USER returned, rc &lt;8&gt; 0
 DEFAULTS returned, rc &lt;9&gt; 1
   trap ERROR &lt;NILS&gt; rc 10 entry 10 none
 NILS returned, rc &lt;10&gt; 1
+</code></pre>
+<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_no_text', .raiser~new)
+do mode over .array~of('error call', 'error signal', 'halt call',,
+    'halt signal', 'nostring')
+  call exercise mode
+end
+x = .commandhandler~deregister('spec_cc_no_text')
+exit
+exercise: procedure
+  use arg mode
+  select
+    when mode = 'error call' then call on error name trapped
+    when mode = 'error signal' then signal on error name trapped
+    when mode = 'halt call' then call on halt name trapped
+    when mode = 'halt signal' then signal on halt name trapped
+    otherwise signal on nostring name trapped
+  end
+  address spec_cc_no_text mode
+  say 'return' rc
+  say 'next clause'
+  return
+trapped:
+  if condition('c') = 'NOSTRING' then say 'NOSTRING'
+  else say condition('c') condition('d') condition('o')~description
+  return
+::class raiser inherit CommandHandler
+::method command
+  use arg command, caller
+  parse var command kind .
+  if kind = 'nostring' then kind = 'error'
+  say 'raise returned' caller~raise(kind, 5, .unreadable~new)
+  return 10
+::class unreadable
+::method string
+  say 'string called'
+  return .object~new
+</code></pre>
+<pre><code class="language-output">raise returned 5
+string called
+ERROR an UNREADABLE an UNREADABLE
+return 5
+next clause
+raise returned 5
+string called
+ERROR an UNREADABLE an UNREADABLE
+raise returned 5
+string called
+return 5
+HALT an UNREADABLE an UNREADABLE
+next clause
+raise returned 5
+string called
+HALT an UNREADABLE an UNREADABLE
+raise returned 5
+string called
+NOSTRING
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_halt', .halter~new)
 call on halt name stopped
@@ -1598,66 +1655,6 @@ copy-twice: rc 0 0
 copy-later: rc 1 1
 </code></pre>
 <h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
-<div class="rule" id="r-class.commandcontext.deviation.30"><a href="#r-class.commandcontext.deviation.30">[class.commandcontext.deviation.30]</a></div>
-<p>A command condition whose description has no usable <code>STRING</code> answer carries
-the fallback name. The pinned ooRexx revision carries <code>.nil</code> in this case.
-The <a href="../conditions/nostring.html#r-cond.nostring.raise">NOSTRING rules</a> still apply.</p>
-<pre><code class="language-rexx">x = .commandhandler~register('spec_cc_no_text', .raiser~new)
-do mode over .array~of('error call', 'error signal', 'halt call',,
-    'halt signal', 'nostring')
-  call exercise mode
-end
-x = .commandhandler~deregister('spec_cc_no_text')
-exit
-exercise: procedure
-  use arg mode
-  select
-    when mode = 'error call' then call on error name trapped
-    when mode = 'error signal' then signal on error name trapped
-    when mode = 'halt call' then call on halt name trapped
-    when mode = 'halt signal' then signal on halt name trapped
-    otherwise signal on nostring name trapped
-  end
-  address spec_cc_no_text mode
-  say 'return' rc
-  say 'next clause'
-  return
-trapped:
-  if condition('c') = 'NOSTRING' then say 'NOSTRING'
-  else say condition('c') condition('d') (condition('d') == condition('o')~description)
-  return
-::class raiser inherit CommandHandler
-::method command
-  use arg command, caller
-  parse var command kind .
-  if kind = 'nostring' then kind = 'error'
-  say 'raise returned' caller~raise(kind, 5, .unreadable~new)
-  return 10
-::class unreadable
-::method string
-  say 'string called'
-  return .object~new
-</code></pre>
-<pre><code class="language-output">raise returned 5
-string called
-ERROR an UNREADABLE 1
-return 5
-next clause
-raise returned 5
-string called
-ERROR an UNREADABLE 1
-raise returned 5
-string called
-return 5
-HALT an UNREADABLE 1
-next clause
-raise returned 5
-string called
-HALT an UNREADABLE 1
-raise returned 5
-string called
-NOSTRING
-</code></pre>
 <div class="rule" id="r-class.commandcontext.deviation.183"><a href="#r-class.commandcontext.deviation.183">[class.commandcontext.deviation.183]</a></div>
 <p>An object whose <code>REQUEST('String')</code> answers an error number as text supplies
 that code to <code>CommandContext~raise('SYNTAX', code)</code>. The handler receives

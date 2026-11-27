@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="nostring"><a class="header" href="#nostring">NOSTRING</a></h1>
 <p class="references">rexxref: Conditions and Condition Traps; Conditions and Condition Traps &gt; Condition Information &gt; Descriptive Strings; Conditions and Condition Traps &gt; Condition Information &gt; Additional Object Information; Conditions and Condition Traps &gt; Action Taken when a Condition Is Trapped</p>
-<p class="deviations">Deviations: D30, D77, D179</p>
+<p class="deviations">Deviations: D77, D179</p>
 <p>NOSTRING is the condition of needing the string value of an object that does
 not provide one. Most values a program handles are strings or answer as
 strings, and the interpreter converts them without notice. An object of a
@@ -335,8 +335,9 @@ n: return 'N' condition('d')
 method</a> of the object answers when that is a string,
 and its <code>ADDITIONAL</code> entry is the object. When the answer is an object that is
 not a string but has a string value, such as an array, the description is that
-value. When the answer has no string value, <a href="#r-cond.nostring.deviation.30">Deviation
-30</a> applies. The condition object has the
+value. When the answer has no string value, the description is the default
+string value of the object, as <a href="../conventions.html#r-conv.string.answer">the answer rule</a> says.
+The condition object has the
 entries that every condition has, <code>ADDITIONAL</code> and <code>POSITION</code>, and neither
 <code>RC</code> nor <code>CODE</code>, as <a href="information.html#r-cond.information.object">the entries rule</a> lists them.
 The text is the one that the object would have as its string value when no
@@ -432,8 +433,8 @@ back from r
 <a href="index.html#r-cond.index.untrapped">the untrapped rule</a> says: the clause goes on and uses
 as the string value of the object the text that its <code>STRING</code> method answers
 when that is a string, and the string value of that answer when it is another
-object that has one, such as an array. <a href="#r-cond.nostring.deviation.30">Deviation
-30</a> applies when the answer has none. The
+object that has one, such as an array, and the default string value of the
+object when the answer has none (<a href="../conventions.html#r-conv.string.answer">the answer rule</a>). The
 <a href="../directives/options.html#r-dir.options.condition">::OPTIONS</a> directive can turn an untrapped NOSTRING
 into a SYNTAX condition, and its rule specifies that.</p>
 <pre><code class="language-rexx">say 'a' || .plain~new
@@ -501,21 +502,6 @@ n: say 'NOSTRING' '['condition('d')']' condition('o')~additional~class
 <pre><code class="language-output">aT.
 bdflt
 NOSTRING [a PLAIN] The Stem class
-</code></pre>
-<div class="rule" id="r-cond.nostring.deviation.30"><a href="#r-cond.nostring.deviation.30">[cond.nostring.deviation.30]</a></div>
-<p>With a missing or unusable <code>STRING</code> answer, the description of NOSTRING is the fallback text. If the condition goes untrapped, the clause uses that same text. The pinned ooRexx revision can supply an unusable description or fail during conversion.</p>
-<pre><code class="language-rexx">signal on nostring name n
-say 'x' .weird~new
-n: say 'trapped' condition('c') condition('o')~additional~class
-say 'a' || .weird~new
-say 'after'
-::class weird
-::method string
-  return .directory~new
-</code></pre>
-<pre><code class="language-output">trapped NOSTRING The WEIRD class
-aa WEIRD
-after
 </code></pre>
 
                     </main>
