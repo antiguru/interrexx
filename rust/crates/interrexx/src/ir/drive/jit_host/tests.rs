@@ -352,6 +352,58 @@ fn a_constant_used_only_in_until_can_run_in_generated_code() {
 }
 
 #[test]
+fn a_routine_call_in_a_loop_test_resumes_the_compiled_caller() {
+    reset_compiled_runs();
+    let limit = super::THRESHOLD + 2000;
+    ran(format!(
+        "n = 0; hits = 0; m = 0\n\
+         do i = 1 while n + f(i) < {limit} * 2\n\
+           n = n + 1; a = n // 7; b = a * 3; c = b - i; d = c + a\n\
+           m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5\n\
+           a = k + d; b = a * 2; c = b - i; d = c + a; e = d // 5\n\
+           g = e + h; h = g - c; k = h // 7; a = k + d; b = a * 3\n\
+         end\n\
+         if n \\= {limit} | hits \\= {limit} + 1 then bad = 1 / 0\n\
+         exit\n\
+         f: hits = hits + 1\n\
+         return arg(1)"
+    )
+    .as_bytes());
+    assert!(super::COMPILED_RESUMES.with(std::cell::Cell::get) > 1900);
+}
+
+#[test]
+fn a_method_send_in_a_loop_body_resumes_with_live_operands() {
+    reset_compiled_runs();
+    let limit = super::THRESHOLD + 2000;
+    let source = format!(
+        "o = .probe~new; hits = 0; m = 0\n\
+         do i = 1 to {limit}\n\
+           x = i + o~next(i) + 3\n\
+           if x \\= i * 2 + 3 then bad = 1 / 0\n\
+           a = x // 7; b = a * 3; c = b - i; d = c + a\n\
+           m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5\n\
+         end\n\
+         if o~hits \\= {limit} then bad = 1 / 0\n\
+         ::class probe\n\
+         ::method init\n\
+           expose hits; hits = 0\n\
+         ::method next\n\
+           expose hits; hits = hits + 1; return arg(1)\n\
+         ::method hits\n\
+           expose hits; return hits"
+    );
+    let outcome = crate::execute(
+        "jit-resumed-method.rex",
+        source.into_bytes(),
+        false,
+        crate::Invocation::none(),
+    );
+    assert_eq!(outcome.exit_code, 0, "{outcome:?}");
+    assert!(super::COMPILED_RESUMES.with(std::cell::Cell::get) > 1900);
+}
+
+#[test]
 fn exclusive_or_in_while_runs_in_generated_code() {
     check_header_constant("while (i <= LIMIT) && (i < 0)");
 }

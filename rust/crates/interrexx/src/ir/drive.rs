@@ -114,6 +114,8 @@ pub(crate) struct ParkedCall {
     /// A `DO`/`LOOP` header's values the region had accumulated.
     header: Option<Box<LoopHeaderValues>>,
     deliver: Deliver,
+    #[cfg(feature = "jit")]
+    jit: Option<jit_host::JitResume>,
 }
 
 /// Where a parked call's answer goes.
@@ -2936,6 +2938,8 @@ impl Interp {
                     stale: chunk.trace().clause_echoes() != sink.clause_echoes(),
                     debugging: sink.debugging(),
                     header: None,
+                    #[cfg(feature = "jit")]
+                    jit: None,
                     deliver: Deliver::Exec,
                 }))
             }
@@ -3429,6 +3433,8 @@ impl Interp {
             stale,
             debugging,
             header,
+            #[cfg(feature = "jit")]
+            jit: None,
             deliver,
         });
     }
@@ -4227,18 +4233,9 @@ impl Interp {
             }
         };
         match delivered {
-            Ok(()) => self.ops_loop_steady(
-                code,
-                chunk,
-                registers,
-                parked.at,
-                0,
-                len,
-                source,
-                base,
-                NO_GRANT,
-                Some(parked),
-            ),
+            Ok(()) => {
+                self.resume_delivered_region(code, chunk, registers, source, base, len, parked)
+            }
             Err(failure) => self.leave_parked(
                 code,
                 chunk,
@@ -4338,18 +4335,9 @@ impl Interp {
             parked.at -= 1;
         }
         match delivered {
-            Ok(()) => self.ops_loop_steady(
-                code,
-                chunk,
-                registers,
-                parked.at,
-                0,
-                len,
-                source,
-                base,
-                NO_GRANT,
-                Some(parked),
-            ),
+            Ok(()) => {
+                self.resume_delivered_region(code, chunk, registers, source, base, len, parked)
+            }
             Err(failure) => self.leave_parked(
                 code,
                 chunk,
@@ -4361,6 +4349,48 @@ impl Interp {
                 Err(failure),
             ),
         }
+    }
+
+    /// Continues a clause after the driver delivered its parked call's result.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the caller's original register frame and range"
+    )]
+    #[inline]
+    fn resume_delivered_region(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        source: Option<&ProgramSource>,
+        base: usize,
+        len: usize,
+        parked: ParkedCall,
+    ) -> Result<Exit, Failure> {
+        let at = parked.at;
+        #[cfg(feature = "jit")]
+        let (at, parked) = if parked.jit.is_some() {
+            let mut parked = Some(parked);
+            match self.resume_jit_region(
+                code,
+                chunk,
+                registers,
+                source,
+                (base, 0, len),
+                &mut parked,
+            ) {
+                Some(jit_host::JitAction::At(target)) => (target, None),
+                Some(jit_host::JitAction::Return(exit)) => return exit,
+                None => (at, parked),
+            }
+        } else {
+            (at, Some(parked))
+        };
+        #[cfg(not(feature = "jit"))]
+        let parked = Some(parked);
+        self.ops_loop_steady(
+            code, chunk, registers, at, 0, len, source, base, NO_GRANT, parked,
+        )
     }
 
     /// `parked`'s clause left with `ran` rather than running on: the clause

@@ -827,9 +827,8 @@ f: return arg(1) >= 9999
 49995000 9999 9999
 compiled: no
 
-# a WHILE that calls a routine, with a body that would compile: the call
-# parks the test region for the driver, which would finish each pass itself,
-# so the loop stays driven
+# a WHILE whose body still has too little native work to repay parking
+# for the routine and re-entering generated code on every pass
 run
 n = 0; m = 0
 do i = 1 while f(i)

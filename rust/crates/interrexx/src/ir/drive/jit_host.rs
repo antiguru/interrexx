@@ -44,6 +44,9 @@ const THRESHOLD: u32 = 7168;
 /// A body is compiled only when it has at least this many steps compiled code
 /// does itself for each op the host runs.
 const HOSTED_SHARE: usize = 8;
+/// Additional native work required when a loop test can leave generated
+/// code every pass and resume through a new entry.
+const TEST_RESUME_STEPS: usize = 48;
 /// Passes a compiled loop runs before its hosted ops are weighed.
 const RETIRE_AFTER: u64 = 16;
 /// A loop whose body has an op the compiled code does not take.
@@ -142,6 +145,14 @@ struct Open {
     entry: SteppedClause,
 }
 
+/// The compiled loop and its retirement accounting across a parked call.
+pub(super) struct JitResume {
+    loop_pc: u32,
+    do_index: u32,
+    passes: u64,
+    hosted: u64,
+}
+
 struct Driven<'a, 'c> {
     interp: &'a mut Interp,
     code: &'a Code<'c>,
@@ -205,8 +216,6 @@ impl Interp {
         top: bool,
         range: (usize, usize, usize),
     ) -> Option<JitAction> {
-        #[cfg(debug_assertions)]
-        let depth = self.activation_depth();
         let state = chunk.jit.state.get(usize::cast_from(do_index))?;
         let compiled = match state.get() {
             REFUSED => return None,
@@ -246,19 +255,108 @@ impl Interp {
                 ));
                 (compiled, budget, loops, tests)
             }
-            at => {
-                let all = chunk.jit.compiled.borrow();
-                let (compiled, budget, loops, tests) = all.get(usize::cast_from(at - THRESHOLD))?;
-                (
-                    Rc::clone(compiled),
-                    *budget,
-                    Rc::clone(loops),
-                    Rc::clone(tests),
-                )
-            }
+            at => chunk
+                .jit
+                .compiled
+                .borrow()
+                .get(usize::cast_from(at - THRESHOLD))?
+                .clone(),
         };
-        let (compiled, budget, loops, tests) = compiled;
         let first = pass_start(chunk, do_index)?;
+        Some(self.run_jit(
+            code,
+            chunk,
+            registers,
+            source,
+            (pc, do_index, first),
+            top,
+            range,
+            compiled,
+            None,
+        ))
+    }
+
+    /// Takes back a compiled caller only after the driver delivered the call
+    /// result. The parked level owns the register frame and the open clause;
+    /// there is no generated frame or slot pointer to keep across the call.
+    pub(super) fn resume_jit_region(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        source: Option<&ProgramSource>,
+        range: (usize, usize, usize),
+        parked: &mut Option<ParkedCall>,
+    ) -> Option<JitAction> {
+        let call = parked.as_ref()?;
+        let resume = call.jit.as_ref()?;
+        let sink = self.chunk_trace();
+        if sink.debugging() || sink != chunk.trace() || self.trace_switchable && chunk.settled() {
+            return None;
+        }
+        let at = chunk
+            .jit
+            .state
+            .get(usize::cast_from(resume.do_index))?
+            .get();
+        if at < THRESHOLD || at == REFUSED {
+            return None;
+        }
+        let compiled = chunk
+            .jit
+            .compiled
+            .borrow()
+            .get(usize::cast_from(at - THRESHOLD))?
+            .clone();
+        let first = pass_start(chunk, resume.do_index)?;
+        debug_assert!(compiled.0.can_resume(call.at));
+        let call = parked.take().expect("the parked call just read");
+        let resume = call.jit.expect("the resume record just read");
+        let (pc, do_index) = (resume.loop_pc, resume.do_index);
+        let open = Open {
+            pc: call.clause_pc,
+            index: call.index,
+            end: call.end,
+            entry: call.entry,
+        };
+        #[cfg(test)]
+        COMPILED_RESUMES.with(|runs| runs.set(runs.get() + 1));
+        Some(self.run_jit(
+            code,
+            chunk,
+            registers,
+            source,
+            (pc, do_index, first),
+            true,
+            range,
+            compiled,
+            Some((open, call.at, resume)),
+        ))
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the loop, its frame and any open clause"
+    )]
+    #[inline(never)]
+    fn run_jit(
+        &mut self,
+        code: &Code<'_>,
+        chunk: &Chunk,
+        registers: RegFrame<'_>,
+        source: Option<&ProgramSource>,
+        (pc, do_index, first): (u32, u32, u32),
+        top: bool,
+        range: (usize, usize, usize),
+        (compiled, budget, loops, tests): Compiling,
+        resume: Option<(Open, u32, JitResume)>,
+    ) -> JitAction {
+        #[cfg(debug_assertions)]
+        let depth = self.activation_depth();
+        let (open, resume_at, passes, hosted) = match resume {
+            Some((open, at, resume)) => (Some(open), Some(at), resume.passes, resume.hosted),
+            None => (None, None, 0, 0),
+        };
         let mut driven = Driven {
             interp: self,
             code,
@@ -269,7 +367,7 @@ impl Interp {
             loop_pc: pc,
             do_index: usize::cast_from(do_index),
             first,
-            open: None,
+            open,
             range,
             jump_to: 0,
             loops,
@@ -277,7 +375,7 @@ impl Interp {
             loop_state: [LoopState::ASK; layout::MAX_LOOPS],
 
             budget,
-            hosted: 0,
+            hosted,
             retire: false,
             closed: false,
             exit: None,
@@ -290,7 +388,9 @@ impl Interp {
                 .borrow_mut()
                 .insert(chunk.opening_at(usize::cast_from(do_index)).position.line)
         });
-        let answer = compiled.run(registers, &mut driven);
+        let (answer, passes) = compiled.run(registers, &mut driven, resume_at, passes);
+        let hosted = driven.hosted;
+        let retire = driven.retire;
         debug_assert_eq!(answer, STOP, "compiled passes end only on a STOP");
         debug_assert!(
             driven.open.is_none(),
@@ -318,7 +418,7 @@ impl Interp {
                 Err(failure) => JitAction::Return(Err(failure)),
             }
         };
-        Some(match exit {
+        match exit {
             JitExit::At(target) => JitAction::At(target),
             JitExit::Slice(at) => JitAction::Return(Ok(Exit::Slice(at))),
             JitExit::Done(flow) => {
@@ -335,10 +435,25 @@ impl Interp {
                 end,
                 index,
             } => {
+                let resume = (!retire
+                    && matches!(park.deliver, Deliver::Register(_) | Deliver::Send)
+                    && compiled.can_resume(park.at))
+                .then_some(JitResume {
+                    loop_pc: pc,
+                    do_index,
+                    passes,
+                    hosted,
+                });
                 self.park_call(park, entry, clause_pc, end, index, false, false);
+                if let Some(parked) = self.activity.parked_calls.last_mut() {
+                    parked.jit = resume;
+                }
+                if retire {
+                    chunk.jit.state[usize::cast_from(do_index)].set(REFUSED);
+                }
                 JitAction::Return(Ok(Exit::Parked))
             }
-        })
+        }
     }
 }
 
@@ -360,6 +475,7 @@ fn pass_of(
         return None;
     }
     let mut steps = Vec::new();
+    let mut test_invokes = 0;
     // The loop each loop record is: this one, then each inner loop in the
     // order its start appears.
     let mut loops = vec![do_index];
@@ -533,29 +649,6 @@ fn pass_of(
                 }
                 _ => {}
             }
-            // **A test region whose call can park is the driver's.** A call
-            // to a routine or a send to a method runs its callee stackless
-            // from the driver, which then finishes the pass itself: compiled
-            // code would be entered and left on every pass and its body never
-            // run. A call its site resolved to a builtin runs to completion.
-            if test
-                && match *op {
-                    Op::CallArgs { site, .. } => !matches!(
-                        chunk.resolved_call(site, generation),
-                        Some(Resolved::Builtin(_))
-                    ),
-                    Op::CallExpr { .. }
-                    | Op::CallNamed { .. }
-                    | Op::Call { .. }
-                    | Op::Send { .. }
-                    | Op::SendWith { .. }
-                    | Op::SendScope { .. }
-                    | Op::Message { .. } => true,
-                    _ => false,
-                }
-            {
-                return None;
-            }
             let step = match *op {
                 Op::Const { dst, konst } => match chunk.interned_konst(konst) {
                     ObjRef::NIL => Step::Op { pc: at },
@@ -708,17 +801,17 @@ fn pass_of(
                 // Ops that neither jump nor trace, which `general` runs; one
                 // that parks the clause for a callee hands it to the driver.
                 Op::PushArg { src } => Step::PushArg { src },
+                Op::CallArgs { .. }
+                | Op::CallExpr { .. }
+                | Op::Send { .. }
+                | Op::SendWith { .. } => Step::Invoke { pc: at },
                 Op::Load { .. }
                 | Op::Binary { .. }
                 | Op::Prefix { .. }
                 | Op::Store { .. }
                 | Op::Exec { .. }
-                | Op::CallArgs { .. }
-                | Op::CallExpr { .. }
                 | Op::CallNamed { .. }
                 | Op::Call { .. }
-                | Op::Send { .. }
-                | Op::SendWith { .. }
                 | Op::SendScope { .. }
                 | Op::Reference { .. }
                 | Op::ClassAt { .. }
@@ -743,7 +836,7 @@ fn pass_of(
             };
             // Any other op the host runs might take pushed arguments the
             // pairing does not see: the pushes before it stay pushes.
-            if matches!(step, Step::Op { .. })
+            if matches!(step, Step::Op { .. } | Step::Invoke { .. })
                 && !matches!(
                     op,
                     Op::CallArgs { .. }
@@ -754,6 +847,9 @@ fn pass_of(
                 )
             {
                 pending.clear();
+            }
+            if test && matches!(step, Step::Invoke { .. }) {
+                test_invokes += 1;
             }
             steps.push(step);
         }
@@ -783,7 +879,7 @@ fn pass_of(
             // `Step::Region`'s weight.
             Step::Test { .. } | Step::Tested { .. } if inner == 0 => hosted += 1,
             Step::Test { .. } | Step::Tested { .. } => {}
-            Step::Op { .. } | Step::Between { .. } => hosted += 1,
+            Step::Op { .. } | Step::Invoke { .. } | Step::Between { .. } => hosted += 1,
             Step::Builtin { .. }
             | Step::Compound { .. }
             | Step::Open { .. }
@@ -794,7 +890,7 @@ fn pass_of(
             _ => {}
         }
     }
-    if hosted * HOSTED_SHARE > native {
+    if hosted * HOSTED_SHARE + test_invokes * TEST_RESUME_STEPS > native {
         return None;
     }
     let budget = u64::cast_from((native / HOSTED_SHARE).max(1));
@@ -2011,6 +2107,7 @@ impl Driven<'_, '_> {
 #[cfg(test)]
 thread_local! {
     static COMPILED_RUNS: Cell<usize> = const { Cell::new(0) };
+    static COMPILED_RESUMES: Cell<usize> = const { Cell::new(0) };
     static QUIET_CALLS: Cell<usize> = const { Cell::new(0) };
     static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
     static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
@@ -2036,6 +2133,7 @@ fn compiled_runs() -> usize {
 #[cfg(test)]
 fn reset_compiled_runs() {
     COMPILED_RUNS.with(|runs| runs.set(0));
+    COMPILED_RESUMES.with(|runs| runs.set(0));
     QUIET_CALLS.with(|calls| calls.set(0));
     QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
     HANDED_BACK.with(|handed| handed.set(0));
