@@ -1,17 +1,17 @@
 ---
 element: ERRORTEXT
 kind: builtin
-syntax: "ERRORTEXT(n)"
+syntax: "ERRORTEXT(n [, values])"
 ansi: "9.5.5"
 rexxref: "Functions > Built-in Functions > ERRORTEXT"
-deviations: [179]
 ---
 
 # ERRORTEXT
 
 ERRORTEXT answers the message that goes with an error number or an error code:
 the text that names the kind of error, or the one that says what went wrong,
-without the number, the program or the line. What
+without the number, the program or the line. For an error code it can also put
+values in the places of the message, as a raised error does. What
 the text says is not part of the book (see [the rule on error
 messages](r:conv.error.name)), so the examples of this page look at whether a
 message exists and at which numbers share one, never at its words.
@@ -19,10 +19,11 @@ message exists and at which numbers share one, never at its words.
 ## Arguments
 
 r[bif.errortext.args]
-ERRORTEXT takes one argument, `n`. The argument count is checked by the
-[builtin call rules](r:bif.index.call.count): one argument is required, so a
-call with none raises `SYNTAX 40.3`, and a call with three raises `SYNTAX
-40.4`. A second argument is [Deviation 179](r:bif.errortext.deviation.179)'s. ERRORTEXT does not run as a [String
+ERRORTEXT takes one or two arguments, `n` and `values`. The argument count is
+checked by the [builtin call rules](r:bif.index.call.count): one argument is
+required, so a call with none raises `SYNTAX 40.3`, and a call with three raises
+`SYNTAX 40.4`. `values` may be omitted, as in `ERRORTEXT(40.1, )`, and then
+the call is one of `n` alone. ERRORTEXT does not run as a [String
 method](r:class.string.builtins): sending the message `ERRORTEXT` to a string
 raises `SYNTAX 97.1`.
 
@@ -229,29 +230,119 @@ say c~rc (errortext(c~rc) \== '') (errortext(c~rc) == c~errortext)
 41 1 1
 ```
 
-> **Note.** The ANSI draft (9.5.5) gives ERRORTEXT a second argument, `S`,
-> that selects the standard English text. interrexx takes one argument only, as
-> [Deviation 179](r:bif.errortext.deviation.179) says. The texts are interrexx's
-> own and are not specified.
+## The values
 
-## Deviations
+r[bif.errortext.values]
+`values` fills the places of the message of an error code, as the interpreter
+fills them when it raises the error. It is a single string, which stands for an
+array of that one item, or a single-dimensional array, an instance of a
+subclass of `Array` included. A number is a string. Anything else raises
+`SYNTAX 40.912`: `.nil`, a `List`, a `Directory`, a `Stem`, a `MutableBuffer`,
+any other object, and an array of more than one dimension, whatever it
+answers to `REQUEST`, `MAKEARRAY` or `STRING`, none of which is sent to it. It is
+checked whether or not the code has a message. `n` is checked as the rules above
+say.
 
-r[bif.errortext.deviation.179]
-ERRORTEXT takes one argument, as at language level 6.06 ([Deviation
-179](../deviations.md)), so a second argument raises `SYNTAX 40.4`, whatever it
-is. ooRexx, at level 6.07, takes a second argument of values that fill the
-`&1`, `&2` places of an error code's message.
+The array has a size, which counts positions with no item: an array that
+had an item removed, or one made with room for more than it holds, is as large as
+it was. Let that size be `k`. The first `k` places of the message, counted from
+its start in the order they stand there, which is not necessarily the order of
+their numbers, are filled. The place `&i` is replaced by the item at index `i`,
+or by the null string where the array has no item at `i`, which includes an
+index past its size. Every place after those `k` stays as written, `&i`. A
+string that is not an array has size 1. What was put in a place is not read for
+places again, so an item `&2` appears as it is. An error code with no message
+answers the null string whatever `values` holds, and a message with no places,
+such as that of an error number, comes back unchanged.
+
+An item is put in as its string value is for a string or a number, as the
+contents of a `MutableBuffer`, and as the name that an error message gives an
+object otherwise, which is its `OBJECTNAME` ([the name rule](r:class.object.objectname)),
+`an Array` or `The NIL object` unless its class has an `OBJECTNAME` of its own.
+No `STRING` method is sent to it.
+
+For the condition object `c` of a trapped `SYNTAX` error, `ERRORTEXT(c~code,
+c~additional)` is the `MESSAGE` entry of `c`.
+
+The first example uses the message of `40.912`, which has three places, and
+leaves its wording alone: it looks for the values and counts the places that
+are left.
 
 ```rexx
-signal on syntax name b
-say errortext(26, 'S')
-b: say condition('o')~code
-signal on syntax name c
-say errortext('40.1', 'x')
-c: say condition('o')~code
+t = errortext('40.912', .array~of('AAA', 'BBB', 'CCC', 'DDD'))
+say (pos('AAA', t) > 0) (pos('BBB', t) > 0) (pos('CCC', t) > 0) (pos('DDD', t) > 0),
+    countstr('&', t)
+say countstr('&', errortext('40.912', 'AAA')),
+    countstr('&', errortext('40.912', .array~of('AAA', 'BBB')))
+sparse = .array~new
+sparse[2] = 'BBB'
+say countstr('&', errortext('40.912', sparse)) (pos('BBB', errortext('40.912', sparse)) > 0)
+removed = .array~of('AAA', 'BBB', 'CCC')
+removed~remove(3)
+say countstr('&', errortext('40.912', removed)) (pos('CCC', errortext('40.912', removed)) > 0)
+say (errortext('40.912', .array~new) == errortext('40.912')),
+    (errortext('40.912', '') == errortext('40.912', .array~of('')))
+say (errortext(40, 'AAA') == errortext(40)) '['errortext('60.1', 'AAA')']'
+say countstr('&', errortext('40.912', .array~of('&1', '&2', '&3')))
 ```
 
 ```output
-40.4
-40.4
+1 1 1 0 0
+2 1
+1 1
+0 0
+1 1
+1 []
+3
 ```
+
+The second shows how the items are put in, and that no message is sent to an
+object: the `STRING` and `MAKEARRAY` methods of the class do not run, and the
+values an object is refused as are those of the rule.
+
+```rexx
+t = errortext('40.912', .array~of(.zq~new, .nil, .mutablebuffer~new('MMM')))
+say (pos('a ZQ', t) > 0) (pos('The NIL object', t) > 0) (pos('MMM', t) > 0)
+t = errortext('40.912', .array~of(.array~of(1), 3.10, '4.50'))
+say (pos('an Array', t) > 0) (pos('3.10', t) > 0) (pos('4.5', t) > 0)
+list = .array~of(.nil, .list~new, .directory~new, .stem~new, .mutablebuffer~new('x'), .zq~new, .array~new(2, 2))
+do i = 1 to list~items
+  call try '40.912', list[i]
+end
+call try 40, .nil
+call try '60.1', .nil
+exit
+try:
+  signal on syntax name bad
+  say errortext(arg(1), arg(2)) \== ''
+  return
+bad: say condition('o')~code
+  return
+::class zq
+::method string
+  say 'STRING sent'
+  return 'zq'
+::method makearray
+  say 'MAKEARRAY sent'
+  return .array~of(1)
+```
+
+```output
+1 1 1
+1 1 1
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+```
+
+> **Note.** The ANSI draft (9.5.5) gives ERRORTEXT a second argument, `S`,
+> that selects the standard English text. ooRexx's second argument is the one
+> of values above, and interrexx takes that one: `S` is a string, so it stands
+> for one value. The texts are interrexx's own and are not specified.
+

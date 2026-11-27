@@ -30,13 +30,11 @@ struct Case {
 const DECLARED_GAPS: &[&str] = &[];
 
 /// The cases whose difference a Deviation licenses, which must not agree
-/// either but answer rather than refuse: ERRORTEXT takes one argument here,
-/// as at language level 6.06, and ooRexx at 6.07 takes a second one of values
-/// (Deviation 179).
+/// either but answer rather than refuse. None is licensed now.
 ///
 /// Each case names the error this crate raises for it, which
 /// [`every_deviating_case_raises_its_own_error`] holds it to.
-const DEVIATING: &[(&str, &str)] = &[("errortext_arity", "Error 40.4:")];
+const DEVIATING: &[(&str, &str)] = &[];
 
 const CASES: &[Case] = &[
     // ---- ADDRESS: the default, the forms, byte transparency ----
@@ -188,7 +186,98 @@ const CASES: &[Case] = &[
     },
     Case {
         name: "errortext_arity",
-        source: "say errortext(1,2)",
+        source: "say errortext(1,2,3)",
+    },
+    // The second argument, values for the places of a message
+    // (`r[bif.errortext.values]`). The cases count places and look for the
+    // values, never reading the wording, which differs.
+    Case {
+        name: "errortext_two_args",
+        source: "say '['errortext(1,2)']' '['errortext(60.1,2)']'",
+    },
+    Case {
+        name: "errortext_values_all_filled",
+        source: "t = errortext('40.912', .array~of('AAA','BBB','CCC','DDD')); say (pos('AAA',t)>0) (pos('BBB',t)>0) (pos('CCC',t)>0) (pos('DDD',t)>0) countstr('&',t)",
+    },
+    Case {
+        name: "errortext_values_leading_places",
+        source: "say countstr('&', errortext('40.912', 'AAA')) countstr('&', errortext('40.912', .array~of('AAA','BBB'))) countstr('&', errortext('40.912', .array~new))",
+    },
+    Case {
+        name: "errortext_values_size_counts_holes",
+        source: "a = .array~new; a[2] = 'BBB'; r = .array~of('AAA','BBB','CCC'); r~remove(3); say countstr('&', errortext('40.912', a)) countstr('&', errortext('40.912', r)) (pos('CCC', errortext('40.912', r))>0) countstr('&', errortext('40.912', .array~new(5)))",
+    },
+    Case {
+        name: "errortext_values_string_is_one_item",
+        source: "say (errortext('40.912', '') == errortext('40.912', .array~of(''))) (errortext('40.912', 5) == errortext('40.912', .array~of(5))) (errortext('40.912', ('x')) == errortext('40.912', .array~of('x')))",
+    },
+    Case {
+        name: "errortext_values_omitted",
+        source: "say (errortext('40.912', ) == errortext('40.912')) (errortext(40, ) == errortext(40))",
+    },
+    Case {
+        name: "errortext_values_no_message",
+        source: "say '['errortext('60.1', 'AAA')']' '['errortext('40.10', .array~of('x'))']' (errortext(40, 'AAA') == errortext(40))",
+    },
+    Case {
+        name: "errortext_values_not_rescanned",
+        source: "say countstr('&', errortext('40.912', .array~of('&1','&2','&3')))",
+    },
+    Case {
+        name: "errortext_values_item_rendering",
+        source: "t = errortext('40.912', .array~of(.array~of(1), .nil, .mutablebuffer~new('MMM'))); u = errortext('40.912', .array~of(3.10, '4.50', .zq~new)); say (pos('an Array',t)>0) (pos('The NIL object',t)>0) (pos('MMM',t)>0) (pos('3.10',u)>0) (pos('4.50',u)>0) (pos('a ZQ',u)>0)\n::class zq\n::method string\n  say 'STRING sent'\n  return 'zq'",
+    },
+    Case {
+        name: "errortext_values_array_subclass",
+        source: "say (errortext('40.912', .sub~of('AAA','BBB','CCC')) == errortext('40.912', .array~of('AAA','BBB','CCC')))\n::class sub subclass array",
+    },
+    Case {
+        name: "errortext_values_string_subclass",
+        source: "say (errortext('40.912', .st~new('AAA')) == errortext('40.912', 'AAA'))\n::class st subclass string",
+    },
+    Case {
+        name: "errortext_values_roundtrip",
+        source: "signal on syntax name e; x = substr('abc', 0); e: c = condition('o'); say c~code (errortext(c~code, c~additional) == c~message)",
+    },
+    Case {
+        name: "errortext_values_nil",
+        source: "signal on syntax name e; x = errortext('40.912', .nil); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_list",
+        source: "signal on syntax name e; x = errortext('40.912', .list~of('a')); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_directory",
+        source: "signal on syntax name e; x = errortext('40.912', .directory~new); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_stem",
+        source: "signal on syntax name e; x = errortext('40.912', .stem~new); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_buffer",
+        source: "signal on syntax name e; x = errortext('40.912', .mutablebuffer~new('a')); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_two_dimensions",
+        source: "signal on syntax name e; x = errortext('40.912', .array~new(2,2)); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_not_converted",
+        source: "signal on syntax name e; x = errortext('40.912', .zq~new)\n::class zq\n::method makearray\n  say 'MAKEARRAY sent'\n  return .array~of(1)\n::method string\n  say 'STRING sent'\n  return 'zq'; say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_bad_without_message",
+        source: "signal on syntax name e; x = errortext('60.1', .nil); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_bad_for_a_number",
+        source: "signal on syntax name e; x = errortext(40, .object~new); say 'no error'; exit; e: say condition('o')~code",
+    },
+    Case {
+        name: "errortext_values_checked_after_code",
+        source: "signal on syntax name e; x = errortext(100, 'AAA'); say 'no error'; exit; e: say condition('o')~code",
     },
     // The range message's substitution. `_crossed` marks the intersection
     // the hand sweep held constant; every one of these was a live

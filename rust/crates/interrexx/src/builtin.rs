@@ -354,7 +354,7 @@ const IMPLEMENTED: &[Builtin] = &[
     Builtin {
         name: b"ERRORTEXT",
         min: 1,
-        max: Some(1),
+        max: Some(2),
         run: state::errortext,
     },
     Builtin {
@@ -897,7 +897,7 @@ pub(crate) fn raw_argument_positions(name: &'static [u8]) -> &'static [usize] {
 
 /// The whole of what [`raw_argument_positions`] answers, as a table, so a
 /// second builtin joining it is one row rather than a second branch.
-static RAW_ARGUMENT_POSITIONS: &[(&[u8], &[usize])] = &[(b"VALUE", &[2])];
+static RAW_ARGUMENT_POSITIONS: &[(&[u8], &[usize])] = &[(b"ERRORTEXT", &[2]), (b"VALUE", &[2])];
 
 /// One builtin call's arguments, in each of the readings a builtin needs of
 /// them.

@@ -54,6 +54,19 @@ pub(super) fn collection_store(interp: &Interp, receiver: ObjRef) -> ObjRef {
     }
 }
 
+impl Interp {
+    /// The slots of `value` when it is a single-dimensional array or an
+    /// instance of an `Array` subclass, trailing empty ones included, and
+    /// `None` for anything else. Nothing is sent to `value`.
+    pub(crate) fn single_dimensional_slots(&self, value: ObjRef) -> Option<Vec<Option<ObjRef>>> {
+        let store = collection_store(self, value);
+        let (slots, dimensions) = self.array_body(store)?;
+        dimensions
+            .is_none_or(|held| held.len() == 1)
+            .then(|| slots.to_vec())
+    }
+}
+
 /// [`array_slots`] as an owned copy, for a caller that renders the slots and
 /// so needs `interp` back.
 pub(super) fn array_slots_owned(

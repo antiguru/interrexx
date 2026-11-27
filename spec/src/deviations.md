@@ -1517,18 +1517,17 @@ tracks doing the same.
 ## 179. Language level 6.06
 
 interrexx implements language level 6.06. `.RexxInfo~languageLevel`, and the
-level in `PARSE VERSION` and `.RexxInfo~name`, read 6.06, ERRORTEXT takes one
-argument, and the CATCH and FINALLY clauses of level 6.07 are not part of
-interrexx. Neither is the THROW instruction of level 6.07: a clause that starts
-with THROW is a command, a condition object has no `THROWN` entry, and the
-native interface's interface versions are those of level 6.06. Its function
+level in `PARSE VERSION` and `.RexxInfo~name`, read 6.06, and the CATCH and
+FINALLY clauses of level 6.07 are not part of interrexx. Neither is the THROW
+instruction of level 6.07: a clause that starts with THROW is a command, a
+condition object has no `THROWN` entry, and the native interface's interface
+versions are those of level 6.06. Its function
 tables have the `Throw` and `ThrowObject` members, so that code written for
 level 6.07 builds, but a call of one ends the process with a message naming
 the member. ooRexx is at level
-6.07: ERRORTEXT takes a second argument of values for an error code's message,
-THROW raises a condition that goes from caller to caller until it is caught,
-every condition object has a `THROWN` entry, and the level reads 6.07. Ruled by
-the owner on 2026-11-17 (#796), and for THROW on 2026-11-24 (#804).
+6.07: THROW raises a condition that goes from caller to caller until it is
+caught, every condition object has a `THROWN` entry, and the level reads 6.07.
+Ruled by the owner on 2026-11-17 (#796), and for THROW on 2026-11-24 (#804).
 
 The same difference applies to the [required language level in compiled
 images](r:env.invocation.rexxc.required-level). ooRexx records 6.07 when a
@@ -1539,8 +1538,7 @@ ordinary routine calls and they do not raise the required level (#861).
 ## 180. Withdrawn
 
 ERRORTEXT's argument: interrexx takes an error code `nn.nnn` as ooRexx does,
-ruled by the owner on 2026-11-19 (#796). Its second argument, a feature of
-level 6.07, is part of Deviation 179.
+ruled by the owner on 2026-11-19 (#796).
 
 ## 181. A TRACE in a string that an INTERPRET in a typed line runs
 

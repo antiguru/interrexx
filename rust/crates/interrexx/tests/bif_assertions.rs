@@ -1038,9 +1038,11 @@ fn a_raise_row_needs_the_sub_number_too() {
 #[test]
 fn every_exempt_attribution_is_a_declared_outcome() {
     // The count is the whole point of this table, not decoration on it.
-    // `MISMATCH`'s fourteen rows are five of `ERRORTEXT::test_ERRORTEXT` and seven
-    // of `ERRORTEXT::test_ERRORTEXT_subcode`, which compare a message's wording
-    // with ooRexx's, unspecified under `r[conv.error.text]`, and `STREAM::test_relative_file_exists` and `...2`.
+    // `MISMATCH`'s 28 rows are 26 of `ERRORTEXT`, five of `test_ERRORTEXT`, seven
+    // of `test_ERRORTEXT_subcode`, eleven of `test_ERRORTEXT_values` and three of
+    // `test_ERRORTEXT_values_rules`, which compare a message's wording with
+    // ooRexx's, unspecified under `r[conv.error.text]`, and
+    // `STREAM::test_relative_file_exists` and `...2`.
     // The two STREAM rows assert against `.ooTest.dir`, which does not resolve outside the
     // ooTest framework -- both interpreters render it as the literal
     // `.OOTEST.DIR`, so the expected value is a string no implementation can
@@ -1049,11 +1051,11 @@ fn every_exempt_attribution_is_a_declared_outcome() {
     //
     // `RAISE-MISMATCH` has no rows: a builtin raises its own 40.xxx argument
     // errors, as the suite expects (ooRexx SF #2136).
-    // `ANOMALY`'s 21 are 20 of `ERRORTEXT`, which pass ERRORTEXT a second
-    // argument of values, which the specification does not accept (Deviation
-    // 179), and `SETLOCAL::test_endlocal_no_setlocal`, whose assertion calls
-    // the group's own `run` method, which a lifted-out row cannot reach.
-    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 14), ("RAISE-MISMATCH", 0), ("ANOMALY", 21)];
+    // `ANOMALY`'s three are two of `ERRORTEXT::test_ERRORTEXT_values`, whose
+    // assertions use the classes `myArray` and `myString` that the group
+    // defines, and `SETLOCAL::test_endlocal_no_setlocal`, whose assertion calls
+    // the group's own `run` method; a lifted-out row cannot reach either.
+    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 28), ("RAISE-MISMATCH", 0), ("ANOMALY", 3)];
 
     let names: Vec<&str> = DERIVED.iter().map(|(name, _)| *name).collect();
     let mut counts = vec![0usize; DERIVED.len()];
