@@ -1,6 +1,4 @@
-/* The three routines the REXX package exports: FILESPEC, BEEP and DIRECTORY.
-   They are native routines rather than builtins, so they resolve after a
-   program's own ::ROUTINEs and before the external file search.
+/* FILESPEC, BEEP and DIRECTORY are builtin functions.
    BEEP writes one bell byte to standard output and answers the null string. */
 say filespec('N', '/a/b.c') filespec('L', '/a/b.c') filespec('E', '/a/b.c') filespec('P', '/a/b.c')
 say '[' || filespec('D', '/a/b.c') || ']'
