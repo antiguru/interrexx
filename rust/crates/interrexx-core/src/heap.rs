@@ -3,6 +3,12 @@
 use crate::body::{BehaviourId, Body, Object};
 use crate::roots::RootSet;
 use crate::{Decoded, ObjRef};
+use interrexx_cast::CastFrom;
+
+/// Why a slot's index fits a `u32`: `alloc_with_uncollected`, the one place a
+/// slot is pushed, refuses one whose index does not, so every index below
+/// `slots.len()` does.
+const SLOT_FITS: &str = "the heap admits only slot indices that fit a u32";
 
 /// A slot carries its generation whether occupied or not, so that a handle
 /// minted before a sweep cannot read the slot's next occupant.
@@ -263,7 +269,7 @@ impl Heap {
                 }
                 // A weak reference reaches nothing and holds no bytes.
                 Body::WeakRef(_) => {
-                    weak_marked.push(slot as u32);
+                    weak_marked.push(u32::try_from(slot).expect(SLOT_FITS));
                     0
                 }
                 // A cell's value is in the root set, which `trace` cannot see.
@@ -286,7 +292,7 @@ impl Heap {
 
         // Pass 1: clear weak references whose target did not survive.
         for slot in weak_marked {
-            let slot = slot as usize;
+            let slot = usize::cast_from(slot);
             let Slot::Live { object, .. } = &self.slots[slot] else {
                 unreachable!("the mark loop only records live slots")
             };
@@ -405,7 +411,10 @@ impl Heap {
                         0,
                         "held_bytes charges bytes for a Class body"
                     );
-                    freed_classes.push(ObjRef::heap(slot as u32, generation));
+                    freed_classes.push(ObjRef::heap(
+                        u32::try_from(slot).expect(SLOT_FITS),
+                        generation,
+                    ));
                 }
                 Body::Cell(cell, _) => freed_cells.push(*cell),
                 _ => {
@@ -435,7 +444,7 @@ impl Heap {
                         next: free_head,
                         generation: next,
                     };
-                    free_head = Some(slot as u32);
+                    free_head = Some(u32::try_from(slot).expect(SLOT_FITS));
                     free
                 }
                 _ => Slot::Free {
@@ -490,7 +499,7 @@ impl Heap {
                 return false;
             };
             matches!(
-                slots.get(slot as usize),
+                slots.get(usize::cast_from(slot)),
                 Some(Slot::Live { generation: live, .. }) if *live == generation
             )
         });
@@ -613,17 +622,18 @@ impl Heap {
         // its full width. Measured on the allocating benchmark axes.
         match self.free_head {
             Some(slot) => {
-                let Slot::Free { next, generation } = self.slots[slot as usize] else {
+                let Slot::Free { next, generation } = self.slots[usize::cast_from(slot)] else {
                     unreachable!("the free list only threads free slots")
                 };
                 self.free_head = next;
-                self.slots[slot as usize] = Slot::Live {
+                self.slots[usize::cast_from(slot)] = Slot::Live {
                     object: Object {
                         behaviour,
                         body,
                         has_uninit: false,
                         ready_for_uninit: false,
                         watched: false,
+                        lent: false,
                     },
                     generation,
                 };
@@ -640,6 +650,7 @@ impl Heap {
                         has_uninit: false,
                         ready_for_uninit: false,
                         watched: false,
+                        lent: false,
                     },
                     generation: 0,
                 });
@@ -656,9 +667,9 @@ impl Heap {
         let Decoded::Heap { slot, generation } = r.decode() else {
             return None;
         };
-        let entry = self.slots.get(slot as usize)?;
+        let entry = self.slots.get(usize::cast_from(slot))?;
         (entry.generation() == generation && matches!(entry, Slot::Live { .. }))
-            .then_some(slot as usize)
+            .then_some(usize::cast_from(slot))
     }
 
     /// A live `Body::Text`'s bytes, and `None` for every other slot state and
@@ -669,7 +680,7 @@ impl Heap {
         let Decoded::Heap { slot, generation } = r.decode() else {
             return None;
         };
-        match self.slots.get(slot as usize)? {
+        match self.slots.get(usize::cast_from(slot))? {
             Slot::Live {
                 object:
                     Object {
@@ -679,7 +690,7 @@ impl Heap {
                 generation: live,
             } if *live == generation => {
                 #[cfg(feature = "sharing")]
-                self.resolved(slot as usize);
+                self.resolved(usize::cast_from(slot));
                 Some(bytes.as_slice())
             }
             _ => None,
@@ -803,7 +814,7 @@ impl Heap {
             shared: false,
             program,
         };
-        let slot = slot as usize;
+        let slot = usize::cast_from(slot);
         if slot == self.sharing.tags.len() {
             self.sharing.tags.push(std::cell::Cell::new(tag));
         } else {
@@ -860,7 +871,7 @@ mod retire_tests {
         let Decoded::Heap { slot, .. } = r.decode() else {
             panic!("heap handle")
         };
-        if let Slot::Live { generation, .. } = &mut heap.slots[slot as usize] {
+        if let Slot::Live { generation, .. } = &mut heap.slots[usize::cast_from(slot)] {
             *generation = GENERATION_MAX;
         }
         let stale = ObjRef::heap(slot, GENERATION_MAX);

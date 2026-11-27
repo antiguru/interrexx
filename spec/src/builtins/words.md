@@ -105,7 +105,3 @@ say words(.object~new) words(.object~new~string)
 > **Note.** The ANSI draft (9.3.29) defines WORDS as the number of leading
 > word numbers `k`, counting from 1, for which `SUBWORD(string, k)` is not the
 > null string; it is 0 when there is no word. This counts the same words.
-
-> **Note.** An argument whose `STRING` method answers an object that is not a
-> string falls under [Deviation 30](r:conv.string.deviation.30), as it does
-> for every builtin.

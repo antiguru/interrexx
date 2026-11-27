@@ -1,0 +1,3 @@
+# The oracle's outcomes of base/rexxutil/SysEventSem.testGroup derived, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# count, status, digest of the compared descriptors, key.
+30	0	757e6777bd1cce0b	pass, assertions 5, rc 0, last started TEST_POST_WAIT_RESET_CLOSE, failing []

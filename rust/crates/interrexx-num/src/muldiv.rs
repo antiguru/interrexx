@@ -1,6 +1,8 @@
 //! Multiplication and division.
 
-use crate::{ArithError, Digits, Number};
+use interrexx_cast::CastFrom;
+
+use crate::{ArithError, Digits, Number, last_digit, signed_count, signed_len};
 
 /// Below this working size division uses stack buffers and can never fail an
 /// allocation, so the reservation probe in `div` is skipped the same way.
@@ -79,7 +81,7 @@ impl Number {
         let exponent = left
             .exponent
             .checked_add(right.exponent)
-            .and_then(|e| e.checked_add(extra as i32))
+            .and_then(|e| e.checked_add(i32::try_from(extra).ok()?))
             .ok_or(ArithError::ExponentComputationOverflow)?;
         let negative = left.negative != right.negative;
         let raw = Number {
@@ -103,7 +105,7 @@ fn exact_integer_product(left: &Number, right: &Number, digits: u64) -> Option<N
     let width = left.digits.len() + right.digits.len();
     // Eighteen digits is the widest product an `i64` holds whatever its
     // digits are, so this bounds the folds below as well as the multiply.
-    if width > 18 || width as u64 > digits {
+    if width > 18 || u64::cast_from(width) > digits {
         return None;
     }
     let fold = |number: &Number| {
@@ -152,17 +154,19 @@ fn word_product(a: &[u8], b: &[u8]) -> Digits {
             // Two words of nineteen digits each, so each half converts in
             // `u64`: the low half to all its digits, the high half below.
             const SPLIT: u128 = 10_000_000_000_000_000_000;
-            let mut low = (product % SPLIT) as u64;
+            // The product is below `SPLIT^2`, so both halves are below `SPLIT`.
+            let half = |value: u128| u64::try_from(value).expect("below 10^19");
+            let mut low = half(product % SPLIT);
             for slot in buf[WORD_DIGITS..].iter_mut().rev() {
-                *slot = (low % 10) as u8;
+                *slot = last_digit(low);
                 low /= 10;
             }
-            ((product / SPLIT) as u64, WORD_DIGITS)
+            (half(product / SPLIT), WORD_DIGITS)
         }
     };
     loop {
         end -= 1;
-        buf[end] = (word % 10) as u8;
+        buf[end] = last_digit(word);
         word /= 10;
         if word == 0 {
             break;
@@ -202,7 +206,9 @@ impl Number {
         let calc_exp = left
             .exponent
             .checked_sub(right.exponent)
-            .and_then(|e| e.checked_add(left.digits.len() as i32 - right.digits.len() as i32))
+            .and_then(|e| {
+                e.checked_add(signed_count(left.digits.len()) - signed_count(right.digits.len()))
+            })
             .ok_or(ArithError::ExponentComputationOverflow)?;
 
         // A quotient below 1 has no integer part, so % is zero and // is the
@@ -277,7 +283,8 @@ impl Number {
         // quotient down one place: value = q * 10^(left.exponent -
         // right.exponent + left length - consumed). Same believed-
         // unreachable guard as the two above.
-        let q_exp = i64::from(left.exponent) - i64::from(right.exponent) + left.digits.len() as i64
+        let q_exp = i64::from(left.exponent) - i64::from(right.exponent)
+            + signed_len(left.digits.len())
             - i64::try_from(consumed).unwrap_or(i64::MAX);
         let q_exp = i32::try_from(q_exp).map_err(|_| ArithError::ExponentComputationOverflow)?;
 
@@ -315,7 +322,7 @@ impl Number {
             q = Digits::single(0);
         }
         if q_exp < 0 {
-            let drop = (-q_exp) as usize;
+            let drop = usize::cast_from(q_exp.unsigned_abs());
             if drop >= q.len() {
                 q = Digits::single(0);
             } else {
@@ -333,7 +340,7 @@ impl Number {
         // nowhere near i64::MAX.
         let digits_i64 = i64::try_from(digits).unwrap_or(i64::MAX);
         if !int_digits.is_zero()
-            && int_digits.digits.len() as i64 + i64::from(int_digits.exponent) > digits_i64
+            && signed_len(int_digits.digits.len()) + i64::from(int_digits.exponent) > digits_i64
         {
             // Only `%`/`//` reach here (`Divide` already returned above),
             // and the interpreter reports each with its own, substitution-
@@ -356,8 +363,9 @@ impl Number {
                 // this sum truncated the working precision for large
                 // `digits` -- the same class as the comparison fix above,
                 // on the arithmetic side.
-                let exact_extra =
-                    (left.digits.len() + right.digits.len() + int_digits.digits.len() + 10) as u64;
+                let exact_extra = u64::cast_from(
+                    left.digits.len() + right.digits.len() + int_digits.digits.len() + 10,
+                );
                 let exact = digits.saturating_add(exact_extra);
                 let product = int_digits.mul(&right, exact)?;
                 let mut r = left.sub(&product, exact)?;
@@ -489,7 +497,10 @@ fn limb_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, usize) {
         // residue, without dividing.
         let divisor = fold_digits(d);
         let residue = from_digits(n, 0).iter().rev().fold(0u64, |acc, limb| {
-            ((u128::from(acc) * 1_000_000_000 + u128::from(*limb)) % u128::from(divisor)) as u64
+            u64::try_from(
+                (u128::from(acc) * 1_000_000_000 + u128::from(*limb)) % u128::from(divisor),
+            )
+            .expect("below the divisor")
         });
         if let Some(zeros) = terminating_zeros(residue, divisor) {
             stop = stop.min(first.max(n.len() + zeros));
@@ -536,7 +547,7 @@ fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Dig
             let next = if i < n.len() { n[i] } else { 0 };
             i += 1;
             remainder = remainder * 10 + u64::from(next);
-            let digit = (remainder / divisor) as u8;
+            let digit = u8::try_from(remainder / divisor).expect("a remainder below 10 * divisor");
             remainder %= divisor;
             if length == 0 && digit == 0 {
                 if i > exhausted {
@@ -563,7 +574,7 @@ fn short_divide(n: &[u8], divisor: u64, divisor_len: usize, want: usize) -> (Dig
         let next = if i < n.len() { n[i] } else { 0 };
         i += 1;
         remainder = remainder * 10 + u64::from(next);
-        let digit = (remainder / divisor) as u8;
+        let digit = u8::try_from(remainder / divisor).expect("a remainder below 10 * divisor");
         remainder %= divisor;
         if q.is_empty() && digit == 0 {
             // Not yet reached the first significant quotient digit.
@@ -598,9 +609,9 @@ fn wide_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, usize) {
     // Digit guesses divide by the divisor's first two digits plus one, so a
     // guess is either correct or errs low, never high -- the estimate the
     // interpreter's `Division` uses, shared with `divide_power`.
-    let mut div_char = d[0] as i32 * 10;
+    let mut div_char = i32::from(d[0]) * 10;
     if d.len() > 1 {
-        div_char += d[1] as i32;
+        div_char += i32::from(d[1]);
     }
     div_char += 1;
 
@@ -630,17 +641,18 @@ fn wide_divide(n: &[u8], d: &[u8], want: usize) -> (Digits, usize) {
                         start = 0;
                         break;
                     }
-                    std::cmp::Ordering::Greater => cur[0] as i32,
+                    std::cmp::Ordering::Greater => i32::from(cur[0]),
                 }
             } else if cur.len() > d.len() {
                 // The remainder is longer, so it has at least two digits.
-                cur[0] as i32 * 10 + cur[1] as i32
+                i32::from(cur[0]) * 10 + i32::from(cur[1])
             } else {
                 break;
             };
             // A zero guess gets wrapped to 1.
             let m = (multiplier * 10 / div_char).max(1);
-            count += m as u8;
+            // At most `99 * 10 / 11`: the divisor leads with a nonzero digit.
+            count += u8::try_from(m).expect("a guess below 91");
             subtract_multiple(&mut rem[start..], d, m);
             while rem.len() - start > 1 && rem[start] == 0 {
                 start += 1;
@@ -689,8 +701,8 @@ pub(crate) fn subtract_multiple(left: &mut [u8], divisor: &[u8], m: i32) {
         let sub = divisor
             .len()
             .checked_sub(i + 1)
-            .map_or(0, |k| divisor[k] as i32 * m);
-        let mut v = carry + left[pos] as i32 - sub;
+            .map_or(0, |k| i32::from(divisor[k]) * m);
+        let mut v = carry + i32::from(left[pos]) - sub;
         if v < 0 {
             // A single digit product can leave a deficit as large as 81, so
             // the borrow out can span two positions.
@@ -700,7 +712,7 @@ pub(crate) fn subtract_multiple(left: &mut [u8], divisor: &[u8], m: i32) {
         } else {
             carry = 0;
         }
-        left[pos] = v as u8;
+        left[pos] = u8::try_from(v).expect("a digit");
     }
     debug_assert_eq!(
         carry, 0,
@@ -800,7 +812,7 @@ mod mul_shortcut_tests {
                             .map(|i| match style {
                                 0 => 9,
                                 1 => u8::from(i == 0),
-                                _ => (next() % 10) as u8,
+                                _ => crate::last_digit(next()),
                             })
                             .collect()
                     };
@@ -1018,8 +1030,9 @@ mod divide_route_tests {
     fn the_short_divisor_width_is_the_one_a_machine_word_holds() {
         let widest = |width: u32| 10u128.pow(width) - 1;
         let step = |divisor: u128| (divisor - 1) * 10 + 9;
-        assert!(step(widest(SHORT_DIVISOR_DIGITS as u32)) <= u128::from(u64::MAX));
-        assert!(step(widest(SHORT_DIVISOR_DIGITS as u32 + 1)) > u128::from(u64::MAX));
+        let digits = u32::try_from(SHORT_DIVISOR_DIGITS).expect("a short width");
+        assert!(step(widest(digits)) <= u128::from(u64::MAX));
+        assert!(step(widest(digits + 1)) > u128::from(u64::MAX));
     }
 
     /// Either side of the width where the route changes, through the operator

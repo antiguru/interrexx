@@ -695,6 +695,11 @@ fn begin_routine(
             .then(|| interp.lookup(receiver, message, None))
             .flatten();
         if let Some(resolution) = level {
+            // A level held aside goes on below this one
+            // ([`Interp::deferred_level`]).
+            if interp.activity.deferred_level.is_some() {
+                interp.raise_deferred_level();
+            }
             let caller = interp.running_activation().map(|activation| activation.id);
             interp
                 .activity

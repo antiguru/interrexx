@@ -8,8 +8,27 @@
 
 /// Nine decimal digits per limb: the product of two limbs plus two more
 /// limbs stays inside a `u64`.
-const BASE: u64 = 1_000_000_000;
+const BASE: u64 = interrexx_cast::u64_from_u32(LIMB_BASE);
+/// [`BASE`] at a limb's own width.
+const LIMB_BASE: u32 = 1_000_000_000;
+/// [`BASE`] signed, for the borrow arithmetic of the division.
+const SIGNED_BASE: i64 = interrexx_cast::i64_from_u32(LIMB_BASE);
 const LIMB_DIGITS: usize = 9;
+
+/// `value`, which is below [`BASE`], as a limb.
+fn to_limb(value: u64) -> u32 {
+    u32::try_from(value).expect("a limb is below BASE")
+}
+
+/// `value`, which is in `0..BASE`, as a limb.
+fn signed_limb(value: i64) -> u32 {
+    u32::try_from(value).expect("a limb is in 0..BASE")
+}
+
+/// The last decimal digit of `value`.
+fn last_digit(value: u32) -> u8 {
+    u8::try_from(value % 10).expect("a remainder by 10 is a digit")
+}
 
 /// Below this many limbs in the shorter operand, Karatsuba's extra additions
 /// cost more than the multiplications it saves.
@@ -25,7 +44,7 @@ pub(crate) fn from_digits(digits: &[u8], zeros: usize) -> Vec<u32> {
     limbs.resize(zeros / LIMB_DIGITS, 0);
     let partial = zeros % LIMB_DIGITS;
     let mut limb: u32 = 0;
-    let mut scale: u32 = 10u32.pow(partial as u32);
+    let mut scale: u32 = 10u32.pow(u32::try_from(partial).expect("below LIMB_DIGITS"));
     let mut filled = partial;
     for &digit in digits.iter().rev() {
         limb += u32::from(digit) * scale;
@@ -61,7 +80,7 @@ pub(crate) fn to_digits(limbs: &[u32]) -> Vec<u8> {
     let mut lead = limbs[top - 1];
     let mut len = 0;
     loop {
-        buf[len] = (lead % 10) as u8;
+        buf[len] = last_digit(lead);
         lead /= 10;
         len += 1;
         if lead == 0 {
@@ -72,7 +91,7 @@ pub(crate) fn to_digits(limbs: &[u32]) -> Vec<u8> {
     for &limb in limbs[..top - 1].iter().rev() {
         let mut v = limb;
         for slot in buf.iter_mut().rev() {
-            *slot = (v % 10) as u8;
+            *slot = last_digit(v);
             v /= 10;
         }
         out.extend_from_slice(&buf);
@@ -121,13 +140,13 @@ fn schoolbook(out: &mut [u32], a: &[u32], b: &[u32]) {
         let mut carry = 0u64;
         for (j, &y) in b.iter().enumerate() {
             let t = u64::from(out[i + j]) + x * u64::from(y) + carry;
-            out[i + j] = (t % BASE) as u32;
+            out[i + j] = to_limb(t % BASE);
             carry = t / BASE;
         }
         let mut k = i + b.len();
         while carry != 0 {
             let t = u64::from(out[k]) + carry;
-            out[k] = (t % BASE) as u32;
+            out[k] = to_limb(t % BASE);
             carry = t / BASE;
             k += 1;
         }
@@ -162,9 +181,9 @@ fn sum(a: &[u32], b: &[u32]) -> Vec<u32> {
     let mut carry = 0u32;
     for (i, &l) in long.iter().enumerate() {
         let mut t = l + short.get(i).copied().unwrap_or(0) + carry;
-        carry = u32::from(t >= BASE as u32);
+        carry = u32::from(t >= LIMB_BASE);
         if carry != 0 {
-            t -= BASE as u32;
+            t -= LIMB_BASE;
         }
         out.push(t);
     }
@@ -181,9 +200,9 @@ fn add_into(acc: &mut [u32], addend: &[u32]) {
     let mut i = 0;
     while i < addend.len() || carry != 0 {
         let mut t = acc[i] + addend.get(i).copied().unwrap_or(0) + carry;
-        carry = u32::from(t >= BASE as u32);
+        carry = u32::from(t >= LIMB_BASE);
         if carry != 0 {
-            t -= BASE as u32;
+            t -= LIMB_BASE;
         }
         acc[i] = t;
         i += 1;
@@ -206,7 +225,7 @@ fn sub_from(acc: &mut [u32], sub: &[u32]) {
             acc[i] -= s;
             borrow = 0;
         } else {
-            acc[i] = acc[i] + BASE as u32 - s;
+            acc[i] = acc[i] + LIMB_BASE - s;
             borrow = 1;
         }
         i += 1;
@@ -229,10 +248,11 @@ pub(crate) fn divide(n: &[u32], d: &[u32]) -> (Vec<u32>, Vec<u32>) {
         let mut rem = 0u64;
         for i in (0..n.len()).rev() {
             let cur = rem * BASE + u64::from(n[i]);
-            q[i] = (cur / divisor) as u32;
+            // `rem < divisor`, so `cur < divisor * BASE`.
+            q[i] = to_limb(cur / divisor);
             rem = cur % divisor;
         }
-        let rem = if rem == 0 { vec![] } else { vec![rem as u32] };
+        let rem = if rem == 0 { vec![] } else { vec![to_limb(rem)] };
         return (q, rem);
     }
 
@@ -266,42 +286,47 @@ pub(crate) fn divide(n: &[u32], d: &[u32]) -> (Vec<u32>, Vec<u32>) {
         for i in 0..k {
             let p = qhat * u64::from(dd[i]) + carry;
             carry = p / BASE;
-            let t = i64::from(nn[j + i]) - (p % BASE) as i64 - borrow;
+            let t = i64::from(nn[j + i]) - i64::from(to_limb(p % BASE)) - borrow;
             if t < 0 {
-                nn[j + i] = (t + BASE as i64) as u32;
+                nn[j + i] = signed_limb(t + SIGNED_BASE);
                 borrow = 1;
             } else {
-                nn[j + i] = t as u32;
+                nn[j + i] = signed_limb(t);
                 borrow = 0;
             }
         }
-        let t = i64::from(nn[j + k]) - carry as i64 - borrow;
+        // `qhat` is below `2 * BASE` and a limb below `BASE`, so the carry is
+        // at most `2 * BASE`.
+        let carry = i64::try_from(carry).expect("a carry of at most 2 * BASE");
+        let t = i64::from(nn[j + k]) - carry - borrow;
         if t < 0 {
             // The estimate was one too high: add the divisor back.
-            nn[j + k] = (t + BASE as i64) as u32;
+            nn[j + k] = signed_limb(t + SIGNED_BASE);
             qhat -= 1;
             let mut carry = 0u32;
             for i in 0..k {
                 let mut s = nn[j + i] + dd[i] + carry;
-                carry = u32::from(s >= BASE as u32);
+                carry = u32::from(s >= LIMB_BASE);
                 if carry != 0 {
-                    s -= BASE as u32;
+                    s -= LIMB_BASE;
                 }
                 nn[j + i] = s;
             }
             // The carry out cancels the borrow left in the top limb.
-            nn[j + k] = ((u64::from(nn[j + k]) + u64::from(carry)) % BASE) as u32;
+            nn[j + k] = to_limb((u64::from(nn[j + k]) + u64::from(carry)) % BASE);
         } else {
-            nn[j + k] = t as u32;
+            nn[j + k] = signed_limb(t);
         }
-        q[j] = qhat as u32;
+        // The estimate starts below `BASE^2 / (BASE / 2)` and only falls.
+        q[j] = u32::try_from(qhat).expect("an estimate below 2 * BASE");
     }
     // The remainder is what is left of the scaled numerator, scaled back.
     let mut rem = vec![0u32; k];
     let mut carry = 0u64;
     for i in (0..k).rev() {
         let cur = carry * BASE + u64::from(nn[i]);
-        rem[i] = (cur / factor) as u32;
+        // `carry < factor`, so `cur < factor * BASE`.
+        rem[i] = to_limb(cur / factor);
         carry = cur % factor;
     }
     debug_assert_eq!(carry, 0, "the scaled remainder divides by the scale");
@@ -315,17 +340,21 @@ fn scale(limbs: &[u32], factor: u64) -> Vec<u32> {
     let mut carry = 0u64;
     for &limb in limbs {
         let t = u64::from(limb) * factor + carry;
-        out.push((t % BASE) as u32);
+        out.push(to_limb(t % BASE));
         carry = t / BASE;
     }
     if carry != 0 {
-        out.push(carry as u32);
+        // `limb * factor + carry < BASE * factor`, so the carry is below the
+        // factor.
+        out.push(to_limb(carry));
     }
     out
 }
 
 #[cfg(test)]
 mod tests {
+    use interrexx_cast::CastFrom;
+
     use super::*;
 
     /// xorshift64*, so a failure reproduces from the seed.
@@ -352,7 +381,7 @@ mod tests {
                         0 => 9,
                         1 if i > 0 => 0,
                         2 if self.below(3) == 0 => 9,
-                        _ => self.below(10) as u8,
+                        _ => u8::try_from(self.below(10)).expect("a digit"),
                     };
                     if i == 0 && d == 0 { 1 } else { d }
                 })
@@ -374,7 +403,11 @@ mod tests {
             *slot = v % 10;
             carry = v / 10;
         }
-        let mut digits: Vec<u8> = out.iter().rev().map(|d| *d as u8).collect();
+        let mut digits: Vec<u8> = out
+            .iter()
+            .rev()
+            .map(|d| u8::try_from(*d).expect("a digit"))
+            .collect();
         let lead = digits.iter().take_while(|d| **d == 0).count();
         digits.drain(..lead.min(digits.len() - 1));
         digits
@@ -428,15 +461,15 @@ mod tests {
     fn the_limb_quotient_multiplies_back_to_the_dividend() {
         let mut rng = Rng(13);
         for _ in 0..3000 {
-            let ld = 1 + rng.below(80) as usize;
-            let lq = 1 + rng.below(80) as usize;
+            let ld = 1 + usize::try_from(rng.below(80)).expect("below 80");
+            let lq = 1 + usize::try_from(rng.below(80)).expect("below 80");
             let d = from_digits(&rng.digits(ld), 0);
             let qq = from_digits(&rng.digits(lq), 0);
             // Zero, or a remainder with fewer digits than the divisor.
             let r = if ld == 1 || rng.below(3) == 0 {
                 vec![]
             } else {
-                let len = 1 + rng.below(ld as u64 - 1) as usize;
+                let len = 1 + usize::try_from(rng.below(u64::cast_from(ld) - 1)).expect("below ld");
                 from_digits(&rng.digits(len), 0)
             };
             let mut n = mul(&qq, &d);

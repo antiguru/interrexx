@@ -7,6 +7,7 @@
 use crate::Interp;
 use crate::run::{NameShape, shape_of};
 use crate::trace::{ChunkTrace, TraceEvent};
+use interrexx_cast::{CastFrom, CastTruncate};
 use interrexx_core::ObjRef;
 use interrexx_parse::{
     Call, CallTarget, CodeBody, DirectiveKind, Expr, ExprKind, Fragment, Instruction,
@@ -36,12 +37,12 @@ impl ProgramId {
     /// The slot this id names.
     #[inline]
     fn slot(self) -> u32 {
-        self.0 as u32
+        u32::cast_truncate(self.0)
     }
 
     #[inline]
     fn generation(self) -> u32 {
-        (self.0 >> 32) as u32
+        u32::try_from(self.0 >> 32).expect("the high half")
     }
 
     /// The id the `slot`th program loaded into a fresh interpreter gets.
@@ -100,7 +101,7 @@ impl Programs {
     pub(crate) fn insert(&mut self, program: Rc<Program>) -> ProgramId {
         self.live += 1;
         let id = if let Some(slot) = self.free.pop() {
-            let held = &mut self.slots[slot as usize];
+            let held = &mut self.slots[usize::cast_from(slot)];
             held.program = Some(program);
             held.id
         } else {
@@ -121,7 +122,7 @@ impl Programs {
     /// The program `id` names, or `None` once it has been freed.
     #[inline]
     pub(crate) fn get(&self, id: ProgramId) -> Option<&Rc<Program>> {
-        let held = self.slots.get(id.slot() as usize)?;
+        let held = self.slots.get(usize::cast_from(id.slot()))?;
         if held.id != id {
             return None;
         }
@@ -137,7 +138,7 @@ impl Programs {
     #[inline]
     fn package_slot(&self, id: ProgramId) -> Option<&PackageSlot> {
         self.get(id)?;
-        self.packages.get(id.slot() as usize)
+        self.packages.get(usize::cast_from(id.slot()))
     }
 
     /// The object standing for `id`'s package, or `None` before one is built
@@ -156,7 +157,7 @@ impl Programs {
     /// answers the hold it keeps on the program. `None` for a freed `id`.
     pub(crate) fn set_package(&mut self, id: ProgramId, package: ObjRef) -> Option<ProgramHold> {
         self.get(id)?;
-        let held = &mut self.packages[id.slot() as usize];
+        let held = &mut self.packages[usize::cast_from(id.slot())];
         let hold = Rc::new(id);
         held.package = Some(package);
         held.holds = Some(Rc::downgrade(&hold));
@@ -185,9 +186,12 @@ impl Programs {
             // A slot whose generation would reach the last one is retired, so
             // that the id it holds is never issued.
             let next = held.id.generation() + 1;
-            held.id = ProgramId::new(slot as u32, next);
+            held.id = ProgramId::new(
+                u32::try_from(slot).expect("fewer than 2^32 program slots"),
+                next,
+            );
             if next < u32::MAX {
-                self.free.push(slot as u32);
+                self.free.push(held.id.slot());
             }
         }
         freed
@@ -385,6 +389,7 @@ pub(crate) struct Plan {
     /// The spelling an `EXPOSE` binds each symbol under, made once and shared
     /// by every binding of it.
     exposed_names: BySymbol<std::cell::OnceCell<Rc<[u8]>>>,
+    literal_parses: Vec<(usize, Vec<(u32, interrexx_core::ObjRef)>)>,
     last_chunk: LastChunk,
 }
 
@@ -514,13 +519,18 @@ impl Plan {
             ..Plan::default()
         };
         let mut trace_events = Vec::with_capacity(body.instructions.len());
-        for instruction in &body.instructions {
+        for (index, instruction) in body.instructions.iter().enumerate() {
             // Set again in front of each instruction and read back after it,
             // because `note_instruction` only ever clears the flag: the walk
             // would otherwise report every instruction after the first
             // retracing one as retracing too.
             plan.keeps_the_trace_setting = true;
             plan.note_instruction(&instruction.kind, symbols);
+            if let InstructionKind::Parse(parse) = &instruction.kind
+                && let Some(writes) = crate::parse_template::literal_writes(parse, &plan, symbols)
+            {
+                plan.literal_parses.push((index, writes));
+            }
             trace_events.push(match (plan.keeps_the_trace_setting, &instruction.kind) {
                 (true, _) => TraceEvent::Keeps,
                 (false, InstructionKind::Trace(setting)) => {
@@ -562,6 +572,14 @@ impl Plan {
                 .collect();
         }
         plan
+    }
+
+    pub(crate) fn literal_parse(&self, index: usize) -> Option<&[(u32, interrexx_core::ObjRef)]> {
+        let at = self
+            .literal_parses
+            .binary_search_by_key(&index, |(at, _)| *at)
+            .ok()?;
+        Some(&self.literal_parses[at].1)
     }
 
     /// Registers every name one instruction's own fields could read -- the
@@ -1156,6 +1174,19 @@ impl Interp {
         for entry in compiled.by_symbol.iter_mut() {
             *entry = entry.map(|local_slot| enclosing[local_slot]);
         }
+        // Prepared writes use the same local numbering and must move with
+        // the ordinary stores. Fall back to the template walk if a caller
+        // slot cannot fit in the prepared op's u32 operand.
+        compiled.literal_parses.retain_mut(|(_, writes)| {
+            writes.iter_mut().all(|(slot, _)| {
+                let local_slot = usize::cast_from(*slot);
+                let Ok(enclosing_slot) = u32::try_from(enclosing[local_slot]) else {
+                    return false;
+                };
+                *slot = enclosing_slot;
+                true
+            })
+        });
         compiled.result_slot = compiled.result_slot.map(|slot| enclosing[slot]);
         compiled.sigl_slot = compiled.sigl_slot.map(|slot| enclosing[slot]);
         compiled.self_slot = compiled.self_slot.map(|slot| enclosing[slot]);

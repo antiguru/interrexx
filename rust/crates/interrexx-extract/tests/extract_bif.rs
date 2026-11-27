@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 /// The ooTest revision every absolute literal below was measured at. Named in
 /// each failure message so a red count is diagnosable as `svn up` rather than
 /// as a regression in this repository.
-const OOTEST_REVISION: &str = "r13532";
+const OOTEST_REVISION: &str = "r13624";
 
 /// What a red absolute-literal test most likely means, appended to every such
 /// failure.
@@ -59,11 +59,12 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("ADDRESS", 2, 0, 0),
     ("ARG", 64, 0, 0),
     ("B2X", 41, 24, 13),
-    ("BEEP", 5, 3, 0),
+    ("BEEP", 7, 3, 0),
     ("BITAND", 101, 83, 18),
     ("BITOR", 124, 105, 19),
     ("BITXOR", 136, 111, 25),
     ("BuiltinArgumentErrors", 12, 0, 0),
+    ("BuiltinSearchOrder", 6, 0, 0),
     ("C2D", 127, 69, 33),
     ("C2X", 34, 32, 1),
     ("CENTER", 97, 74, 22),
@@ -83,6 +84,7 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("DELSTR", 87, 79, 0),
     ("DELWORD", 69, 65, 0),
     ("DIGITS", 20, 5, 0),
+    ("DIRECTORY", 7, 3, 0),
     ("ERRORTEXT", 151, 138, 0),
     ("FILESPEC", 76, 0, 0),
     ("FORM", 3, 2, 0),
@@ -101,7 +103,7 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("MIN", 12, 12, 0),
     ("OVERLAY", 62, 62, 0),
     ("POS", 70, 44, 0),
-    ("QUALIFY", 21, 2, 0),
+    ("QUALIFY", 25, 2, 0),
     ("QUEUED", 5, 1, 0),
     ("RANDOM", 3, 0, 0),
     ("REVERSE", 27, 26, 0),
@@ -177,7 +179,7 @@ fn base_bif_yields_the_measured_counts() {
     let raises: usize = measured.iter().map(|r| r.3).sum();
     assert_eq!(
         (calls, rows, raises, calls - rows),
-        (6418, 5051, 186, 1367),
+        (6437, 5054, 186, 1383),
         "the totals moved.{}",
         provenance()
     );
@@ -187,19 +189,19 @@ fn base_bif_yields_the_measured_counts() {
 #[test]
 fn the_drop_reasons_account_for_every_call_outside_the_population() {
     const EXPECTED: &[(DropReason, usize, usize)] = &[
-        (DropReason::OutsideTestMethod, 5, 8),
+        (DropReason::OutsideTestMethod, 5, 9),
         (DropReason::RoutineBody, 1, 5),
         (DropReason::InsideComment, 3, 25),
         (DropReason::ContinuedLine, 2, 2),
         (DropReason::NotAClause, 0, 0),
         (DropReason::UnparsedCallShape, 0, 0),
         (DropReason::ExpectedRaise, 189, 195),
-        (DropReason::MessageSend, 103, 420),
-        (DropReason::UnsupportedStatement, 131, 503),
+        (DropReason::MessageSend, 107, 429),
+        (DropReason::UnsupportedStatement, 134, 508),
         (DropReason::NumericNotConstant, 9, 14),
         (DropReason::UnresolvedFixture, 121, 121),
         (DropReason::InFileRoutine, 3, 8),
-        (DropReason::NoValueUnderOptions, 17, 45),
+        (DropReason::NoValueUnderOptions, 18, 46),
         (DropReason::OtherExpectation, 0, 0),
         (DropReason::NonUtf8Source, 6, 11),
         (DropReason::SideEffectingAssertion, 1, 6),
@@ -238,7 +240,7 @@ fn the_drop_reasons_account_for_every_call_outside_the_population() {
         provenance()
     );
     let dropped: usize = measured.values().map(|v| v.1).sum();
-    assert_eq!(dropped, 1367, "the drop total moved.{}", provenance());
+    assert_eq!(dropped, 1383, "the drop total moved.{}", provenance());
 }
 
 /// A real lower bound on the rows side, so that conservation cannot be

@@ -2,6 +2,8 @@
 
 use std::fmt::Write as _;
 
+use interrexx_cast::CastFrom;
+
 /// xorshift64*, so the generator has no dependencies and a run is
 /// reproducible from its seed alone.
 struct Rng(u64);
@@ -18,8 +20,12 @@ impl Rng {
     fn below(&mut self, n: u64) -> u64 {
         self.next() % n
     }
+    /// A value below `n`, which is a length.
+    fn index(&mut self, n: usize) -> usize {
+        usize::try_from(self.below(u64::cast_from(n))).expect("below a length")
+    }
     fn pick<'a, T>(&mut self, items: &'a [T]) -> &'a T {
-        &items[self.below(items.len() as u64) as usize]
+        &items[self.index(items.len())]
     }
 }
 
@@ -30,7 +36,7 @@ fn literal(rng: &mut Rng) -> String {
     if rng.below(2) == 0 {
         out.push('-');
     }
-    let len = 1 + rng.below(12) as usize;
+    let len = 1 + rng.index(12);
     for i in 0..len {
         // Bias the leading digit away from zero sometimes, but not always --
         // leading zeros are their own edge case.
@@ -42,7 +48,7 @@ fn literal(rng: &mut Rng) -> String {
         let _ = write!(out, "{d}");
     }
     if rng.below(3) == 0 {
-        let point = rng.below(out.len() as u64) as usize;
+        let point = rng.index(out.len());
         out.insert(point.max(1), '.');
     }
     match rng.below(6) {
@@ -50,18 +56,18 @@ fn literal(rng: &mut Rng) -> String {
         1 => {
             // Near the representable edge, where the interpreter switches
             // between a value, an overflow, and an unconvertible literal.
-            let edge = 999_999_999i64 - rng.below(15) as i64;
+            let edge = 999_999_999i64 - rng.below(15).cast_signed();
             let sign = if rng.below(2) == 0 { "" } else { "-" };
             let _ = write!(out, "e{sign}{edge}");
         }
         2 => {
             // Deliberately past the edge: these must be rejected.
-            let over = 999_999_999i64 + 1 + rng.below(1_000) as i64;
+            let over = 999_999_999i64 + 1 + rng.below(1_000).cast_signed();
             let sign = if rng.below(2) == 0 { "" } else { "-" };
             let _ = write!(out, "e{sign}{over}");
         }
         _ => {
-            let e = rng.below(40) as i64 - 20;
+            let e = rng.below(40).cast_signed() - 20;
             let _ = write!(out, "e{e}");
         }
     }
@@ -87,7 +93,7 @@ fn main() {
         // overflow boundaries anyway.
         let b = if op == "**" {
             match rng.below(4) {
-                0 => format!("{}", rng.below(40) as i64 - 20),
+                0 => format!("{}", rng.below(40).cast_signed() - 20),
                 1 => format!("{}.{}", rng.below(6), rng.below(10)),
                 2 => format!("{}", rng.below(1_000_000_000)),
                 _ => format!("-{}", rng.below(30)),

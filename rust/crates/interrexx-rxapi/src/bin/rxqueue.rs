@@ -4,6 +4,7 @@
 use std::io::{BufRead, Write};
 use std::process::ExitCode;
 
+use interrexx_cast::CastTruncate;
 use interrexx_rxapi::client::{Session, connect};
 use interrexx_rxapi::message::code::{
     NO_SERVICE, OK, QUEUE_BAD_NAME, QUEUE_NOT_REGISTERED, QUEUE_PRIORITY,
@@ -81,7 +82,7 @@ fn failure_text(status: u64, name: &[u8]) -> String {
 /// Reports `status` for `name` and answers the exit status.
 fn fail(status: u64, name: &[u8]) -> ExitCode {
     say(&failure_text(status, name));
-    ExitCode::from((status % 256) as u8)
+    ExitCode::from(u8::cast_truncate(status))
 }
 
 fn status(reply: Result<Reply, u64>) -> u64 {
@@ -156,7 +157,7 @@ fn main() -> ExitCode {
     // gone when it disconnects, so its lines would reach nobody.
     if name.eq_ignore_ascii_case(b"SESSION") && !session.inherited() {
         say("There is no session queue: name a queue, or run rxqueue from a Rexx program.");
-        return ExitCode::from(QUEUE_NOT_REGISTERED as u8);
+        return ExitCode::from(u8::try_from(QUEUE_NOT_REGISTERED).expect("a status below 256"));
     }
     let client = match connect() {
         Ok(client) => client,

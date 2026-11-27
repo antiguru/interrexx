@@ -135,7 +135,12 @@ impl Mapping {
                 // SAFETY: `raw` came from `into_raw` just above and is turned back into the one
                 // owner it was, so the loader reference is still held once.
                 let handle = unsafe { PlatformLibrary::from_raw(raw) };
-                (Some(handle.into()), raw as usize)
+                #[cfg(unix)]
+                let identity = raw.addr();
+                // libloading's `HMODULE` is an `isize`.
+                #[cfg(windows)]
+                let identity = raw.cast_unsigned();
+                (Some(handle.into()), identity)
             }
             None => (None, 0),
         };
@@ -291,6 +296,10 @@ impl NativeMethodEntry {
 /// A method row for a stub this image itself defines, for a caller that needs
 /// an entry point without a library.
 #[cfg(test)]
+#[expect(
+    clippy::as_conversions,
+    reason = "a function pointer has no method that answers its address"
+)]
 pub(crate) fn stub_entry(name: &[u8], stub: NativeMethod) -> NativeMethodEntry {
     NativeMethodEntry {
         style: METHOD_TYPED_STYLE,
@@ -303,6 +312,10 @@ pub(crate) fn stub_entry(name: &[u8], stub: NativeMethod) -> NativeMethodEntry {
 /// A routine row for a stub this image itself defines, for a caller that
 /// needs an entry point without a library.
 #[cfg(test)]
+#[expect(
+    clippy::as_conversions,
+    reason = "a function pointer has no method that answers its address"
+)]
 pub(crate) fn stub_routine_entry(
     style: c_int,
     name: &[u8],
@@ -335,8 +348,8 @@ pub fn hooks_only(
         required_version: 0,
         package_name: std::ptr::null(),
         package_version: std::ptr::null(),
-        loader: loader.map(|hook| hook as PackageHook),
-        unloader: unloader.map(|hook| hook as PackageHook),
+        loader: loader.map(|hook| -> PackageHook { hook }),
+        unloader: unloader.map(|hook| -> PackageHook { hook }),
         routines: std::ptr::null_mut(),
         methods: std::ptr::null_mut(),
     };
@@ -354,6 +367,10 @@ pub type TypedRoutine = NativeRoutine;
 /// defines, for a test that drives native calls without a shared object.
 #[doc(hidden)]
 #[must_use]
+#[expect(
+    clippy::as_conversions,
+    reason = "a function pointer has no method that answers its address"
+)]
 pub fn routines_only(routines: &[(&str, TypedRoutine)]) -> Library {
     #[cfg(unix)]
     let mapping = Mapping::new(Some(PlatformLibrary::this().into()));
@@ -447,7 +464,7 @@ unsafe extern "C-unwind" fn embedding_wait(
     // SAFETY: `context` is the live call context, and `arguments` the
     // descriptor array `SIGNATURE` declares the result element of.
     unsafe {
-        let thread = (*context).threadContext as usize;
+        let thread = (*context).threadContext.expose_provenance();
         if let Some(wait) = EMBEDDING_WAIT.get() {
             wait(thread);
         }
@@ -975,16 +992,20 @@ pub unsafe extern "C-unwind" fn foreign_in_callback(
     // while this one waits for it, inside the call.
     unsafe {
         let thread = (*context).threadContext;
-        let shared = thread as usize;
-        let other = (*arguments.add(3)).value.value_RexxObjectPtr as usize;
-        let message = (*arguments.add(4)).value.value_CSTRING as usize;
+        let shared = thread.expose_provenance();
+        let other = (*arguments.add(3))
+            .value
+            .value_RexxObjectPtr
+            .expose_provenance();
+        let message = (*arguments.add(4)).value.value_CSTRING.expose_provenance();
         let foreign = std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(200));
-            let thread = shared as *mut crate::layout::RexxThreadContext_;
+            let thread =
+                std::ptr::with_exposed_provenance_mut::<crate::layout::RexxThreadContext_>(shared);
             ((*(*thread).functions).SendMessage0)(
                 thread,
-                other as crate::layout::RexxObjectPtr,
-                message as crate::layout::CSTRING,
+                std::ptr::with_exposed_provenance_mut(other),
+                std::ptr::with_exposed_provenance(message),
             );
         });
         ((*(*thread).functions).SendMessage0)(
@@ -1063,16 +1084,21 @@ pub unsafe extern "C-unwind" fn send_from_another_thread(
     // The other thread uses the context, the object and the message only
     // while this one waits for it, inside the call.
     unsafe {
-        let thread = (*context).threadContext as usize;
-        let object = (*arguments.add(1)).value.value_RexxObjectPtr as usize;
-        let message = (*arguments.add(2)).value.value_CSTRING as usize;
+        let thread = (*context).threadContext.expose_provenance();
+        let object = (*arguments.add(1))
+            .value
+            .value_RexxObjectPtr
+            .expose_provenance();
+        let message = (*arguments.add(2)).value.value_CSTRING.expose_provenance();
         let answered = std::thread::spawn(move || {
-            let thread = thread as *mut crate::layout::RexxThreadContext_;
+            let thread =
+                std::ptr::with_exposed_provenance_mut::<crate::layout::RexxThreadContext_>(thread);
             ((*(*thread).functions).SendMessage0)(
                 thread,
-                object as crate::layout::RexxObjectPtr,
-                message as crate::layout::CSTRING,
-            ) as usize
+                std::ptr::with_exposed_provenance_mut(object),
+                std::ptr::with_exposed_provenance(message),
+            )
+            .addr()
         })
         .join()
         .expect("the sending thread");
@@ -1366,10 +1392,15 @@ unsafe extern "C-unwind" fn register_tested_handler(thread: *mut RexxThreadConte
     // handler has the direct type.
     unsafe {
         let instance = (*thread).instance;
+        #[expect(
+            clippy::as_conversions,
+            reason = "a function item has no method that answers its address"
+        )]
+        let handler = answering as *mut c_void;
         ((*(*instance).functions).AddCommandEnvironment)(
             instance,
             c"TESTED".as_ptr(),
-            answering as *mut c_void,
+            handler,
             DIRECT_COMMAND_ENVIRONMENT,
         );
     }
@@ -2454,6 +2485,10 @@ impl CommandHandler {
 
     /// A handler over `function`, for a test of the call.
     #[cfg(test)]
+    #[expect(
+        clippy::as_conversions,
+        reason = "a function pointer has no method that answers its address"
+    )]
     pub(crate) fn direct(function: DirectHandler) -> CommandHandler {
         CommandHandler {
             entry_point: function as *mut c_void,
@@ -2463,6 +2498,10 @@ impl CommandHandler {
 
     /// A redirecting handler over `function`, for a test of the call.
     #[cfg(test)]
+    #[expect(
+        clippy::as_conversions,
+        reason = "a function pointer has no method that answers its address"
+    )]
     pub(crate) fn redirecting(function: RedirectingHandler) -> CommandHandler {
         CommandHandler {
             entry_point: function as *mut c_void,
@@ -3109,7 +3148,7 @@ pub unsafe fn registered(
     let handle = None;
     // SAFETY: the caller guarantees the entry, its tables and its strings
     // are valid and stay mapped for the lifetime of the process.
-    unsafe { library_keyed(&*entry, handle, name, Some(entry as usize)) }
+    unsafe { library_keyed(&*entry, handle, name, Some(entry.addr())) }
 }
 
 /// The library `entry` describes, refused where its version check refuses.

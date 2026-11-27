@@ -1,4 +1,5 @@
 use crate::ir::UseArgOp;
+use interrexx_cast::CastFrom;
 
 use super::*;
 
@@ -219,7 +220,7 @@ impl Interp {
             return Err(Loud::instruction(&clause.kind).into());
         };
         self.bind_use_target(code, index, target, argument, *strict, in_method)?;
-        Ok(skip as usize)
+        Ok(usize::cast_from(skip))
     }
 
     /// Binds one `USE ARG` target to one argument, or to its default, or to

@@ -1,5 +1,7 @@
 //! The `NUMERIC` settings, and the errors that changing them can raise.
 
+use interrexx_cast::CastFrom;
+
 use crate::Number;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -114,8 +116,8 @@ fn max_value_for_digits(digits: u64) -> u64 {
     if digits >= 18 {
         MAX_WHOLENUMBER
     } else {
-        // `digits < 18`, so the narrowing is lossless and the power fits.
-        10u64.pow(digits as u32) - 1
+        // `digits < 18`, so the power fits.
+        10u64.pow(u32::try_from(digits).expect("below 18")) - 1
     }
 }
 
@@ -141,9 +143,9 @@ fn unsigned_whole_number(text: &str, digits: u64) -> Option<u64> {
     let mut carry = false;
     // More stored digits than the DIGITS in force: the value is rounded at
     // that boundary, and the first dropped digit decides the carry.
-    if length as u64 > digits {
-        let keep = digits as usize; // < length, so lossless
-        exponent += (length - keep) as i64;
+    if u64::cast_from(length) > digits {
+        let keep = usize::try_from(digits).expect("below the length");
+        exponent += crate::signed_len(length - keep);
         carry = n.digits[keep] >= 5;
         length = keep;
     }
@@ -156,23 +158,25 @@ fn unsigned_whole_number(text: &str, digits: u64) -> Option<u64> {
 
     // Some kept digits sit below the decimal point. They must all reduce to
     // zero for the value to be whole.
-    let decimals = (-exponent) as u64;
-    if carry && decimals > length as u64 {
+    let decimals = exponent.unsigned_abs();
+    if carry && decimals > u64::cast_from(length) {
         // The carry lands below the lowest stored digit; the padding zeros
         // in between can never ripple it up to the integer part.
         return None;
     }
     let required = if carry { 9 } else { 0 };
-    let checked = decimals.min(length as u64) as usize; // <= length: lossless
+    let checked =
+        usize::try_from(decimals.min(u64::cast_from(length))).expect("at most the length");
     if kept[length - checked..].iter().any(|d| *d != required) {
         return None;
     }
-    if decimals >= length as u64 {
+    if decimals >= u64::cast_from(length) {
         // Nothing left of the point: the value truncates to 0, or to 1 when
         // the all-nines carry ripples all the way up.
         return Some(u64::from(carry));
     }
-    create_unsigned_value(&kept[..length - decimals as usize], carry, 0, max_value)
+    let decimals = usize::try_from(decimals).expect("below the length");
+    create_unsigned_value(&kept[..length - decimals], carry, 0, max_value)
 }
 
 /// The unsigned-value conversion: accumulate the integer digits, add the

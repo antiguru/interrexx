@@ -1,3 +1,3 @@
 # The oracle's outcomes of base/keyword/TRACE_TraceObject.testGroup whole, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
-5	0	a9db57caa56ff6f4	pass, assertions 1070, rc 0, last started TEST_VARIABLE, failing []
+5	0	abe97fbe0a3a662a	pass, assertions 1070, rc 0, last started TEST_VARIABLE, failing []

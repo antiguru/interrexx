@@ -13,9 +13,9 @@ use libc::{AI_CANONNAME, NI_NAMEREQD};
 use std::net::Ipv6Addr;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4};
 #[cfg(windows)]
-const AI_CANONNAME: i32 = windows_sys::Win32::Networking::WinSock::AI_CANONNAME as i32;
+const AI_CANONNAME: i32 = windows_sys::Win32::Networking::WinSock::AI_CANONNAME.cast_signed();
 #[cfg(windows)]
-const NI_NAMEREQD: i32 = windows_sys::Win32::Networking::WinSock::NI_NAMEREQD as i32;
+const NI_NAMEREQD: i32 = windows_sys::Win32::Networking::WinSock::NI_NAMEREQD.cast_signed();
 
 use super::inet_aton;
 

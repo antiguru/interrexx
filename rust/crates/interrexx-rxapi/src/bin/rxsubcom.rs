@@ -4,6 +4,7 @@
 use std::io::Write;
 use std::process::ExitCode;
 
+use interrexx_cast::CastTruncate;
 use interrexx_rxapi::client::connect;
 use interrexx_rxapi::message::code::{NOT_REGISTERED, OK};
 use interrexx_rxapi::message::{Registry, Reply, Request};
@@ -144,7 +145,7 @@ fn main() -> ExitCode {
         },
         Err(status) => status,
     };
-    ExitCode::from((code % 256) as u8)
+    ExitCode::from(u8::cast_truncate(code))
 }
 
 #[cfg(test)]

@@ -10,6 +10,7 @@
 //! alike on every target, and a map of names is laid out alike wherever the
 //! map's probe groups are as wide.
 
+use interrexx_cast::{CastFrom, CastTruncate};
 use std::hash::{BuildHasher, Hasher};
 
 /// The multiplier of the 64-bit hash.
@@ -74,13 +75,13 @@ impl Hasher for WideFxHasher {
 
     #[inline]
     fn write_u128(&mut self, i: u128) {
-        self.add_to_hash(i as u64);
-        self.add_to_hash((i >> 64) as u64);
+        self.add_to_hash(u64::cast_truncate(i));
+        self.add_to_hash(u64::cast_truncate(i >> 64));
     }
 
     #[inline]
     fn write_usize(&mut self, i: usize) {
-        self.add_to_hash(i as u64);
+        self.add_to_hash(u64::cast_from(i));
     }
 
     #[inline]
@@ -94,7 +95,7 @@ impl Hasher for WideFxHasher {
 #[inline]
 fn multiply_mix(x: u64, y: u64) -> u64 {
     let full = u128::from(x).wrapping_mul(u128::from(y));
-    (full as u64) ^ ((full >> 64) as u64)
+    u64::cast_truncate(full) ^ u64::cast_truncate(full >> 64)
 }
 
 /// A byte string compressed to one word.
@@ -133,7 +134,7 @@ fn hash_bytes(bytes: &[u8]) -> u64 {
         s0 ^= word(len - 16);
         s1 ^= word(len - 8);
     }
-    multiply_mix(s0, s1) ^ (len as u64)
+    multiply_mix(s0, s1) ^ u64::cast_from(len)
 }
 
 #[cfg(test)]

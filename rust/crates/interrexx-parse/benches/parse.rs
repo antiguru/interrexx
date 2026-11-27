@@ -2,6 +2,7 @@
 //! start (`interrexx_lib::LIBRARY`).
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use interrexx_cast::CastFrom;
 use interrexx_parse::{DirectiveKind, parse_program};
 use std::time::Duration;
 
@@ -31,7 +32,9 @@ fn parse(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(30));
 
     let library = &interrexx_lib::LIBRARY;
-    group.throughput(criterion::Throughput::Bytes(library.source.len() as u64));
+    group.throughput(criterion::Throughput::Bytes(u64::cast_from(
+        library.source.len(),
+    )));
     group.bench_function("library", |bencher| {
         bencher.iter_batched(
             // Untimed: the owned buffer `parse_program` needs, cloned here

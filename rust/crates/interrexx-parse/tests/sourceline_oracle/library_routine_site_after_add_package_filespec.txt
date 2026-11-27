@@ -1,0 +1,9 @@
+count 8
+/* A call site that found FILESPEC, a routine of the REXX package at language
+   level 6.06 (Deviation 179), finds a public routine of the same name that
+   addPackage made callable in front of it, on its next pass. */
+source = .array~of('::routine filespec public', "  return 'pk' arg(1)")
+do i = 1 to 2
+  say 'internal' i filespec('N', '/a/b.c')
+  if i = 1 then .context~package~addPackage(.package~new('filespec.cls', source))
+end

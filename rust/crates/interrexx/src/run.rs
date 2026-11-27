@@ -21,6 +21,7 @@ use crate::{
     ActiveCondition, CallContext, Code, Failure, InstalledRoutine, Interp, Loud, Novalue,
     PendingTrap, VarHome,
 };
+use interrexx_cast::CastFrom;
 use interrexx_core::{
     BehaviourId, Body, Decoded, FrameId, ObjRef, RegFrame, ScopePools, SlotFrame, VarRefHome,
 };
@@ -40,12 +41,12 @@ pub(crate) use indent::{all_indents, static_indent};
 // The `Raised` constructors for the conditions the instruction loop raises.
 pub(crate) mod raised;
 use raised::{
-    raise_syntax_condition, raised_available_not_logical, raised_digit_led, raised_dot_led,
-    raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
+    names_no_error, raise_syntax_condition, raised_available_not_logical, raised_digit_led,
+    raised_dot_led, raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
     raised_iterate_no_match, raised_iterate_wrong_kind, raised_leave_no_loop,
     raised_leave_no_match, raised_naming_the_operand, raised_repetition_count_not_whole,
     raised_select_no_when, raised_symbol_expected, raised_until_not_logical,
-    raised_when_case_not_logical, raised_while_not_logical, syntax_code,
+    raised_when_case_not_logical, raised_while_not_logical,
 };
 pub(crate) use raised::{
     raised_for_code, raised_from_settings, raised_if_not_logical, raised_when_not_logical,
@@ -129,9 +130,13 @@ pub(crate) const FORWARD_ARRAY_SLOT: u32 = 4;
 
 fn forward_slot(forward: &Forward, slot: u32) -> Option<&Expr> {
     if let Some(item) = slot.checked_sub(FORWARD_ARRAY_SLOT) {
-        return forward.array.as_ref()?.get(item as usize)?.as_ref();
+        return forward
+            .array
+            .as_ref()?
+            .get(usize::cast_from(item))?
+            .as_ref();
     }
-    forward_option_parts(forward)[slot as usize].1
+    forward_option_parts(forward)[usize::cast_from(slot)].1
 }
 
 /// Where control goes after one instruction (the design's "Control flow").
@@ -1007,12 +1012,14 @@ impl Interp {
                     name,
                     args,
                 } => {
-                    let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
-                    let name = code.symbols.name(*name).as_bytes().to_vec();
-                    let package = self.running_program().ok_or_else(Loud::missing_body)?;
-                    let resolution = self.namespace_routine(package, &namespace, &name);
-                    let resolved = self.resolved_after_arguments(code, resolution, args)?;
-                    self.invoke_named_call(code, CallResolution::Settled(resolved), &name, args)
+                    let namespace = code.symbols.name(*namespace).as_bytes();
+                    let name = code.symbols.name(*name).as_bytes();
+                    self.invoke_named_call(
+                        code,
+                        CallResolution::Qualified { namespace },
+                        name,
+                        args,
+                    )
                 }
             },
 
@@ -2596,7 +2603,7 @@ impl Interp {
         let indent = if let Some(indent) = rerun {
             indent
         } else if shortcut {
-            position.indent as usize + self.activity.activation_indent
+            usize::cast_from(position.indent) + self.activity.activation_indent
         } else {
             self.printed_indent(code, index)
         };
@@ -2620,7 +2627,7 @@ impl Interp {
         // `ClauseEntry` this hands back is what `leave_stepped_clause` spends
         // on the matching half.
         let line = if shortcut {
-            position.line as usize
+            usize::cast_from(position.line)
         } else {
             self.clause_line_at(code, index, instruction, source)
                 .unwrap_or_else(|| self.activity.clause_state.line())
@@ -2688,6 +2695,19 @@ impl Interp {
             interpret::Pause::Go => {}
             interpret::Pause::Again => return Ok(Flow::Goto(index)),
             interpret::Pause::Transfer(flow) => return Ok(flow),
+        }
+        // **Nested fragments are bounded by the stack, as calls are.** A
+        // fragment runs on this activation, so no activation count grows, and
+        // `Op::ExecWith` hands over a value read from a register, so no
+        // expression level checked the stack on the way here either. Without
+        // this, `zs = 'interpret zs'; interpret zs` overflows the interpreter
+        // thread's stack and aborts the process instead of raising 11.1.
+        // After the `>>>` line and the pause, as on the oracle: under `trace
+        // r` the deepest `INTERPRET` still traces its value before the 11.1.
+        // Before anything below is saved, so the raise leaves nothing to undo.
+        let probe = 0u8;
+        if self.stack_exhausted(&raw const probe) {
+            return Err(Raised::insufficient_stack().into());
         }
         // **The fragment's level, with delta 0.** Measured: a
         // fragment's clauses print at the enclosing `INTERPRET`
@@ -3633,7 +3653,9 @@ impl Interp {
     /// Raises the
     /// condition again from the level that is failing now, so
     /// `POSITION`, the program and the report's `line <n>` are that level's,
-    /// while every level already left keeps its traceback line.
+    /// while every level already left keeps its traceback line. A native
+    /// level that named its package for the major line
+    /// ([`FailureSite::Packaged`]) is one of those levels and names nothing.
     pub(crate) fn reraise_failure_levels(&mut self) {
         self.activity.failure_origin = None;
         self.activity.failure_propagated = true;
@@ -3644,7 +3666,11 @@ impl Interp {
             .iter_mut()
             .chain(self.activity.failure_site.as_mut())
         {
-            if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
+            if let FailureSite::Packaged { text, .. } = site {
+                *site = FailureSite::Rendered {
+                    text: std::mem::take(text),
+                };
+            } else if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
                 let mut text = Vec::new();
                 site.push_trace_line(&mut text);
                 *site = FailureSite::Rendered { text };
@@ -3954,7 +3980,8 @@ impl Interp {
             }
             // A `CALL`'s argument `slot`.
             (InstructionKind::Call(call), slot) => match &**call {
-                interrexx_parse::Call::Named { args, .. } => {
+                interrexx_parse::Call::Named { args, .. }
+                | interrexx_parse::Call::Qualified { args, .. } => {
                     args.get(usize::from(slot))?.as_ref()?
                 }
                 _ => return None,
@@ -4013,7 +4040,7 @@ impl Interp {
                 self.eval(code, expression)
             }
             (InstructionKind::Use(use_), slot) => {
-                let Some(expr) = Self::use_arg_default(use_, slot as usize) else {
+                let Some(expr) = Self::use_arg_default(use_, usize::cast_from(slot)) else {
                     return Err(Loud::instruction(&instruction.kind).into());
                 };
                 self.eval(code, expr)

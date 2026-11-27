@@ -1,5 +1,6 @@
 use crate::bytes::Bytes;
 use crate::{ArraySlots, ObjRef, SlotRef};
+use interrexx_cast::CastFrom;
 use interrexx_num::{Form, Number};
 use rustc_hash::FxHashMap;
 use std::collections::TryReserveError;
@@ -861,14 +862,10 @@ impl BufferState {
     }
 }
 
-/// Every variable pool one object holds: one per scope that has bound a name in
-/// it, found by walking the list (a list of variable dictionaries searched in
-/// order).
 /// Where one exposed name last sat in a [`ScopePools`]: the index of its
-/// scope's pool and of its entry there. Only ever a guess, which the pools
-/// check against the scope and the name before trusting it, so an entry
-/// dropped or a pool reordered since costs a search and never a wrong
-/// variable.
+/// entry. Only ever a guess, which the pools check against the scope and the
+/// name before trusting it, so an entry dropped or moved since costs a search
+/// and never a wrong variable.
 #[derive(Clone, Debug)]
 pub struct PoolHint(std::cell::Cell<u32>);
 
@@ -880,129 +877,200 @@ impl Default for PoolHint {
 
 impl PoolHint {
     #[inline]
-    fn get(&self) -> (usize, usize) {
-        let at = self.0.get();
-        ((at >> 16) as usize, (at & 0xffff) as usize)
+    fn get(&self) -> usize {
+        usize::cast_from(self.0.get())
     }
 
-    /// Records `pool` and `entry`, or nothing where either is too wide to
-    /// pack.
+    /// Records `entry`, or nothing where it is too wide to pack.
     #[inline]
-    fn set(&self, pool: usize, entry: usize) {
-        if let (Ok(pool), Ok(entry)) = (u16::try_from(pool), u16::try_from(entry)) {
-            self.0.set((u32::from(pool) << 16) | u32::from(entry));
+    fn set(&self, entry: usize) {
+        if let Ok(entry) = u32::try_from(entry) {
+            self.0.set(entry);
         }
     }
 }
 
+/// One name a [`ScopePools`] binds: the scope it is bound in, its name, and
+/// its value.
+#[derive(Clone, Debug)]
+pub struct PoolEntry {
+    pub scope: ObjRef,
+    pub name: Rc<[u8]>,
+    pub value: ObjRef,
+}
+
+/// The variable pools of one object, held as one list of entries so that an
+/// object with a single scope costs one allocation.
+///
+/// **Each scope's entries are contiguous**, in binding order, and scopes
+/// follow one another in the order they first bound a name, **including a
+/// scope that has dropped every name and binds again**, which goes back where
+/// it was. A new name for a scope that already has entries is inserted after
+/// that scope's last entry, which keeps [`ScopePools::entries`] a slice and
+/// [`ScopePools::find`]'s "created last" order.
+///
+/// What remembers a scope's place once it has no entries is a tail of **order
+/// records**, written the first time a scope drops its last name and absent
+/// until then: one entry per scope that has bound a name, in first-binding
+/// order, with `ObjRef::MARKER` as their scope, no name, and the scope they
+/// stand for as their value. They are never read as variables, and sit after
+/// every real entry. The marker is not nil because a real scope can be: a
+/// method run by `~run` exposes in the nil scope.
+/// They are kept in the list, not beside it, because a field here would widen
+/// every object.
+///
+/// A name with no value is **absent** rather than present-and-empty: `DROP`
+/// removes the entry, and a reader cannot tell the two apart -- measured, a
+/// class method exposing `v`, assigning it, and dropping it leaves a later
+/// `expose v` reading the derived name `V`, which is what a never-bound name
+/// reads as. A name is shared rather than owned so that a caller binding the
+/// same names on many objects (a hash store's five) can hand over a copy of
+/// one it keeps instead of allocating each afresh.
 #[derive(Clone, Debug, Default)]
 pub struct ScopePools {
-    /// The scope's class identity, and the names it has bound. A name with no
-    /// value is **absent** rather than present-and-empty: `DROP` removes the
-    /// entry, and a reader cannot tell the two apart -- measured, a class
-    /// method exposing `v`, assigning it, and dropping it leaves a later
-    /// `expose v` reading the derived name `V`, which is what a never-bound
-    /// name reads as. A name is shared rather than owned so that a caller
-    /// binding the same names on many objects (a hash store's five) can hand
-    /// over a copy of one it keeps instead of allocating each afresh.
-    pools: Vec<(ObjRef, Vec<(Rc<[u8]>, ObjRef)>)>,
+    entries: Vec<PoolEntry>,
 }
 
 impl ScopePools {
     pub fn new() -> ScopePools {
-        ScopePools { pools: Vec::new() }
+        ScopePools {
+            entries: Vec::new(),
+        }
     }
 
     /// The value `name` holds in `scope`'s pool, or `None` when the pool does
     /// not hold it -- which is the uninitialised state and not an error.
     pub fn get(&self, scope: ObjRef, name: &[u8]) -> Option<ObjRef> {
-        let pool = self.pool(scope)?;
-        pool.iter()
-            .find(|(bound, _)| **bound == *name)
-            .map(|(_, value)| *value)
+        self.entries
+            .iter()
+            .find(|entry| entry.scope == scope && *entry.name == *name)
+            .map(|entry| entry.value)
     }
 
     /// [`ScopePools::get`], tried first where `hint` says the name last was.
     #[inline]
     pub fn get_hinted(&self, scope: ObjRef, name: &[u8], hint: &PoolHint) -> Option<ObjRef> {
-        let (at, entry) = hint.get();
-        if let Some((held, pool)) = self.pools.get(at)
-            && *held == scope
-            && let Some((bound, value)) = pool.get(entry)
-            && **bound == *name
+        if let Some(entry) = self.entries.get(hint.get())
+            && entry.scope == scope
+            && *entry.name == *name
         {
-            return Some(*value);
+            return Some(entry.value);
         }
-        let at = self.pools.iter().position(|(held, _)| *held == scope)?;
-        let pool = &self.pools[at].1;
-        let entry = pool.iter().position(|(bound, _)| **bound == *name)?;
-        hint.set(at, entry);
-        Some(pool[entry].1)
+        let at = self
+            .entries
+            .iter()
+            .position(|entry| entry.scope == scope && *entry.name == *name)?;
+        hint.set(at);
+        Some(self.entries[at].value)
     }
 
     /// [`ScopePools::set`], tried first where `hint` says the name last was.
     #[inline]
     pub fn set_hinted(&mut self, scope: ObjRef, name: &[u8], value: ObjRef, hint: &PoolHint) {
-        let (at, entry) = hint.get();
-        if let Some((held, pool)) = self.pools.get_mut(at)
-            && *held == scope
-            && let Some((bound, slot)) = pool.get_mut(entry)
-            && **bound == *name
+        if let Some(entry) = self.entries.get_mut(hint.get())
+            && entry.scope == scope
+            && *entry.name == *name
         {
-            *slot = value;
+            entry.value = value;
             return;
         }
-        let at = match self.pools.iter().position(|(held, _)| *held == scope) {
-            Some(at) => at,
-            None => {
-                self.pools.push((scope, Vec::new()));
-                self.pools.len() - 1
-            }
-        };
-        let pool = &mut self.pools[at].1;
-        let entry = match pool.iter().position(|(bound, _)| **bound == *name) {
-            Some(entry) => {
-                pool[entry].1 = value;
-                entry
-            }
-            None => {
-                pool.push((name.into(), value));
-                pool.len() - 1
-            }
-        };
-        hint.set(at, entry);
+        let at = self.bind(scope, name, value);
+        hint.set(at);
     }
 
     /// Binds `name` in `scope`'s pool, creating the pool and the entry if
     /// this is the first write to either.
     pub fn set(&mut self, scope: ObjRef, name: &[u8], value: ObjRef) {
-        let pool = match self.pools.iter().position(|(s, _)| *s == scope) {
-            Some(index) => &mut self.pools[index].1,
-            None => {
-                self.pools.push((scope, Vec::new()));
-                &mut self.pools.last_mut().expect("the pool just pushed").1
+        self.bind(scope, name, value);
+    }
+
+    /// Binds `name` to `value` in `scope`'s pool, and answers where its entry
+    /// is.
+    fn bind(&mut self, scope: ObjRef, name: &[u8], value: ObjRef) -> usize {
+        match self
+            .entries
+            .iter()
+            .position(|entry| entry.scope == scope && *entry.name == *name)
+        {
+            Some(at) => {
+                self.entries[at].value = value;
+                at
             }
-        };
-        match pool.iter_mut().find(|(bound, _)| **bound == *name) {
-            Some(entry) => entry.1 = value,
-            None => pool.push((name.into(), value)),
+            None => self.insert(scope, name.into(), value),
         }
     }
 
-    /// [`Self::set`] for each of `entries` in turn, with each name a copy of
-    /// the caller's own, and room made for all of them at once.
-    pub fn set_all(&mut self, scope: ObjRef, entries: &[(&Rc<[u8]>, ObjRef)]) {
-        let pool = match self.pools.iter().position(|(s, _)| *s == scope) {
-            Some(index) => &mut self.pools[index].1,
-            None => {
-                self.pools.push((scope, Vec::with_capacity(entries.len())));
-                &mut self.pools.last_mut().expect("the pool just pushed").1
+    /// Adds an entry the pool does not hold, after the last entry of `scope`'s
+    /// run, and answers where it went. A scope with no entries goes ahead of
+    /// the first scope that follows it in first-binding order, or at the end.
+    fn insert(&mut self, scope: ObjRef, name: Rc<[u8]>, value: ObjRef) -> usize {
+        let at = match self.entries.iter().rposition(|entry| entry.scope == scope) {
+            Some(last) => last + 1,
+            None if self
+                .entries
+                .last()
+                .is_none_or(|last| !is_order_record(last)) =>
+            {
+                self.entries.len()
             }
+            None => self.place_new_run(scope),
         };
+        self.entries.insert(at, PoolEntry { scope, name, value });
+        at
+    }
+
+    /// Where the first entry of `scope`, which has none, goes when order
+    /// records exist: ahead of the run of the first scope after it in
+    /// first-binding order that still has entries, or after the last real
+    /// entry. Records `scope` as bound if it is new.
+    #[cold]
+    #[inline(never)]
+    fn place_new_run(&mut self, scope: ObjRef) -> usize {
+        let real = self
+            .entries
+            .iter()
+            .rposition(|entry| !is_order_record(entry))
+            .map_or(0, |last| last + 1);
+        let Some(rank) = self.entries[real..]
+            .iter()
+            .position(|record| record.value == scope)
+        else {
+            // Order records exist here, so the last entry is one, and its
+            // empty name is shared rather than allocated afresh.
+            let empty = self.entries.last().map(|last| Rc::clone(&last.name));
+            self.entries.push(order_record(
+                scope,
+                empty.unwrap_or_else(|| Rc::from(&b""[..])),
+            ));
+            return real;
+        };
+        self.entries[real + rank + 1..]
+            .iter()
+            .find_map(|later| {
+                self.entries[..real]
+                    .iter()
+                    .position(|entry| entry.scope == later.value)
+            })
+            .unwrap_or(real)
+    }
+
+    /// [`Self::set`] for each of `entries` in turn, with each name a copy of
+    /// the caller's own, and, on an empty list, room for all of them made at
+    /// once.
+    pub fn set_all(&mut self, scope: ObjRef, entries: &[(&Rc<[u8]>, ObjRef)]) {
+        if self.entries.is_empty() {
+            self.entries.reserve_exact(entries.len());
+        }
         for &(name, value) in entries {
-            match pool.iter_mut().find(|(bound, _)| *bound == *name) {
-                Some(entry) => entry.1 = value,
-                None => pool.push((Rc::clone(name), value)),
+            match self
+                .entries
+                .iter_mut()
+                .find(|entry| entry.scope == scope && *entry.name == **name)
+            {
+                Some(entry) => entry.value = value,
+                None => {
+                    self.insert(scope, Rc::clone(name), value);
+                }
             }
         }
     }
@@ -1013,12 +1081,13 @@ impl ScopePools {
     /// finds its entry this way without comparing any name's bytes.
     #[inline]
     pub fn set_shared(&mut self, scope: ObjRef, name: &Rc<[u8]>, value: ObjRef) -> bool {
-        let Some((_, pool)) = self.pools.iter_mut().find(|(s, _)| *s == scope) else {
-            return false;
-        };
-        match pool.iter_mut().find(|(bound, _)| Rc::ptr_eq(bound, name)) {
+        match self
+            .entries
+            .iter_mut()
+            .find(|entry| entry.scope == scope && Rc::ptr_eq(&entry.name, name))
+        {
             Some(entry) => {
-                entry.1 = value;
+                entry.value = value;
                 true
             }
             None => false,
@@ -1029,41 +1098,114 @@ impl ScopePools {
     /// what `DROP` on an exposed variable does. A name the pool never held is
     /// a no-op, exactly as `DROP` on a never-assigned local is.
     pub fn clear(&mut self, scope: ObjRef, name: &[u8]) {
-        let Some(index) = self.pools.iter().position(|(s, _)| *s == scope) else {
+        let Some(at) = self
+            .entries
+            .iter()
+            .position(|entry| entry.scope == scope && *entry.name == *name)
+        else {
             return;
         };
-        self.pools[index].1.retain(|(bound, _)| **bound != *name);
+        let shares_run = (at > 0 && self.entries[at - 1].scope == scope)
+            || self
+                .entries
+                .get(at + 1)
+                .is_some_and(|next| next.scope == scope);
+        if !shares_run
+            && self
+                .entries
+                .last()
+                .is_none_or(|last| !is_order_record(last))
+        {
+            self.write_order_records();
+        }
+        self.entries.remove(at);
+    }
+
+    /// Appends the order records, from the list as it stands, which still
+    /// holds the scope about to leave it.
+    #[cold]
+    #[inline(never)]
+    fn write_order_records(&mut self) {
+        let mut seen: Vec<ObjRef> = Vec::new();
+        for entry in &self.entries {
+            if seen.last() != Some(&entry.scope) {
+                seen.push(entry.scope);
+            }
+        }
+        let empty: Rc<[u8]> = Rc::from(&b""[..]);
+        self.entries.extend(
+            seen.into_iter()
+                .map(|scope| order_record(scope, Rc::clone(&empty))),
+        );
     }
 
     /// The value `name` holds in the pool created last that binds it, each new
     /// dictionary being chained at the head of the list.
     pub fn find(&self, name: &[u8]) -> Option<ObjRef> {
-        self.pools.iter().rev().find_map(|(_, pool)| {
-            pool.iter()
-                .find(|(bound, _)| **bound == *name)
-                .map(|(_, value)| *value)
-        })
+        self.entries
+            .iter()
+            .rev()
+            .find(|entry| *entry.name == *name && !is_order_record(entry))
+            .map(|entry| entry.value)
     }
 
     /// Every name `scope`'s pool binds, with its value, in binding order.
-    pub fn entries(&self, scope: ObjRef) -> &[(Rc<[u8]>, ObjRef)] {
-        self.pool(scope).map_or(&[], Vec::as_slice)
+    pub fn entries(&self, scope: ObjRef) -> &[PoolEntry] {
+        let Some(start) = self.entries.iter().position(|entry| entry.scope == scope) else {
+            return &[];
+        };
+        let run = self.entries[start..]
+            .iter()
+            .take_while(|entry| entry.scope == scope)
+            .count();
+        &self.entries[start..start + run]
     }
 
-    fn pool(&self, scope: ObjRef) -> Option<&Vec<(Rc<[u8]>, ObjRef)>> {
-        self.pools
+    /// The first `N` entries of `scope`'s run, when they all belong to
+    /// `scope`, found without measuring the run.
+    #[inline]
+    pub fn leading<const N: usize>(&self, scope: ObjRef) -> Option<&[PoolEntry; N]> {
+        let start = self.entries.iter().position(|entry| entry.scope == scope)?;
+        let first = self.entries[start..].first_chunk::<N>()?;
+        first
             .iter()
-            .find(|(s, _)| *s == scope)
-            .map(|(_, pool)| pool)
+            .all(|entry| entry.scope == scope)
+            .then_some(first)
     }
 
     /// Appends every object these pools reach: each scope's own identity and
     /// every value bound in it.
     fn trace(&self, out: &mut Vec<ObjRef>) {
-        for (scope, pool) in &self.pools {
-            out.push(*scope);
-            out.extend(pool.iter().map(|(_, value)| *value));
+        let mut previous = None;
+        for entry in &self.entries {
+            if is_order_record(entry) {
+                // The scope it stands for is reached through this record when it
+                // has no entries. One that still has entries is pushed again
+                // here, which the collector's marks absorb.
+                out.push(entry.value);
+                continue;
+            }
+            if previous != Some(entry.scope) {
+                out.push(entry.scope);
+                previous = Some(entry.scope);
+            }
+            out.push(entry.value);
         }
+    }
+}
+
+/// Whether `entry` is an order record of a [`ScopePools`] rather than a
+/// variable: no real scope is `ObjRef::MARKER`, which equals no handle a
+/// program can hold.
+fn is_order_record(entry: &PoolEntry) -> bool {
+    entry.scope == ObjRef::MARKER
+}
+
+fn order_record(scope: ObjRef, empty: Rc<[u8]>) -> PoolEntry {
+    PoolEntry {
+        scope: ObjRef::MARKER,
+        name: empty,
+        value: scope,
     }
 }
 
@@ -1558,6 +1700,10 @@ pub struct Object {
     /// never cleared, as variable dependents stay once created: the one test a
     /// variable store or drop makes before looking for watchers.
     pub(crate) watched: bool,
+    /// Set once the object has been handed to native code, and never
+    /// cleared: a handle an extension kept from that call names the object
+    /// from a later one for as long as it lives, as an ooRexx pointer does.
+    pub(crate) lent: bool,
 }
 
 impl Object {
@@ -1571,6 +1717,18 @@ impl Object {
     /// Marks this object as one whose variables a `GUARD WHEN` has watched.
     pub fn mark_watched(&mut self) {
         self.watched = true;
+    }
+
+    /// Whether the object has been handed to native code. See the field.
+    #[inline(always)]
+    pub fn lent(&self) -> bool {
+        self.lent
+    }
+
+    /// Marks this object as one native code has been handed.
+    #[inline(always)]
+    pub fn mark_lent(&mut self) {
+        self.lent = true;
     }
 
     /// Whether this object defines an `UNINIT` method. See the field.
@@ -1588,7 +1746,7 @@ mod aligned_tests {
     fn aligned_bytes_are_aligned_and_read_back() {
         assert_eq!(std::mem::align_of::<Word>(), 16);
         let mut bytes = AlignedBytes::zeroed(20);
-        assert_eq!(bytes.as_mut_ptr() as usize % 16, 0);
+        assert_eq!(bytes.as_mut_ptr().addr() % 16, 0);
         bytes.write(15, b"abcdefgh");
         let read = bytes.to_vec();
         assert_eq!((read.len(), &read[15..20]), (20, &b"abcde"[..]));

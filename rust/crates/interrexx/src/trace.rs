@@ -779,18 +779,19 @@ mod tests {
                 (mode.all, mode.results, mode.intermediates, mode.labels),
                 (false, false, false, false),
                 "{} is silent",
-                *letter as char
+                char::from(*letter)
             );
             assert_eq!(
-                mode.letter, *letter,
+                mode.letter,
+                *letter,
                 "{} keeps its own name",
-                *letter as char
+                char::from(*letter)
             );
             assert_eq!(
                 mode_from_setting(&[letter.to_ascii_lowercase()]),
                 Ok(mode),
                 "{} classifies case-insensitively",
-                *letter as char
+                char::from(*letter)
             );
         }
         // Every letter round-trips: what `mode_from_setting` accepts is what
@@ -799,7 +800,7 @@ mod tests {
         // program that happens to use the second one.
         for letter in b"ACEFILNOR" {
             let mode = mode_from_setting(&[*letter]).expect("a recognised letter");
-            assert_eq!(mode.letter, *letter, "{}", *letter as char);
+            assert_eq!(mode.letter, *letter, "{}", char::from(*letter));
         }
         assert_eq!(mode_from_setting(b"z"), Err(b'z'));
         assert_eq!(mode_from_setting(b"?z"), Err(b'z'));

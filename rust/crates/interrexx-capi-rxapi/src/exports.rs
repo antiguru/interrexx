@@ -35,10 +35,11 @@ fn target(name: &CStr) -> *mut c_void {
         if handle.is_null() {
             failed(&format!("{beside} is not loaded and cannot be"));
         }
-        handle as usize
+        handle.expose_provenance()
     });
     // SAFETY: `handle` came from `dlopen` and is never closed; `name` is NUL-terminated.
-    let symbol = unsafe { libc::dlsym(handle as *mut c_void, name.as_ptr()) };
+    let symbol =
+        unsafe { libc::dlsym(std::ptr::with_exposed_provenance_mut(handle), name.as_ptr()) };
     if symbol.is_null() {
         failed(&format!(
             "{} defines no {}",
@@ -58,15 +59,25 @@ fn target(name: &CStr) -> *mut c_void {
     let handle = *LIBREXX.get_or_init(load_sibling);
     // SAFETY: the handle owns a process-lifetime reference to the interpreter
     // DLL, and the symbol name is NUL-terminated.
-    let symbol = unsafe { GetProcAddress(handle as _, name.as_ptr().cast()) };
-    match symbol {
-        Some(symbol) => symbol as *mut c_void,
-        None => failed(&format!(
+    let symbol = unsafe {
+        GetProcAddress(
+            std::ptr::with_exposed_provenance_mut(handle),
+            name.as_ptr().cast(),
+        )
+    };
+    let Some(symbol) = symbol else {
+        failed(&format!(
             "{} defines no {}",
             env!("REXX_LIBREXX"),
             name.to_string_lossy()
-        )),
-    }
+        ));
+    };
+    #[expect(
+        clippy::as_conversions,
+        reason = "a function pointer has no method that answers its address"
+    )]
+    let symbol = symbol as *mut c_void;
+    symbol
 }
 
 #[cfg(windows)]
@@ -74,6 +85,8 @@ fn load_sibling() -> usize {
     use std::ffi::OsString;
     use std::os::windows::ffi::{OsStrExt, OsStringExt};
     use std::path::PathBuf;
+
+    use interrexx_cast::CastFrom;
     use windows_sys::Win32::System::LibraryLoader::{
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
         GetModuleFileNameW, GetModuleHandleExW, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS,
@@ -81,12 +94,17 @@ fn load_sibling() -> usize {
     };
 
     let mut own_module = std::ptr::null_mut();
+    #[expect(
+        clippy::as_conversions,
+        reason = "a function item has no method that answers its address"
+    )]
+    let own_address = load_sibling as *const ();
     // SAFETY: FROM_ADDRESS interprets the second argument as an address inside
     // our loaded module. The output points to writable space for one handle.
     let found = unsafe {
         GetModuleHandleExW(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            load_sibling as *const () as *const u16,
+            own_address.cast::<u16>(),
             &mut own_module,
         )
     };
@@ -99,11 +117,12 @@ fn load_sibling() -> usize {
 
     // Windows extended-length paths can hold up to 32,767 UTF-16 code units.
     let mut filename = vec![0u16; 32_768];
+    let capacity = u32::try_from(filename.len()).expect("the buffer holds 32,768 code units");
     // SAFETY: the forwarding module is executing, and the buffer is writable
     // for the requested number of UTF-16 code units.
-    let length =
-        unsafe { GetModuleFileNameW(own_module, filename.as_mut_ptr(), filename.len() as u32) }
-            as usize;
+    let length = usize::cast_from(unsafe {
+        GetModuleFileNameW(own_module, filename.as_mut_ptr(), capacity)
+    });
     if length == 0 || length >= filename.len() {
         failed(&format!(
             "reading the forwarding module path: {}",
@@ -134,7 +153,7 @@ fn load_sibling() -> usize {
             std::io::Error::last_os_error()
         ));
     }
-    handle as usize
+    handle.expose_provenance()
 }
 
 fn failed(what: &str) -> ! {

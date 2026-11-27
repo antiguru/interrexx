@@ -2,6 +2,7 @@
 //! evaluation depth and recursion limits.
 
 use interrexx::{NOT_IMPLEMENTED_EXIT, run_program};
+use interrexx_cast::CastLossy;
 use interrexx_inventory::errors::expand;
 
 /// The path these tests report programs under.
@@ -166,7 +167,7 @@ fn records_the_stack_cost_of_one_eval_frame() {
 
     // The two-sided bound on the evaluation depth, checked against the size
     // actually configured: the limit has to fit between 100,000 and this.
-    let survivable = interrexx::INTERPRETER_STACK_BYTES as f64 / bytes_per_frame;
+    let survivable = f64::cast_lossy(interrexx::INTERPRETER_STACK_BYTES) / bytes_per_frame;
     assert!(
         survivable > 100_000.0,
         "the stack survives only {survivable:.0} eval frames, and the depth \

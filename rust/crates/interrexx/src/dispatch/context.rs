@@ -3,6 +3,7 @@
 use super::{Arity, Cleared, Failure, Interp, Loud, NativeMethod, ObjRef, Raised, hash};
 use crate::activation::{Activation, Entry};
 use crate::plan::ProgramId;
+use interrexx_cast::CastFrom;
 use interrexx_core::{BehaviourId, Body};
 
 /// `RexxContext`'s and `StackFrame`'s instance methods. Chained into
@@ -267,7 +268,7 @@ fn context_invocation(
         let id = interp
             .invocation_of(depth)
             .ok_or_else(|| Failure::from(Raised::context_not_active()))?;
-        Ok(Some(interp.counted(id as usize)))
+        Ok(Some(interp.counted(usize::cast_from(id))))
     })
 }
 
@@ -280,7 +281,7 @@ fn context_thread(
 ) -> Result<Option<ObjRef>, Failure> {
     at_context(interp, receiver, |interp, _| {
         let number = interp.activity_number();
-        Ok(Some(interp.counted(number as usize)))
+        Ok(Some(interp.counted(usize::cast_from(number))))
     })
 }
 
@@ -828,7 +829,7 @@ pub(crate) fn build_frame_with(
         // kinds a native activation builds and which this crate has none of;
         // the id is minted here rather than left at zero.
         None => ObjRef::NIL,
-        Some(id) => interp.counted(id as usize),
+        Some(id) => interp.counted(usize::cast_from(id)),
     };
     interp.roots.activity_mut().push_temp(invocation);
     let trace_text = trace_line_text(interp, depth, &snapshot);
@@ -960,7 +961,7 @@ pub(crate) fn build_ended_frame(
             interp.next_invocation += 1;
             interp.next_invocation
         });
-        let invocation = interp.counted(invocation as usize);
+        let invocation = interp.counted(usize::cast_from(invocation));
         interp.roots.activity_mut().push_temp(invocation);
         invocation
     };

@@ -9,6 +9,7 @@ description = "Benchmark harness for interrexx"
 publish = false
 
 [dependencies]
+interrexx-cast.workspace = true
 interrexx-oracle.workspace = true
 
 [dev-dependencies]

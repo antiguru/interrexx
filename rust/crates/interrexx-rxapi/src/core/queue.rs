@@ -3,6 +3,8 @@
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use interrexx_cast::CastFrom;
+
 use super::{ClientId, Outcome, fold};
 use crate::message::code::*;
 use crate::message::{FIFO, Item, LIFO, MAX_QUEUE_NAME, NO_WAIT, Reply, Timestamp, WAIT};
@@ -123,7 +125,7 @@ impl Queues {
         };
         let mut duplicate = false;
         if let Some(requested) = requested {
-            if requested.len() as u64 >= size {
+            if u64::cast_from(requested.len()) >= size {
                 return refused(QUEUE_STORAGE);
             }
             if !is_valid(&requested) || is_session(&requested) {
@@ -224,7 +226,7 @@ impl Queues {
 
     pub(super) fn query(&mut self, client: ClientId, session: u64, name: Option<Vec<u8>>) -> Reply {
         let (status, count) = match self.resolve(client, session, name) {
-            Ok(queue) => (OK, Some(queue.items.len() as u64)),
+            Ok(queue) => (OK, Some(u64::cast_from(queue.items.len()))),
             Err(QUEUE_NOT_REGISTERED) => (QUEUE_NOT_REGISTERED, Some(0)),
             Err(status) => (status, None),
         };

@@ -1181,7 +1181,7 @@ Nor does interrexx wait for the other activities when the main program ends
 with a refusal of one of the Deviations, exit code 120: they are cut off. In
 the second example a started message waits for a gate that the program opens
 just before the refusal ([Deviation
-30](../deviations.md#30-a-string-method-answering-a-non-string)), and never
+29](../deviations.md#29-an-entry-assignment-with-no-value)), and never
 writes its line. A native call that an activity, the main program's included,
 is in when a refusal ends the program is not ended with it: interrexx cannot
 end the call, which runs on. A host's `RexxStart` returns meanwhile, and the

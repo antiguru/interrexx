@@ -2,6 +2,7 @@
 
 use std::ffi::c_int;
 
+use interrexx_cast::{CastFrom, CastLossy};
 use interrexx_core::ObjRef;
 
 use super::{Class, Conversion, Failure, MAX_WHOLENUMBER, RESULT_DIGITS, Value, pointer_string};
@@ -183,7 +184,14 @@ pub(super) fn signed_word_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    signed(cx, argument, position, isize::MIN as i64, isize::MAX as i64).map(Value::Isize)
+    signed(
+        cx,
+        argument,
+        position,
+        i64::cast_from(isize::MIN),
+        i64::cast_from(isize::MAX),
+    )
+    .map(Value::Isize)
 }
 
 /// `REXX_VALUE_wholenumber_t`.
@@ -192,7 +200,7 @@ pub(super) fn whole_number_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    let max = MAX_WHOLENUMBER.min(isize::MAX as i64);
+    let max = MAX_WHOLENUMBER.min(i64::cast_from(isize::MAX));
     signed(cx, argument, position, -max, max).map(Value::Isize)
 }
 
@@ -239,7 +247,7 @@ pub(super) fn unsigned_word_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    unsigned(cx, argument, position, usize::MAX as u64).map(Value::Usize)
+    unsigned(cx, argument, position, u64::cast_from(usize::MAX)).map(Value::Usize)
 }
 
 /// `REXX_VALUE_stringsize_t`.
@@ -248,7 +256,9 @@ pub(super) fn string_size_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    let max = MAX_WHOLENUMBER.unsigned_abs().min(usize::MAX as u64);
+    let max = MAX_WHOLENUMBER
+        .unsigned_abs()
+        .min(u64::cast_from(usize::MAX));
     unsigned(cx, argument, position, max).map(Value::Usize)
 }
 
@@ -310,11 +320,8 @@ pub(super) fn float_to_native(
     argument: ObjRef,
     position: usize,
 ) -> Result<Value, Failure> {
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "the C++'s own `(float)` cast, which is the conversion measured"
-    )]
-    let narrow = |value: f64| Value::Float(value as f32);
+    // The C++'s own `(float)` cast, which is the conversion measured.
+    let narrow = |value: f64| Value::Float(f32::cast_lossy(value));
     cx.host
         .double_value(argument)?
         .map(narrow)
@@ -569,7 +576,7 @@ pub(super) fn isize_from_native(
     let Value::Isize(number) = value else {
         return Err(Failure::ResultSignature);
     };
-    Ok(Some(cx.host.whole_number(number as i64)))
+    Ok(Some(cx.host.whole_number(i64::cast_from(number))))
 }
 
 /// The object a `REXX_VALUE_uint8_t` value becomes.

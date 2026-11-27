@@ -1021,6 +1021,8 @@ say ns:f('traced', , 'last')
 say ns:f('fallback', , 'last', {padding}reset())
 trace off
 say {walk_open}ns:f(rebind(), , 'last'){walk_close}
+call ns:f {walk_open}reset(){walk_close}, , 'last'
+say result
 say later:f(define(), , 'last')
 numeric digits {walk_open}length('abcdefghijkl'){walk_close}
 say digits()
@@ -1067,6 +1069,7 @@ mark:
         outcome.stdout,
         b"first same 1 last\nsecond changed 1 last\nsecond same 1 last\n\
           second traced 1 last\nfirst fallback 1 last\nsecond changed 1 last\n\
+          first ignored 1 last\n\
           first defined 1 last\n12\nnamespace\n98.987\nroutine\n43.902\n42.3\n"
     );
     assert!(stderr.contains("F => \"second traced 1 last\""), "{stderr}");

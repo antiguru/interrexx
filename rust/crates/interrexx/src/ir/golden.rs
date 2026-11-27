@@ -2,6 +2,7 @@
 //! `golden_tests.rs` and by [`crate::render_ir`], which the `rexx-ir` binary
 //! prints.
 
+use interrexx_cast::CastFrom;
 use interrexx_parse::Operator;
 
 use super::{Chunk, ConditionKeyword, NodePath, Op, PlanSlot};
@@ -36,6 +37,12 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 out.push_str(&format!(
                     "{index}: Signal index={at} src={}\n",
                     render_register(*src)
+                ));
+            }
+            Op::ParseStore { slot, value, .. } => {
+                out.push_str(&format!(
+                    "{index}: ParseStore slot={slot} value={:?}\n",
+                    value.decode()
                 ));
             }
             Op::ParseBegin {
@@ -462,7 +469,7 @@ fn annotation(
     body: &interrexx_parse::CodeBody,
     source: &interrexx_parse::ProgramSource,
 ) -> String {
-    let Some(instruction) = body.instructions.get(index as usize) else {
+    let Some(instruction) = body.instructions.get(usize::cast_from(index)) else {
         return "   ; <index outside this body>".to_string();
     };
     let line = source.line_of(instruction.clause_span.start);

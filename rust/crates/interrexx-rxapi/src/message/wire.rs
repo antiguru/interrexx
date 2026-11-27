@@ -6,6 +6,8 @@
 
 use std::io::{self, Read};
 
+use interrexx_cast::CastFrom;
+
 use super::{Item, Macro, Registered, Registry, Reply, Request, Timestamp};
 
 /// Bumped on any change here; it names the socket.
@@ -61,7 +63,7 @@ pub struct Malformed;
 /// A frame around `body`.
 pub fn frame(call: u64, body: &[u8]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(body.len() + 16);
-    bytes.extend_from_slice(&(body.len() as u64 + 8).to_le_bytes());
+    bytes.extend_from_slice(&(u64::cast_from(body.len()) + 8).to_le_bytes());
     bytes.extend_from_slice(&call.to_le_bytes());
     bytes.extend_from_slice(body);
     bytes
@@ -90,7 +92,7 @@ pub fn read_frame(reader: &mut impl Read) -> io::Result<Option<(u64, Vec<u8>)>> 
     reader.read_exact(&mut call)?;
     let mut body = Vec::new();
     let read = reader.by_ref().take(body_length).read_to_end(&mut body)?;
-    if read as u64 != body_length {
+    if u64::cast_from(read) != body_length {
         return Err(io::ErrorKind::UnexpectedEof.into());
     }
     Ok(Some((u64::from_le_bytes(call), body)))
@@ -113,7 +115,7 @@ impl Encoder {
     }
 
     fn bytes(&mut self, bytes: &[u8]) {
-        self.number(bytes.len() as u64);
+        self.number(u64::cast_from(bytes.len()));
         self.0.extend_from_slice(bytes);
     }
 
@@ -129,7 +131,7 @@ impl Encoder {
     }
 
     fn names(&mut self, names: &[Vec<u8>]) {
-        self.number(names.len() as u64);
+        self.number(u64::cast_from(names.len()));
         for name in names {
             self.bytes(name);
         }
@@ -159,7 +161,7 @@ impl Encoder {
     }
 
     fn macros(&mut self, macros: &[Macro]) {
-        self.number(macros.len() as u64);
+        self.number(u64::cast_from(macros.len()));
         for entry in macros {
             self.bytes(&entry.name);
             self.bytes(&entry.image);

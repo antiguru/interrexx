@@ -1,3 +1,5 @@
+/* A STRING answer with no string value reads as the default string value in a
+   native method's numeric, stem and ObjectToString conversions. */
 o = .sn~new
 t = .t~new
 signal on syntax name s1

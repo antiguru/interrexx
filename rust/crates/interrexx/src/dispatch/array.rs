@@ -4,6 +4,7 @@ use super::{
     BehaviourId, Body, Cleared, Decoded, Failure, INIT, Interp, ObjRef, Raised, class_receiver,
     collection, required_string_argument,
 };
+use interrexx_cast::CastFrom;
 
 use super::{Arity, NativeMethod};
 use interrexx_core::ArraySlots;
@@ -132,16 +133,16 @@ fn grown_array_size(size: u64, extent: u64) -> Result<u64, Failure> {
 /// [`past_fixed_array_size`] reads as past the limit.
 fn index_position(index: u64) -> usize {
     match usize::try_from(index) {
-        Ok(index) if index <= isize::MAX as usize => index,
+        Ok(index) if index <= isize::MAX.unsigned_abs() => index,
         _ if index > MAX_FIXED_ARRAY_SIZE => usize::MAX,
-        _ => isize::MAX as usize,
+        _ => isize::MAX.unsigned_abs(),
     }
 }
 
 /// Whether a position [`index_position`] answered is past
 /// [`MAX_FIXED_ARRAY_SIZE`].
 fn past_fixed_array_size(position: usize) -> bool {
-    position as u64 > MAX_FIXED_ARRAY_SIZE || position == usize::MAX
+    u64::cast_from(position) > MAX_FIXED_ARRAY_SIZE || position == usize::MAX
 }
 
 /// A size [`grown_array_size`] answered, as a slot count, or the 5.0 that an
@@ -298,7 +299,7 @@ fn multi_dimension_position(
     let mut offset = 0;
     for (at, (subscript, dimension)) in subscripts.iter().zip(dimensions).enumerate() {
         let position = position_index(interp, *subscript, index_use.arg_position() + at + 1)?;
-        if position > *dimension as u64 {
+        if position > u64::cast_from(*dimension) {
             return match index_use {
                 IndexUse::Get => Ok(None),
                 IndexUse::Put => {
@@ -328,7 +329,7 @@ pub(super) fn whole_index(interp: &mut Interp, value: ObjRef) -> Result<Option<u
 /// target's bound: what a growth checks against [`MAX_FIXED_ARRAY_SIZE`].
 fn whole_subscript(interp: &mut Interp, value: ObjRef) -> Result<Option<u64>, Failure> {
     if let Some(index) = small_index(value) {
-        return Ok(Some(index as u64));
+        return Ok(Some(u64::cast_from(index)));
     }
     Ok(index_number(interp, value)?
         .and_then(|number| number.whole_value(interrexx_num::ARGUMENT_DIGITS))
@@ -352,7 +353,8 @@ fn small_index(value: ObjRef) -> Option<usize> {
 }
 
 /// An index's number: the value itself where it is one, else its requested
-/// string's. No string value fails the index's check (r[conv.string.argument-kind]).
+/// string's. A `STRING` answer with no string value reads as the default
+/// string, which fails the index's check (r[class.index.string]).
 fn index_number(
     interp: &mut Interp,
     value: ObjRef,
@@ -381,7 +383,7 @@ pub(super) fn unsigned_index(interp: &mut Interp, value: ObjRef) -> Result<Optio
 /// comparators make on what the Rexx method answered, at the default precision
 /// rather than at the subscript precision.
 fn whole_comparison(interp: &mut Interp, value: ObjRef) -> Option<i64> {
-    let digits = interrexx_num::DEFAULT_DIGITS as usize;
+    let digits = crate::DEFAULT_DIGITS;
     if let Decoded::SmallInt(small) = value.decode() {
         return interrexx_num::whole_i64(small, digits);
     }
@@ -461,7 +463,7 @@ fn array_extend_multi(
     for (at, subscript) in subscripts.iter().enumerate() {
         let position = position_index(interp, *subscript, at + 1)?;
         let dimension = match &old {
-            Some(old) => position.max(old[at] as u64),
+            Some(old) => position.max(u64::cast_from(old[at])),
             None => position,
         };
         size = grown_array_size(size, dimension)?;

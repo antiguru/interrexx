@@ -10,13 +10,13 @@ pub(crate) mod process;
 pub(crate) mod search;
 pub(crate) mod stems;
 pub(crate) mod timezone;
-#[cfg(unix)]
 pub(crate) mod tree;
 #[cfg(windows)]
 pub(crate) mod windows_console;
 #[cfg(windows)]
 pub(crate) mod windows_files;
 
+use interrexx_cast::TryCastFrom;
 use interrexx_core::{Body, Decoded, ObjRef};
 use interrexx_num::{DIGITS64, Number};
 
@@ -260,10 +260,7 @@ pub(crate) fn mk_dir(
                     )));
                 }
             };
-            #[allow(clippy::cast_sign_loss, reason = "rem_euclid is not negative")]
-            {
-                bits.rem_euclid(1024) as u32
-            }
+            u32::try_from(bits.rem_euclid(1024)).expect("a remainder of 1024")
         }
     };
     let code = match rustix::fs::mkdir(
@@ -316,9 +313,13 @@ pub(crate) fn sleep(
         _ => return Err(Raised::native_argument_not_a_number("delay", &text).into()),
     };
     if !(0.0..=SLEEP_MAXIMUM).contains(&seconds) {
-        return Err(
-            Raised::native_argument_out_of_range("delay", 0, SLEEP_MAXIMUM as i64, &text).into(),
-        );
+        return Err(Raised::native_argument_out_of_range(
+            "delay",
+            0,
+            i64::try_cast_from(SLEEP_MAXIMUM).expect("a whole number of seconds"),
+            &text,
+        )
+        .into());
     }
     park_point!(interp, crate::pinning::ParkKind::SysSleep);
     let deadline = interp.now() + std::time::Duration::from_secs_f64(seconds).max(SLEEP_FLOOR);
@@ -365,9 +366,9 @@ pub(crate) fn create_event_sem(
 }
 
 /// `SysCreateMutexSem([name])`: an unnamed semaphore of value one, by its
-/// handle. The unnamed form is an empty name; with no argument at all the
-/// reference run crashes (oracle defect, `corpus/oracle-crashes.txt` entry 27),
-/// and here it is unnamed too.
+/// handle. The unnamed form is an empty name, and with no argument at all it
+/// is unnamed too, as in the reference run (`corpus/oracle-crashes.txt` entry
+/// 27, dropped).
 pub(crate) fn create_mutex_sem(
     interp: &mut Interp,
     name: &'static [u8],

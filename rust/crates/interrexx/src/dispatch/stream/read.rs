@@ -1,4 +1,5 @@
 use super::*;
+use interrexx_cast::CastFrom;
 
 /// Up to `len` bytes: from `position` (1-based) of a persistent stream, or
 /// the next ones of a transient stream, which has no position and waits
@@ -96,7 +97,7 @@ pub(super) fn read_line_from(
             return Ok(if line.is_empty() {
                 None
             } else {
-                Some((line, at as i64))
+                Some((line, as_position(at)))
             });
         }
         match chunk.iter().position(|byte| *byte == b'\n') {
@@ -105,11 +106,11 @@ pub(super) fn read_line_from(
                 if line.last() == Some(&b'\r') {
                     line.pop();
                 }
-                return Ok(Some((line, (at + end as u64 + 1) as i64)));
+                return Ok(Some((line, as_position(at + u64::cast_from(end) + 1))));
             }
             None => {
                 line.extend_from_slice(&chunk);
-                at += chunk.len() as u64;
+                at += u64::cast_from(chunk.len());
             }
         }
     }

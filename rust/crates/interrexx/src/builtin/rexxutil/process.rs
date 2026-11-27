@@ -1,5 +1,6 @@
 //! The `REXXUTIL` routines over the process and its terminal.
 
+use interrexx_cast::CastTruncate;
 use std::os::fd::{AsFd, BorrowedFd, IntoRawFd as _};
 
 use interrexx_core::ObjRef;
@@ -198,7 +199,7 @@ impl Usage {
     fn of_this_process() -> Result<Usage, Errno> {
         use nix::sys::resource::{UsageWho, getrusage};
         let usage = getrusage(UsageWho::RUSAGE_SELF)
-            .map_err(|error| Errno::from_raw_os_error(error as i32))?;
+            .map_err(|error| Errno::from_raw_os_error(crate::builtin::errno_number(error)))?;
         let time = |value: nix::sys::time::TimeVal| {
             (
                 u64::try_from(value.tv_sec()).unwrap_or(0),
@@ -272,7 +273,7 @@ impl Usage {
     /// total's milliseconds the sum of the two truncated parts.
     fn cpu_summary(&self) -> String {
         // The work is in `unsigned int`.
-        let narrow = |value: u64| value as u32;
+        let narrow = |value: u64| u32::cast_truncate(value);
         let mut milliseconds = narrow(self.user.1 / 1000) + narrow(self.system.1 / 1000);
         let mut seconds = 0;
         if milliseconds >= 1000 {

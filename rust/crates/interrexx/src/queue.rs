@@ -2,6 +2,7 @@
 //! held in process until a child could see it, and every named queue, which the API service
 //! holds.
 
+use interrexx_cast::CastFrom;
 use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -219,7 +220,7 @@ impl Interp {
     /// `RexxQueryQueue(name)`'s count, 0 on any failure.
     pub(crate) fn queue_count(&self, name: &[u8]) -> u64 {
         if self.queue_is_local(name) {
-            return self.queue.len() as u64;
+            return u64::cast_from(self.queue.len());
         }
         let request = Request::QueryQueue {
             session: Self::session(),

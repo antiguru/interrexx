@@ -190,10 +190,6 @@ c: say condition('o')~code
 
 ## Deviations
 
-> **Note.** An argument whose `STRING` method answers an object that is not a
-> string falls under [Deviation 30](r:conv.string.deviation.30), as it does
-> for every builtin.
-
 r[bif.space.deviation.4]
 interrexx does not specify whether the answer of SPACE is the same object as
 another string of equal value: as `string` itself, when it is already in the

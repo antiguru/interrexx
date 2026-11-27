@@ -13,6 +13,7 @@
 mod tzname;
 mod wordexp;
 
+use interrexx_cast::CastFrom;
 use interrexx_core::{BehaviourId, Body, ObjRef};
 
 use super::native_args::{c_string, failed, int, number};
@@ -78,7 +79,7 @@ fn os(error: rustix::io::Errno) -> Errno {
 }
 
 fn nix_errno(error: nix::errno::Errno) -> Errno {
-    Errno(error as i32)
+    Errno(crate::builtin::errno_number(error))
 }
 
 /// A call's return code: 0, or -1 with its `errno` kept.
@@ -119,12 +120,9 @@ fn pid(raw: i32) -> nix::unistd::Pid {
     nix::unistd::Pid::from_raw(raw)
 }
 
-#[expect(
-    clippy::cast_sign_loss,
-    reason = "C passes the int argument as uid_t or gid_t, so -1 is all ones"
-)]
+/// C passes the int argument as uid_t or gid_t, so -1 is all ones.
 fn unsigned(raw: i32) -> u32 {
-    raw as u32
+    raw.cast_unsigned()
 }
 
 // --- Process and identity ---------------------------------------------------
@@ -146,7 +144,7 @@ pub(crate) fn getppid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
 /// The calling thread's `pthread_self()`, unsigned.
 pub(crate) fn gettid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 0)?;
-    let thread = crate::signal::current_thread() as u64;
+    let thread = u64::cast_from(crate::signal::current_thread());
     Ok(number(interp, thread))
 }
 

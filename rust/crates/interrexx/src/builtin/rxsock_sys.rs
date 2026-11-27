@@ -7,6 +7,8 @@
 
 #![allow(unsafe_code)]
 
+#[cfg(unix)]
+use interrexx_cast::CastFrom;
 pub(crate) use rustix::event::PollFlags;
 use rustix::event::{PollFd, Timespec};
 #[cfg(unix)]
@@ -117,10 +119,10 @@ pub(crate) fn poll(
     if numbers.is_empty() && cancel.is_none() {
         return Ok((0, Vec::new()));
     }
-    let timeout = timeout.map(|left| Timespec {
-        tv_sec: i64::try_from(left.as_secs()).unwrap_or(i64::MAX),
-        // Subsecond nanoseconds fit even where Timespec uses a signed i32.
-        tv_nsec: left.subsec_nanos() as _,
+    // The whole seconds held at `i64::MAX`, the nanoseconds kept.
+    let timeout = timeout.map(|left| {
+        let longest = Duration::new(i64::MAX.unsigned_abs(), left.subsec_nanos());
+        Timespec::try_from(left.min(longest)).expect("seconds at most i64::MAX")
     });
     with_sockets(&numbers, |sockets| {
         let mut descriptors: Vec<_> = sockets
@@ -276,7 +278,7 @@ pub(crate) fn get_option(fd: RawFd, option: Option<i32>) -> Os<String> {
                 }
                 _ => return Err(libc::ENOPROTOOPT),
             }
-            .map_err(|error| error as i32)
+            .map_err(crate::builtin::errno_number)
         }),
     }
 }
@@ -288,11 +290,8 @@ pub(crate) fn set_option(fd: RawFd, option: i32, numeric: i32, linger: (u16, u16
 
     let on = numeric != 0;
     with_socket(fd, |socket| {
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "C passes the int, which the kernel reads unsigned"
-        )]
-        let size = numeric as u32 as usize;
+        // C passes the int, which the kernel reads unsigned.
+        let size = usize::cast_from(numeric.cast_unsigned());
         let set = match option {
             option if RAW_OPTIONS.contains(&option) => {
                 return set_int_option(socket, libc::SOL_SOCKET, raw_option(option), numeric);
@@ -332,7 +331,7 @@ pub(crate) fn set_option(fd: RawFd, option: i32, numeric: i32, linger: (u16, u16
             }
             _ => return Err(libc::ENOPROTOOPT),
         };
-        set.map_err(|error| error as i32)
+        set.map_err(crate::builtin::errno_number)
     })
 }
 
@@ -343,7 +342,7 @@ pub(crate) fn close(fd: RawFd) -> Os<()> {
     if interrexx_rxapi::reserved::is_reserved(fd) {
         Err(libc::EBADF)
     } else {
-        nix::unistd::close(fd).map_err(|error| error as i32)
+        nix::unistd::close(fd).map_err(crate::builtin::errno_number)
     }
 }
 

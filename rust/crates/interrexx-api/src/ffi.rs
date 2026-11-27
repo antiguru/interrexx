@@ -19,6 +19,7 @@ use crate::layout::{
 };
 use crate::redirect::Redirector;
 use crate::values::{Activation, Baton, Converted, Host, MAX_WHOLENUMBER, Repr, Value};
+use interrexx_cast::CastFrom;
 
 /// The state that owns the context `context` addresses.
 ///
@@ -786,9 +787,9 @@ impl ThreadTable {
     #[doc(hidden)]
     #[must_use]
     pub fn attaches_from_another_thread(&self) -> bool {
-        let instance = self.instance() as usize;
+        let instance = self.instance().expose_provenance();
         std::thread::spawn(move || {
-            let instance = instance as *mut RexxInstance_;
+            let instance = std::ptr::with_exposed_provenance_mut::<RexxInstance_>(instance);
             let mut context = std::ptr::null_mut();
             // SAFETY: `instance` is the never-freed instance `with` made, and
             // a context `AttachThread` answers is kept, so it is live.
@@ -813,7 +814,8 @@ impl ThreadTable {
     pub fn build_attached_context(&self) -> Option<usize> {
         let requester = self.requester.clone()?;
         // SAFETY: the instance is this table's, which `with` made.
-        unsafe { build_attached(self.instance(), requester) }.map(|context| context as usize)
+        unsafe { build_attached(self.instance(), requester) }
+            .map(<*mut RexxThreadContext_>::expose_provenance)
     }
 
     /// The context at `address` that `AttachThread` built from this table
@@ -830,7 +832,7 @@ impl ThreadTable {
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         let at = pending
             .iter()
-            .position(|Pending(raw)| context_of(*raw) as usize == address)?;
+            .position(|Pending(raw)| context_of(*raw).addr() == address)?;
         let Pending(raw) = pending.swap_remove(at);
         Some(ThreadContext {
             home: Rc::new(Home(raw)),
@@ -1138,7 +1140,7 @@ unsafe fn foreign_to_attached(context: *mut RexxThreadContext_) -> bool {
     // address is handed out, and from this thread's own records, so the
     // answer asks nothing of the interpreter and waits for no baton.
     cell.attached.get()
-        && !attached_here(context as usize)
+        && !attached_here(context.addr())
         && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
 }
 
@@ -1182,7 +1184,7 @@ fn current_stack() -> Option<(usize, usize)> {
         let mut size: libc::size_t = 0;
         let read = libc::pthread_attr_getstack(&raw const attributes, &raw mut low, &raw mut size);
         libc::pthread_attr_destroy(&raw mut attributes);
-        (read == 0).then(|| (low as usize + size, size))
+        (read == 0).then(|| (low.addr() + size, size))
     }
 }
 
@@ -1195,7 +1197,7 @@ fn current_stack() -> Option<(usize, usize)> {
     let (high, size) = unsafe {
         let this = libc::pthread_self();
         (
-            libc::pthread_get_stackaddr_np(this) as usize,
+            libc::pthread_get_stackaddr_np(this).addr(),
             libc::pthread_get_stacksize_np(this),
         )
     };
@@ -1325,7 +1327,7 @@ impl ThreadContext {
     /// The address an extension is handed, as a number.
     #[must_use]
     pub fn address(&self) -> usize {
-        self.pointer() as usize
+        self.pointer().expose_provenance()
     }
 
     /// The address an extension is handed.
@@ -1343,7 +1345,7 @@ impl ThreadContext {
         let raw = self.home.0.as_ptr();
         // SAFETY: the allocation is live while `self` is; the link is written
         // only by `Thread::allocate`.
-        unsafe { (*raw).thread.context.instance as usize }
+        unsafe { (*raw).thread.context.instance.expose_provenance() }
     }
 
     /// Sets the `applicationData` the instance this context links carries
@@ -1355,7 +1357,8 @@ impl ThreadContext {
         // links is never freed; the field is plain data, written before the
         // instance is handed out, so nothing reads it meanwhile.
         unsafe {
-            (*(*raw).thread.context.instance).applicationData = data as *mut std::ffi::c_void;
+            (*(*raw).thread.context.instance).applicationData =
+                std::ptr::with_exposed_provenance_mut(data);
         }
     }
 
@@ -1994,7 +1997,7 @@ unsafe fn reached<'a, 'c: 'a>(
     // and a kept one for the rest of the process, so `'c` ends before the
     // allocation can.
     let cell: &'c Innermost = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
-    if attached_here(context as usize)
+    if attached_here(context.addr())
         && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
     {
         return attached_call(context, cell, slot, room);
@@ -2018,7 +2021,7 @@ unsafe fn reached<'a, 'c: 'a>(
         None => match &cell.requester {
             Some(requester) if requester.refuses_foreign() => return Addressed::Refused,
             Some(requester) => {
-                match crate::values::BatonHold::take_for(&**requester, context as usize) {
+                match crate::values::BatonHold::take_for(&**requester, context.addr()) {
                     Some(held) => held,
                     None => return Addressed::Refused,
                 }
@@ -2091,12 +2094,10 @@ fn attached_call<'a, 'c: 'a>(
     let held = match &cell.requester {
         Some(requester) if requester.refuses_foreign() => return Addressed::Refused,
         // The interpreter has ended, or ended while this thread waited.
-        Some(requester) => {
-            match crate::values::BatonHold::take_for(&**requester, context as usize) {
-                Some(held) => held,
-                None => return Addressed::Refused,
-            }
-        }
+        Some(requester) => match crate::values::BatonHold::take_for(&**requester, context.addr()) {
+            Some(held) => held,
+            None => return Addressed::Refused,
+        },
         None => crate::values::BatonHold::none(),
     };
     let innermost = cell.call.get();
@@ -2683,7 +2684,7 @@ unsafe extern "C" fn uintptr_to_object(
     let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     or_nothing!(unsafe { innermost_activation(&mut room, context, "UintptrToObject") })
-        .unsigned_object(value as u64)
+        .unsigned_object(u64::cast_from(value))
 }
 
 /// # Safety
@@ -2695,7 +2696,7 @@ unsafe extern "C" fn intptr_to_object(
     let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     or_nothing!(unsafe { innermost_activation(&mut room, context, "IntptrToObject") })
-        .signed_object(value as i64)
+        .signed_object(i64::cast_from(value))
 }
 
 /// # Safety
@@ -2707,7 +2708,7 @@ unsafe extern "C" fn string_size_to_object(
     let mut room = Room::new();
     // SAFETY: as `whole_number_to_object`.
     or_nothing!(unsafe { innermost_activation(&mut room, context, "StringSizeToObject") })
-        .unsigned_object(value as u64)
+        .unsigned_object(u64::cast_from(value))
 }
 
 /// # Safety
@@ -2846,7 +2847,12 @@ unsafe extern "C" fn object_to_int32(
     let found = or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToInt32") })
         .signed_value(object, i64::from(i32::MIN), i64::from(i32::MAX));
     // SAFETY: the caller guarantees `result`; the value is within the range.
-    unsafe { answer_through(result, found.map(|number| number as i32)) }
+    unsafe {
+        answer_through(
+            result,
+            found.map(|number| i32::try_from(number).expect("the value is within `int32_t`")),
+        )
+    }
 }
 
 /// # Safety
@@ -2862,7 +2868,12 @@ unsafe extern "C" fn object_to_unsigned_int32(
         or_nothing!(unsafe { innermost_activation(&mut room, context, "ObjectToUnsignedInt32") })
             .unsigned_value(object, u64::from(u32::MAX));
     // SAFETY: the caller guarantees `result`; the value is within the range.
-    unsafe { answer_through(result, found.map(|number| number as u32)) }
+    unsafe {
+        answer_through(
+            result,
+            found.map(|number| u32::try_from(number).expect("the value is within `uint32_t`")),
+        )
+    }
 }
 
 /// # Safety
@@ -5270,7 +5281,9 @@ fn attached_to(instance: *mut RexxInstance_) -> Option<*mut RexxThreadContext_> 
     ATTACHED.with_borrow(|attached| {
         attached
             .iter()
-            .map(|(context, _)| *context as *mut RexxThreadContext_)
+            .map(|&(context, _)| {
+                std::ptr::with_exposed_provenance_mut::<RexxThreadContext_>(context)
+            })
             .find(|&context| {
                 // SAFETY: a context stays on this thread's list only while it
                 // is attached, and an attached context is kept: the root by
@@ -5316,7 +5329,7 @@ unsafe extern "C" fn attach_thread(
         Some(context) => Some(context),
         None => match attached_to(instance) {
             Some(context) => {
-                attach_here(context as usize);
+                attach_here(context.expose_provenance());
                 Some(context)
             }
             // SAFETY: the caller guarantees `instance`.
@@ -5330,9 +5343,10 @@ unsafe extern "C" fn attach_thread(
                 // `DetachThread` at any time reads live memory.
                 // SAFETY: the caller guarantees `instance`.
                 Some(requester) => unsafe { build_attached(instance, requester) }
-                    .inspect(|&context| attach_here(context as usize)),
+                    .inspect(|&context| attach_here(context.expose_provenance())),
                 // SAFETY: the caller guarantees `instance`.
-                None => unsafe { root_of(instance) }.inspect(|&root| attach_here(root as usize)),
+                None => unsafe { root_of(instance) }
+                    .inspect(|&root| attach_here(root.expose_provenance())),
             },
         },
     };
@@ -5454,8 +5468,8 @@ unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
     let Some(root) = (unsafe { root_of(instance) }) else {
         return;
     };
-    if embedder().is_some_and(|embedder| embedder.terminate(instance as usize)) {
-        forget_attached(root as usize);
+    if embedder().is_some_and(|embedder| embedder.terminate(instance.addr())) {
+        forget_attached(root.addr());
     }
 }
 
@@ -5466,7 +5480,7 @@ unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
 /// # Safety
 /// `instance` is an instance a [`ThreadTable`] made.
 unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
-    if embedder().is_some_and(|embedder| embedder.halt(instance as usize)) {
+    if embedder().is_some_and(|embedder| embedder.halt(instance.addr())) {
         return;
     }
     // SAFETY: the caller guarantees `instance`.
@@ -5482,7 +5496,7 @@ unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
 /// As [`halt`].
 unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t) {
     let on = setting != 0;
-    if embedder().is_some_and(|embedder| embedder.set_trace(instance as usize, on)) {
+    if embedder().is_some_and(|embedder| embedder.set_trace(instance.addr(), on)) {
         return;
     }
     // SAFETY: the caller guarantees `instance`.
@@ -5715,7 +5729,7 @@ mod redirector {
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
     let mut room = Room::new();
-    match detach_counted(context as usize) {
+    match detach_counted(context.addr()) {
         Some(0) => {
             // SAFETY: the context was attached, so it is kept and live, and
             // its wrapper's `owner` is its `Innermost`.
@@ -5756,7 +5770,7 @@ fn end_attached(cell: &Innermost) {
         || cell
             .requester
             .as_ref()
-            .is_some_and(|requester| requester.detach_activity(context as usize));
+            .is_some_and(|requester| requester.detach_activity(context.addr()));
     cell.strings.take();
     // Where the interpreter has ended, it may still hold the activity, and
     // no later attach would take the context, so it is left as it is.
@@ -6131,6 +6145,8 @@ pub mod classic {
 
     /// C's `atoi` of `text`, as a `short`.
     fn short_value(text: &[u8]) -> i16 {
+        use interrexx_cast::CastTruncate;
+
         let mut rest = text
             .iter()
             .skip_while(|byte| byte.is_ascii_whitespace())
@@ -6153,8 +6169,9 @@ pub mod classic {
         if negative {
             value = -value;
         }
-        // The `int` atoi answers, cast to `short` as C casts it.
-        value as i32 as i16
+        // The `int` atoi answers, cast to `short` as C casts it: the low
+        // sixteen bits.
+        i16::cast_truncate(value)
     }
 
     /// `RexxCallBack`: the label `label` of the activation that called the
@@ -6849,6 +6866,7 @@ mod tests {
     use crate::values::{
         self, CStringPool, Conversion, Converted, Repr, Value, code, descriptor, repr, rows,
     };
+    use interrexx_cast::CastTruncate;
     use interrexx_core::ObjRef;
 
     /// Runs `body` with the thread context and table of a native call `host`
@@ -7243,10 +7261,10 @@ mod tests {
                 let table = &*(*context).functions;
                 let mut addresses: Vec<usize> = [0, 1, 7, 16, 17, 100]
                     .into_iter()
-                    .map(|size| (table.AllocateObjectMemory)(context, size) as usize)
+                    .map(|size| (table.AllocateObjectMemory)(context, size).addr())
                     .collect();
                 let first = (table.AllocateObjectMemory)(context, 3);
-                addresses.push((table.ReallocateObjectMemory)(context, first, 300) as usize);
+                addresses.push((table.ReallocateObjectMemory)(context, first, 300).addr());
                 addresses
                     .into_iter()
                     .filter(|address| address % 16 != 0)
@@ -7501,7 +7519,7 @@ mod tests {
             unsafe {
                 let (mut i64v, mut u64v, mut i32v, mut u32v) = (0i64, 0u64, 0i32, 0u32);
                 let (mut whole, mut size, mut iptr, mut uptr) = (0isize, 0usize, 0isize, 0usize);
-                let (mut logical, mut double) = (0 as crate::layout::logical_t, 0f64);
+                let (mut logical, mut double) = (crate::layout::logical_t::default(), 0f64);
                 let answered = [
                     (t.ObjectToInt64)(thread, (t.Int64ToObject)(thread, -7), &raw mut i64v),
                     (t.ObjectToUnsignedInt64)(
@@ -7723,7 +7741,7 @@ mod tests {
     /// low bits of their 64-bit pattern on a narrower target.
     fn sample(repr: Repr) -> Value {
         let address: *mut std::ffi::c_void =
-            std::ptr::without_provenance_mut(0x0123_4567_89ab_cdef_u64 as usize);
+            std::ptr::without_provenance_mut(usize::cast_truncate(0x0123_4567_89ab_cdef_u64));
         match repr {
             Repr::Object => Value::Object(address.cast()),
             Repr::CString => Value::CString(address.cast()),
@@ -7737,8 +7755,8 @@ mod tests {
             Repr::Uint16 => Value::Uint16(0xfedc),
             Repr::Uint32 => Value::Uint32(0xfedc_ba98),
             Repr::Uint64 => Value::Uint64(0xfedc_ba98_7654_3210),
-            Repr::Isize => Value::Isize(-0x0123_4567_89ab_cdef_i64 as isize),
-            Repr::Usize => Value::Usize(0xfedc_ba98_7654_3210_u64 as usize),
+            Repr::Isize => Value::Isize(isize::cast_truncate(-0x0123_4567_89ab_cdef_i64)),
+            Repr::Usize => Value::Usize(usize::cast_truncate(0xfedc_ba98_7654_3210_u64)),
             Repr::Double => Value::Double(-1.5e300),
             Repr::Float => Value::Float(-1.5e30),
         }
@@ -7944,8 +7962,14 @@ mod tests {
     fn a_command_environment_registers_a_handler_of_either_type() {
         let mut host = FakeHost::new();
         let ((), refused) = with_thread(&mut host, |thread, _| {
-            let direct = binding_handler as *mut std::ffi::c_void;
-            let redirecting = copying_handler as *mut std::ffi::c_void;
+            #[expect(
+                clippy::as_conversions,
+                reason = "a function item has no method that answers its address"
+            )]
+            let (direct, redirecting) = (
+                binding_handler as *mut std::ffi::c_void,
+                copying_handler as *mut std::ffi::c_void,
+            );
             // SAFETY: the thread context links its instance, whose table is
             // `INSTANCE`; each name is a literal and each handler has the type
             // its kind names.

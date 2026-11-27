@@ -9,6 +9,7 @@
 
 mod extended;
 
+use interrexx_cast::CastLossy;
 use interrexx_core::{Decoded, ObjRef};
 use interrexx_num::Number;
 
@@ -48,11 +49,8 @@ pub(crate) fn double_argument(
 ) -> Result<f64, Failure> {
     let value = required(args, position)?;
     if let Decoded::SmallInt(number) = value.decode() {
-        #[expect(
-            clippy::cast_precision_loss,
-            reason = "a whole number converts to the nearest double, as C's does"
-        )]
-        return Ok(number as f64);
+        // A whole number converts to the nearest double, as C's does.
+        return Ok(f64::cast_lossy(number));
     }
     let text = interp.required_string_value(value)?;
     let bytes = interp.to_text(text).into_owned();

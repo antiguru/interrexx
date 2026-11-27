@@ -35,7 +35,7 @@ use crate::ObjRef;
 
 /// Cells every block carries past the last offset a frame may start at: one
 /// more than the largest `u16` index.
-const GUARD: usize = u16::MAX as usize + 1;
+const GUARD: usize = interrexx_cast::usize_from_u16(u16::MAX) + 1;
 
 /// How many cells of a block new frames may start in, validated when built.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -119,7 +119,7 @@ impl RegFrame<'_> {
         // live, zeroed block, and every bit pattern is a valid `ObjRef`. Cells
         // are only ever reached through `Cell`, so this shared access cannot
         // alias a `&mut`.
-        unsafe { (*self.base.as_ptr().add(index as usize)).get() }
+        unsafe { (*self.base.as_ptr().add(usize::from(index))).get() }
     }
 
     /// Writes register `index`.
@@ -127,7 +127,7 @@ impl RegFrame<'_> {
     pub fn set(self, index: u16, value: ObjRef) {
         debug_assert!(index < self.len);
         // SAFETY: as in `get`.
-        unsafe { (*self.base.as_ptr().add(index as usize)).set(value) }
+        unsafe { (*self.base.as_ptr().add(usize::from(index))).set(value) }
     }
 
     /// Writes [`ObjRef::NIL`] to every register from `from` to the end.
@@ -196,8 +196,13 @@ pub struct FrameArena {
     /// `blocks[current]`, dangling before the first block.
     block: Cell<NonNull<Cell<ObjRef>>>,
     /// The used length of `block`; above `size` when the next frame must open
-    /// a block, which includes the state before the first one.
+    /// a block, which includes every state with no frame reserved.
     top: Cell<usize>,
+    /// Whether a frame is reserved: set when a frame opens the first block,
+    /// cleared when that frame is released. A frame of length 0 at the start
+    /// of the first block leaves `current` and `top` as no frame does, so
+    /// only this tells the two apart.
+    entered: Cell<bool>,
 }
 
 impl FrameArena {
@@ -209,6 +214,7 @@ impl FrameArena {
             current: Cell::new(0),
             block: Cell::new(NonNull::dangling()),
             top: Cell::new(usize::MAX),
+            entered: Cell::new(false),
         }
     }
 
@@ -226,11 +232,11 @@ impl FrameArena {
         }
         // SAFETY: `start <= size`, so this stays inside the block (property 2).
         let base = unsafe { self.block.get().add(start) };
-        for index in 0..len as usize {
+        for index in 0..usize::from(len) {
             // SAFETY: `index < GUARD` (property 3).
             unsafe { (*base.as_ptr().add(index)).set(ObjRef::NIL) }
         }
-        self.top.set(start + len as usize);
+        self.top.set(start + usize::from(len));
         RegFrame {
             base,
             len,
@@ -239,13 +245,14 @@ impl FrameArena {
         }
     }
 
-    /// Moves to the next block, allocating it the first time, and answers the
-    /// offset the new frame starts at.
+    /// Moves to the next block, or to the first when no frame is reserved,
+    /// allocating it the first time, and answers the offset the new frame
+    /// starts at.
     #[cold]
     #[inline(never)]
     fn open_block(&self) -> usize {
         let mut blocks = self.blocks.borrow_mut();
-        if !blocks.is_empty() {
+        if self.entered.replace(true) {
             self.tops.borrow_mut().push(self.top.get());
             self.current.set(self.current.get() + 1);
         }
@@ -266,9 +273,9 @@ impl FrameArena {
     /// Releases `frame`, which must be the most recently reserved live one.
     #[inline]
     pub fn release(&self, frame: RegFrame<'_>) {
-        let start = self.top.get().wrapping_sub(frame.len as usize);
+        let start = self.top.get().wrapping_sub(usize::from(frame.len));
         debug_assert!(
-            self.top.get() >= frame.len as usize
+            self.top.get() >= usize::from(frame.len)
                 && std::ptr::eq(
                     frame.base.as_ptr(),
                     self.block.get().as_ptr().wrapping_add(start)
@@ -287,7 +294,7 @@ impl FrameArena {
     pub fn park(&self, frame: RegFrame<'_>) -> ParkedFrame {
         debug_assert!(
             std::ptr::eq(
-                frame.base.as_ptr().wrapping_add(frame.len as usize),
+                frame.base.as_ptr().wrapping_add(usize::from(frame.len)),
                 self.block.get().as_ptr().wrapping_add(self.top.get())
             ),
             "frame arena parked a frame that is not the most recent"
@@ -306,9 +313,9 @@ impl FrameArena {
     /// If the most recent frame cannot be `parked`'s, by length or offset.
     #[inline]
     pub fn unpark(&self, parked: ParkedFrame) -> RegFrame<'_> {
-        let start = self.top.get().wrapping_sub(parked.len as usize);
+        let start = self.top.get().wrapping_sub(usize::from(parked.len));
         assert!(
-            self.top.get() >= parked.len as usize && start <= self.size.0,
+            self.top.get() >= usize::from(parked.len) && start <= self.size.0,
             "frame arena unparked a frame that is not the most recent"
         );
         RegFrame {
@@ -323,11 +330,15 @@ impl FrameArena {
     #[cold]
     #[inline(never)]
     fn close_block(&self) {
-        // The first block's opener leaves that block current, at `top` 0.
+        // The first block's opener leaves that block current, and the next
+        // frame opens it again.
         if let Some(top) = self.tops.borrow_mut().pop() {
             self.current.set(self.current.get() - 1);
             self.block.set(self.blocks.borrow()[self.current.get()]);
             self.top.set(top);
+        } else {
+            self.entered.set(false);
+            self.top.set(usize::MAX);
         }
     }
 
@@ -336,9 +347,22 @@ impl FrameArena {
         self.blocks.borrow().len()
     }
 
+    /// Whether no frame is reserved, of any length: the state a new arena is
+    /// in, apart from the blocks it keeps.
+    ///
+    /// Such an arena can serve another activity as a new one would. Every
+    /// cell still holds an `ObjRef` bit pattern (property 1, and a cell is
+    /// only ever written an `ObjRef`), and `reserve` writes
+    /// [`ObjRef::NIL`] to every register it hands out, so a value left in a
+    /// cell is neither a root (`iter` walks only reserved frames) nor any
+    /// register's starting value.
+    pub fn is_idle(&self) -> bool {
+        !self.entered.get()
+    }
+
     /// Every register of every live frame.
     pub fn iter(&self) -> impl Iterator<Item = ObjRef> + '_ {
-        let live = if self.blocks.borrow().is_empty() {
+        let live = if !self.entered.get() {
             0
         } else {
             self.current.get() + 1
@@ -377,7 +401,7 @@ mod tests {
     use crate::ObjRef;
 
     fn offset(arena: &FrameArena, frame: super::RegFrame<'_>) -> usize {
-        (frame.base.as_ptr() as usize - arena.block.get().as_ptr() as usize)
+        (frame.base.as_ptr().addr() - arena.block.get().as_ptr().addr())
             / std::mem::size_of::<std::cell::Cell<ObjRef>>()
     }
 
@@ -409,7 +433,7 @@ mod tests {
         assert_eq!(arena.iter().filter(|v| *v == value).count(), 2);
         assert_eq!(arena.blocks(), 1);
         assert_eq!(offset(&arena, big), 1);
-        assert!(offset(&arena, big) + u16::MAX as usize <= 1 + GUARD);
+        assert!(offset(&arena, big) + usize::from(u16::MAX) <= 1 + GUARD);
         arena.release(big);
         arena.release(small);
         assert_eq!(arena.iter().count(), 0);
@@ -471,6 +495,39 @@ mod tests {
         assert_eq!(offset(&arena, back), 0);
         arena.release(back);
         assert_eq!(arena.iter().count(), 0);
+    }
+
+    #[test]
+    fn an_arena_is_idle_only_with_no_frame_reserved_in_any_block() {
+        let arena = FrameArena::new(FrameBlock::new(2).expect("in range"));
+        assert!(arena.is_idle());
+        let opener = arena.reserve(0);
+        assert!(!arena.is_idle());
+        arena.release(opener);
+        assert!(arena.is_idle());
+        arena.release(arena.reserve(1));
+        let empty = arena.reserve(0);
+        assert_eq!((arena.current.get(), arena.top.get()), (0, 0));
+        assert!(!arena.is_idle());
+        arena.release(empty);
+        assert!(arena.is_idle());
+        let outer = arena.reserve(2);
+        assert!(!arena.is_idle());
+        let spilled = arena.reserve(1);
+        let inner = arena.reserve(1);
+        assert_eq!(arena.blocks(), 2);
+        arena.release(inner);
+        arena.release(spilled);
+        assert!(!arena.is_idle());
+        arena.release(outer);
+        assert!(arena.is_idle());
+        let held = arena.reserve(3);
+        let empty = arena.reserve(0);
+        assert_eq!(arena.top.get(), 0);
+        assert!(!arena.is_idle());
+        arena.release(empty);
+        arena.release(held);
+        assert!(arena.is_idle());
     }
 
     #[test]

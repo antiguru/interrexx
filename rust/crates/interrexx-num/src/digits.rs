@@ -3,6 +3,12 @@
 /// How many decimal digits fit without a heap allocation.
 pub(crate) const INLINE_DIGITS: usize = 30;
 
+/// An inline arm's length, which is at most [`INLINE_DIGITS`].
+#[inline(always)]
+fn inline_len(len: usize) -> u8 {
+    u8::try_from(len).expect("at most INLINE_DIGITS")
+}
+
 /// Most significant digit first, each value 0..=9 -- the same contract
 /// [`Number::digits`] always had, with the storage decided by length.
 #[derive(Clone)]
@@ -27,7 +33,7 @@ impl Digits {
             let mut buf = [0u8; INLINE_DIGITS];
             buf[..source.len()].copy_from_slice(source);
             Digits::Inline {
-                len: source.len() as u8,
+                len: inline_len(source.len()),
                 buf,
             }
         } else {
@@ -49,7 +55,7 @@ impl Digits {
     pub(crate) fn zeros(count: usize) -> Self {
         if count <= INLINE_DIGITS {
             Digits::Inline {
-                len: count as u8,
+                len: inline_len(count),
                 buf: [0; INLINE_DIGITS],
             }
         } else {
@@ -68,14 +74,14 @@ impl Digits {
 
     pub(crate) fn as_slice(&self) -> &[u8] {
         match self {
-            Digits::Inline { len, buf } => &buf[..*len as usize],
+            Digits::Inline { len, buf } => &buf[..usize::from(*len)],
             Digits::Heap(v) => v,
         }
     }
 
     fn as_mut_slice(&mut self) -> &mut [u8] {
         match self {
-            Digits::Inline { len, buf } => &mut buf[..*len as usize],
+            Digits::Inline { len, buf } => &mut buf[..usize::from(*len)],
             Digits::Heap(v) => v,
         }
     }
@@ -83,7 +89,7 @@ impl Digits {
     /// Moves the live digits to the heap, reserving room for `extra` more.
     fn spill(&mut self, extra: usize) {
         if let Digits::Inline { len, buf } = self {
-            let live = &buf[..*len as usize];
+            let live = &buf[..usize::from(*len)];
             let mut v = Vec::with_capacity(live.len() + extra);
             v.extend_from_slice(live);
             *self = Digits::Heap(v);
@@ -92,9 +98,9 @@ impl Digits {
 
     pub(crate) fn push(&mut self, digit: u8) {
         if let Digits::Inline { len, buf } = self
-            && (*len as usize) < INLINE_DIGITS
+            && usize::from(*len) < INLINE_DIGITS
         {
-            buf[*len as usize] = digit;
+            buf[usize::from(*len)] = digit;
             *len += 1;
             return;
         }
@@ -112,7 +118,7 @@ impl Digits {
             Digits::Inline { len, buf } => {
                 let last = len.checked_sub(1)?;
                 *len = last;
-                Some(buf[last as usize])
+                Some(buf[usize::from(last)])
             }
             Digits::Heap(v) => v.pop(),
         }
@@ -121,8 +127,8 @@ impl Digits {
     pub(crate) fn truncate(&mut self, keep: usize) {
         match self {
             Digits::Inline { len, .. } => {
-                if keep < *len as usize {
-                    *len = keep as u8;
+                if keep < usize::from(*len) {
+                    *len = inline_len(keep);
                 }
             }
             Digits::Heap(v) => v.truncate(keep),
@@ -132,9 +138,9 @@ impl Digits {
     /// Prepends `digit`, which is the carry an all-nines rounding grows.
     pub(crate) fn insert_front(&mut self, digit: u8) {
         if let Digits::Inline { len, buf } = self
-            && (*len as usize) < INLINE_DIGITS
+            && usize::from(*len) < INLINE_DIGITS
         {
-            buf.copy_within(..*len as usize, 1);
+            buf.copy_within(..usize::from(*len), 1);
             buf[0] = digit;
             *len += 1;
             return;
@@ -155,9 +161,9 @@ impl Digits {
         }
         match self {
             Digits::Inline { len, buf } => {
-                let count = count.min(*len as usize);
-                buf.copy_within(count..*len as usize, 0);
-                *len -= count as u8;
+                let count = count.min(usize::from(*len));
+                buf.copy_within(count..usize::from(*len), 0);
+                *len -= inline_len(count);
             }
             Digits::Heap(v) => {
                 v.drain(..count.min(v.len()));
@@ -169,13 +175,13 @@ impl Digits {
     /// their least significant digit does to the shorter one.
     pub(crate) fn extend_zeros(&mut self, count: usize) {
         if let Digits::Inline { len, buf } = self
-            && *len as usize + count <= INLINE_DIGITS
+            && usize::from(*len) + count <= INLINE_DIGITS
         {
-            let end = *len as usize + count;
+            let end = usize::from(*len) + count;
             // Written rather than assumed zero: a `truncate` or a `pop` can
             // have left a live digit at these positions.
-            buf[*len as usize..end].fill(0);
-            *len = end as u8;
+            buf[usize::from(*len)..end].fill(0);
+            *len = inline_len(end);
             return;
         }
         self.spill(count);
@@ -424,7 +430,9 @@ mod tests {
 
     #[test]
     fn a_long_value_spills_to_the_heap_and_reads_back_the_same() {
-        let long: Vec<u8> = (0..INLINE_DIGITS as u8 + 7).map(|i| i % 10).collect();
+        let long: Vec<u8> = (0..super::inline_len(INLINE_DIGITS) + 7)
+            .map(|i| i % 10)
+            .collect();
         let mut d = Digits::new();
         for &digit in &long {
             d.push(digit);
@@ -450,7 +458,7 @@ mod tests {
     #[test]
     fn the_in_place_edits_agree_with_a_vector_on_both_arms() {
         for start in [8usize, INLINE_DIGITS + 5] {
-            let source: Vec<u8> = (0..start as u8).map(|i| i % 10).collect();
+            let source: Vec<u8> = (0..super::inline_len(start)).map(|i| i % 10).collect();
 
             let mut d = Digits::from_slice(&source);
             let mut v = source.clone();

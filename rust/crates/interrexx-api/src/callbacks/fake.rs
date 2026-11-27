@@ -59,7 +59,11 @@ pub(crate) enum Held {
 impl FakeHost {
     pub(crate) fn new() -> FakeHost {
         // One space for both tables, as an interpreter has.
-        let space = crate::handles::HandleSpace::new();
+        // One space for every fake host, as one interpreter's tables share
+        // one: tests enter one thread context from fake hosts on several
+        // threads, and its constants' handles must agree between them.
+        static SPACE: std::sync::OnceLock<crate::handles::HandleSpace> = std::sync::OnceLock::new();
+        let space = SPACE.get_or_init(crate::handles::HandleSpace::new).clone();
         FakeHost {
             heap: Heap::new(),
             locals: Table::new(&space),

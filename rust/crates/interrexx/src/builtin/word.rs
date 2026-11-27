@@ -16,6 +16,7 @@
 //! say n + 0                          -- 1E+1: a new value, new pair
 //! ```
 
+use interrexx_cast::CastFrom;
 use std::ops::Range;
 
 use interrexx_core::ObjRef;
@@ -151,7 +152,7 @@ fn blank_lanes(chunk: u64) -> u64 {
 /// baseline target.
 #[inline(always)]
 fn count_lanes(lanes: u64) -> usize {
-    ((lanes >> 7).wrapping_mul(LANES) >> 56) as usize
+    usize::try_from((lanes >> 7).wrapping_mul(LANES) >> 56).expect("at most eight lanes")
 }
 
 /// Where the `n`th (1-based, `n >= 1`) word of `text` starts, or `None`
@@ -174,7 +175,7 @@ fn nth_word_start(text: &[u8], n: usize) -> Option<usize> {
             for _ in 1..remaining {
                 starts &= starts - 1;
             }
-            return Some(at + (starts.trailing_zeros() / 8) as usize);
+            return Some(at + usize::cast_from(starts.trailing_zeros() / 8));
         }
         remaining -= found;
         blank_before = blanks >> 56;
@@ -190,7 +191,7 @@ fn first_blank_from(text: &[u8], from: usize) -> usize {
     while at < text.len() {
         let blanks = blank_lanes(chunk_at(text, at));
         if blanks != 0 {
-            return (at + (blanks.trailing_zeros() / 8) as usize).min(text.len());
+            return (at + usize::cast_from(blanks.trailing_zeros() / 8)).min(text.len());
         }
         at += 8;
     }
@@ -404,7 +405,7 @@ impl WordIndex {
             return None;
         };
         Some(match position.checked_sub(1).and_then(|at| table.get(at)) {
-            Some(&(start, end)) => start as usize..end as usize,
+            Some(&(start, end)) => usize::cast_from(start)..usize::cast_from(end),
             None => 0..0,
         })
     }

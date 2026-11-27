@@ -30,10 +30,7 @@ pub(in crate::dispatch) fn new_supplier(
     items: ObjRef,
     indexes: ObjRef,
 ) -> Result<ObjRef, Failure> {
-    let class = interp
-        .classes()
-        .lookup("Supplier")
-        .expect("Supplier is a native class");
+    let class = interp.object_model().supplier;
     let object = new_instance(interp, class)?;
     interp.roots.activity_mut().push_temp(object);
     store_supplier(interp, object, items, indexes, 0);
@@ -47,10 +44,7 @@ fn store_supplier(
     indexes: ObjRef,
     position: usize,
 ) {
-    let scope = interp
-        .classes()
-        .lookup("Supplier")
-        .expect("Supplier is a native class");
+    let scope = interp.object_model().supplier;
     let position = interp.counted(position);
     interp.set_pool_variable(receiver, scope, SUPPLIER_ITEMS, items);
     interp.set_pool_variable(receiver, scope, SUPPLIER_INDEXES, indexes);
@@ -63,10 +57,7 @@ fn supplier_state(
     interp: &mut Interp,
     receiver: ObjRef,
 ) -> Result<(ObjRef, ObjRef, usize), Failure> {
-    let scope = interp
-        .classes()
-        .lookup("Supplier")
-        .expect("Supplier is a native class");
+    let scope = interp.object_model().supplier;
     let (Some(items), Some(indexes), Some(position)) = (
         pool_variable(interp, receiver, scope, SUPPLIER_ITEMS),
         pool_variable(interp, receiver, scope, SUPPLIER_INDEXES),
@@ -85,7 +76,11 @@ fn supplier_state(
     let Decoded::SmallInt(position) = position.decode() else {
         unreachable!("the position this crate stored is a small integer")
     };
-    Ok((items, indexes, position as usize))
+    Ok((
+        items,
+        indexes,
+        usize::try_from(position).expect("a position this crate stored"),
+    ))
 }
 
 /// The pairs `supplier` has left, index then item with an empty slot read as
@@ -221,10 +216,7 @@ fn native_supplier_init(
         sides.push(supplier_array(interp, value)?);
     }
     store_supplier(interp, receiver, sides[0], sides[1], 0);
-    let scope = interp
-        .classes()
-        .lookup("Supplier")
-        .expect("Supplier is a native class");
+    let scope = interp.object_model().supplier;
     interp.set_pool_variable(receiver, scope, SUPPLIER_COLLECTED, ObjRef::NIL);
     Ok(None)
 }
@@ -241,10 +233,7 @@ pub(in crate::dispatch) fn collected(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
-    let scope = interp
-        .classes()
-        .lookup("Supplier")
-        .expect("Supplier is a native class");
+    let scope = interp.object_model().supplier;
     match args.first().copied().flatten() {
         Some(pair) => {
             interp.set_pool_variable(receiver, scope, SUPPLIER_COLLECTED, pair);

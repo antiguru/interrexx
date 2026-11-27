@@ -23,6 +23,8 @@ libc = "0.2.186"
 [target.'cfg(windows)'.dependencies]
 # Find and load the interpreter DLL installed beside the forwarding DLL.
 windows-sys = { version = "0.61.2", features = ["Win32_System_LibraryLoader"] }
+# The numeric conversions, each named for what it keeps.
+interrexx-cast.workspace = true
 
 [lints]
 workspace = true
