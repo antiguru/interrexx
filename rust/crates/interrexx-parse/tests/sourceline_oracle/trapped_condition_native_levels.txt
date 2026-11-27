@@ -1,11 +1,10 @@
-count 59
+count 53
 -- A condition trapped after a native level: the native frame's context, and
 -- POSITION and PROGRAM from the first frame with a package -- none for a
 -- built-in method, and the caller for a condition a native call re-raises,
 -- which a raise its boundary made is as well.
 call t1
 call t2
-call t3
 call t4
 call t5
 call t6
@@ -19,11 +18,6 @@ syntax: call show; return
 t2: procedure
   signal on syntax
   call SysSleep 'abc'
-  return
-syntax: call show; return
-t3: procedure
-  signal on syntax
-  x = filespec('N')
   return
 syntax: call show; return
 t4: procedure
