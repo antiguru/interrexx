@@ -692,7 +692,8 @@ fn recursion_by_function_call_keeps_the_native_stack_flat() {
 
 /// A send made by an op of a body -- as a clause, as a value, in an argument,
 /// and through each primitive method that runs a Rexx body -- runs that body
-/// on the driver's frame.
+/// on the driver's frame. The method has two clauses so these sends exercise
+/// the activation and resume path.
 #[test]
 fn a_send_op_runs_its_method_on_the_drivers_own_frame() {
     let (outcome, entered) = stackless(
@@ -701,7 +702,7 @@ fn a_send_op_runs_its_method_on_the_drivers_own_frame() {
           say .context~package~findRoutine('R')~call\nexit\n\
           f: return arg(1)\n\
           ::routine r\n  return 'r'\n\
-          ::class c\n::method init\n  return\n::method m\n  return 'm'\n",
+          ::class c\n::method init\n  return\n::method m\n  nop\n  return 'm'\n",
     );
     assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
     assert_eq!(String::from_utf8_lossy(&outcome.stdout), "m m\nm m m\nr\n");
