@@ -335,21 +335,20 @@ ms: procedure
 <div class="rule" id="r-util.sysqueryprocess.pmem"><a href="#r-util.sysqueryprocess.pmem">[util.sysqueryprocess.pmem]</a></div>
 <p><code>PMEM</code> answers a line of text of the form <code>Max_Memory_RSS: </code> and a whole
 number: the most main memory, counted in kilobytes, that the process has held
-at one time so far. Memory that a command that ADDRESS runs holds is not
-counted: in the example a command holds 256 megabytes, and the number grows by
-far less.</p>
+at one time so far. The exact number is unspecified, as host measurements
+can account for different parts of the process's lifetime. The number does
+not decrease between calls. Memory that a command that ADDRESS runs holds is
+not counted: in the example a command holds 256 megabytes, and the number
+grows by far less.</p>
 <pre><code class="language-rexx">t = SysQueryProcess('PMEM')
 parse var t head n extra
 say head '['extra']' datatype(n, 'W') (n &gt; 0)
-address system "awk '/^VmHWM:/ {print $2}' /proc/$PPID/status" with output stem h.
-say (n * 2 &gt; h.1) (n &lt; h.1 * 2)
-address system "dd if=/dev/zero of=/dev/null bs=256M count=1 status=none; echo done" with output stem a.
+address system "dd if=/dev/zero of=/dev/null bs=256M count=1 status=none &amp;&amp; echo done" with output stem a.
 parse value SysQueryProcess('PMEM') with . n2
-say a.1 (n2 - n &lt; 150000)
+say a.1 (n2 &gt;= n) (n2 - n &lt; 150000)
 </code></pre>
 <pre><code class="language-output">Max_Memory_RSS: [] 1 1
-1 1
-done 1
+done 1 1
 </code></pre>
 <div class="rule" id="r-util.sysqueryprocess.prcvdsig"><a href="#r-util.sysqueryprocess.prcvdsig">[util.sysqueryprocess.prcvdsig]</a></div>
 <p><code>PRCVDSIG</code> answers a line of text of the form <code>Received_signals: </code> and a whole
