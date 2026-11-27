@@ -459,9 +459,8 @@ fn run_stored_method(
     .unwrap_or(ObjRef::NIL))
 }
 
-/// The result of the method stored under `index`, run with NO arguments and
-/// under its own name.
-fn method_table_value(
+/// The method stored under `index`, if any.
+fn method_table_entry(
     interp: &mut Interp,
     receiver: ObjRef,
     index: ObjRef,
@@ -473,24 +472,7 @@ fn method_table_value(
     let Some(slot) = found.found() else {
         return Ok(None);
     };
-    let Some(stored) = slot_at(interp, store.items, slot)? else {
-        return Ok(None);
-    };
-    let name = interp.to_text(index).to_vec();
-    run_stored_method(interp, receiver, &name, stored, &[]).map(Some)
-}
-
-/// Run under the name `UNKNOWN` and with the index as its ONE argument --
-/// unlike a method table entry, which is run with none.
-fn unknown_value(
-    interp: &mut Interp,
-    receiver: ObjRef,
-    index: ObjRef,
-) -> Result<Option<ObjRef>, Failure> {
-    let Some(stored) = unknown_method(interp, receiver) else {
-        return Ok(None);
-    };
-    run_stored_method(interp, receiver, b"UNKNOWN", stored, &[Some(index)]).map(Some)
+    slot_at(interp, store.items, slot)
 }
 
 /// The contents, then the method table, then the unknown method.
@@ -499,14 +481,30 @@ fn merged_get(
     receiver: ObjRef,
     index: ObjRef,
 ) -> Result<Option<ObjRef>, Failure> {
+    merged_get_with(interp, receiver, index, |interp, name, stored, args| {
+        run_stored_method(interp, receiver, name, stored, args)
+    })
+}
+
+/// [`merged_get`], with `run` handling the chosen entry method, if any.
+fn merged_get_with(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    index: ObjRef,
+    run: impl FnOnce(&mut Interp, &[u8], ObjRef, &[Option<ObjRef>]) -> Result<ObjRef, Failure>,
+) -> Result<Option<ObjRef>, Failure> {
     let (store, found) = probe(interp, receiver, index)?;
     if let Some(slot) = found.found() {
         return Ok(Some(item_at(interp, &store, slot)?.unwrap_or(ObjRef::NIL)));
     }
-    if let Some(value) = method_table_value(interp, receiver, index)? {
-        return Ok(Some(value));
+    if let Some(stored) = method_table_entry(interp, receiver, index)? {
+        let name = interp.to_text(index).to_vec();
+        return run(interp, &name, stored, &[]).map(Some);
     }
-    unknown_value(interp, receiver, index)
+    let Some(stored) = unknown_method(interp, receiver) else {
+        return Ok(None);
+    };
+    run(interp, b"UNKNOWN", stored, &[Some(index)]).map(Some)
 }
 
 /// `Directory~at` for the native API's `DirectoryAt` and `StringTableAt`,
@@ -659,16 +657,28 @@ fn validated_index(
 
 /// `~at` and `[]`: the item under that index, or `.nil`.
 #[inline(always)]
-pub(super) fn store_at(
+fn store_at(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
+    entry_level: Option<&[u8]>,
 ) -> Result<Option<ObjRef>, Failure> {
     let index = index_argument(args, 1)?;
     let index = validated_index(interp, receiver, index)?;
-    Ok(Some(
-        merged_get(interp, receiver, index)?.unwrap_or(ObjRef::NIL),
-    ))
+    let item = match entry_level {
+        Some(level) => merged_get_with(
+            interp,
+            receiver,
+            index,
+            |interp, name, stored, method_args| {
+                interp.primitive_level(receiver, level, args, |interp| {
+                    run_stored_method(interp, receiver, name, stored, method_args)
+                })
+            },
+        ),
+        None => merged_get(interp, receiver, index),
+    }?;
+    Ok(Some(item.unwrap_or(ObjRef::NIL)))
 }
 
 /// `~put` and `[]=`: **the item comes first and the index second**, the
@@ -1366,12 +1376,13 @@ fn hash_at(
         {
             return leveled_store_at(interp, receiver, args, name);
         }
-        // A string-keyed store compares string values, which sends nothing.
+        // String-keyed lookup sends nothing while comparing keys. Only an
+        // entry method can need the primitive's level for this index.
         if kind.has(HashKind::STRING_KEYED) {
-            return store_at(interp, receiver, args);
+            return store_at(interp, receiver, args, Some(name));
         }
         return interp.deferred_level(receiver, name, args, |interp| {
-            store_at(interp, receiver, args)
+            store_at(interp, receiver, args, None)
         });
     }
     let index = hash_index(interp, args, 1)?;
@@ -1389,7 +1400,7 @@ fn leveled_store_at(
     name: &[u8],
 ) -> Result<Option<ObjRef>, Failure> {
     interp.primitive_level(receiver, name, args, |interp| {
-        store_at(interp, receiver, args)
+        store_at(interp, receiver, args, None)
     })
 }
 
