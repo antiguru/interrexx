@@ -109,6 +109,28 @@ fn run_rust(
     watchdog::run_bounded(path_str, text, invocation)
 }
 
+// spec: env.invocation.heap-limit, env.invocation.heap-limit.raise
+#[test]
+fn a_sidecar_heap_limit_takes_precedence_over_the_corpus_limit() {
+    let directory = run_directory("heap-limit-sidecar");
+    empty_run_directory(&directory);
+    let path = directory.join("limit.rex");
+    fs::write(
+        &path,
+        b"signal on syntax\nsay copies('x', 17 * 1024 * 1024)~length\nexit\n\
+          syntax: say condition('o')~code\n",
+    )
+    .expect("the program");
+    fs::write(directory.join("limit.env"), b"REXX_HEAP_LIMIT=16M\n").expect("the sidecar");
+    let sidecar = sidecar_for(&directory, "limit.rex");
+    let overrides = resolved_environment(&sidecar, &directory);
+    let outcome = run_rust(&path, &directory, &overrides, sidecar.stdin.as_deref());
+    fs::remove_dir_all(directory).expect("remove the fixture directory");
+    assert_eq!(outcome.exit_code, 0);
+    assert_eq!(outcome.stderr, b"");
+    assert_eq!(outcome.stdout, b"5.0\n");
+}
+
 /// One corpus program that disagreed with the oracle, or one where either
 /// side's run did not finish.
 struct Mismatch {
