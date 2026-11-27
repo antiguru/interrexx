@@ -31,6 +31,20 @@ overview at the top of a page, and every note, which is set as a block
 quote that begins **Note.** A note explains where a rule comes from or how
 another definition of Rexx differs; it never adds to or changes a rule.
 
+## Language level
+
+A language level names the features an interpreter implements, as a decimal
+number such as 6.06. An interpreter has one level, the same for every program
+it runs. [PARSE VERSION](r:instr.parse.version),
+[`.RexxInfo~languageLevel`](r:class.rexxinfo.version) and [the native
+interface](r:native.header.versions) report it, and a compiled image records
+the level its program needs ([the required-level
+rule](r:env.invocation.rexxc.required-level)).
+
+> **Note.** interrexx implements level 6.06, and ooRexx level 6.07. [Deviation
+> 179](deviations.md#179-language-level-606) lists what differs, and #804
+> tracks implementing 6.07.
+
 ## Terms
 
 **ooRexx.** The open-source C++ implementation of Object Rexx, version 5.
