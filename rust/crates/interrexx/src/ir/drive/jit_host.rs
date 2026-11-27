@@ -1176,6 +1176,16 @@ impl Host for Driven<'_, '_> {
 
     fn op(&mut self, pc: u32) -> u32 {
         self.hosted += 1;
+        #[cfg(test)]
+        if matches!(
+            self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first),
+            Some(Op::ParseBegin {
+                opening: crate::ir::ParseOpening::Literal,
+                ..
+            })
+        ) {
+            HOST_PARSE_GUARDS.with(|guards| guards.set(guards.get() + 1));
+        }
         // Between clauses: the driver's own arms for these ops.
         match self.chunk.ops_in(pc, pc + 1).and_then(<[Op]>::first) {
             // An inner loop's pass boundary, as the driver's `Op::LoopNext` arm
@@ -1492,6 +1502,7 @@ impl Host for Driven<'_, '_> {
             && fresh.steady == native.steady
             && fresh.small_int_bound == native.small_int_bound
             && fresh.quick_values == native.quick_values
+            && fresh.parse_traced == native.parse_traced
             && fresh.intermediates == native.intermediates
             && fresh.jump_to == native.jump_to
     }
@@ -1570,6 +1581,8 @@ impl Host for Driven<'_, '_> {
         let fuzz = settings.fuzz();
         native.small_int_bound = crate::value::small_int_bound(digits);
         native.quick_values = u64::from(fuzz == 0 && !mode.results);
+        let traced = interp.traced_mode();
+        native.parse_traced = u64::from(traced.results || traced.intermediates);
         native.intermediates = u64::from(interp.tracing_intermediates());
         // `Op::Load`'s and `Op::Store`'s fast paths reach the slot only for a
         // frame no `EXPOSE` redirects, and a store only while `TRACE` shows no
@@ -1992,6 +2005,7 @@ thread_local! {
     static QUIET_COMPOUNDS: Cell<usize> = const { Cell::new(0) };
     static HANDED_BACK: Cell<usize> = const { Cell::new(0) };
     static HOST_BOUNDARIES: Cell<usize> = const { Cell::new(0) };
+    static HOST_PARSE_GUARDS: Cell<usize> = const { Cell::new(0) };
     static RETIREMENTS: Cell<usize> = const { Cell::new(0) };
     static COMPILED_LINES: RefCell<std::collections::BTreeSet<u32>> =
         const { RefCell::new(std::collections::BTreeSet::new()) };
@@ -2016,6 +2030,7 @@ fn reset_compiled_runs() {
     QUIET_COMPOUNDS.with(|accesses| accesses.set(0));
     HANDED_BACK.with(|handed| handed.set(0));
     HOST_BOUNDARIES.with(|taken| taken.set(0));
+    HOST_PARSE_GUARDS.with(|guards| guards.set(0));
     RETIREMENTS.with(|retired| retired.set(0));
     COMPILED_LINES.with(|lines| lines.borrow_mut().clear());
 }

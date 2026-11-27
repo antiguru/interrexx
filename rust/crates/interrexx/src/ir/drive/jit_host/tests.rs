@@ -112,6 +112,22 @@ fn ran(source: &[u8]) -> crate::Interp {
     interp
 }
 
+#[test]
+fn prepared_parse_stays_in_generated_code_with_numeric_fuzz() {
+    reset_compiled_runs();
+    let limit = super::THRESHOLD + 2000;
+    ran(format!(
+        "numeric fuzz 1\n\
+         do {limit}\n\
+           parse value 'alpha beta' with a b\n\
+         end\n\
+         if a \\== 'alpha' | b \\== 'beta' then bad = 1 / 0"
+    )
+    .as_bytes());
+    assert!(compiled_runs() > 0);
+    assert_eq!(super::HOST_PARSE_GUARDS.with(std::cell::Cell::get), 0);
+}
+
 /// The most temporaries live at once in a run of `body` in a compiled loop
 /// of `n` passes, which also ran `counted` quietly.
 fn temps_high_water(body: &str, n: usize, counted: fn() -> usize) -> usize {
