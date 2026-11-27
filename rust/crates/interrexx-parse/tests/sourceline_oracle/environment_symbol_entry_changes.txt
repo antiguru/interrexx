@@ -1,0 +1,87 @@
+count 86
+/* One .NAME read site whose name no class answers, reached again after every
+   change that moves what it answers: .local written by an unknown setter, put,
+   setEntry, [] and remove, grown past its first store, .environment written
+   and shadowed, an entry method answering a new value on each read and an
+   unknown method of .local, the package's own local written and removed,
+   .local written by another activity, .local emptied, and a security manager
+   installed. A read with nothing written since repeats the one before it. */
+l = .local
+e = .environment
+unknown = .method~new('unknown', 'use arg name; return "local unknown" name')
+manager = .manager~new
+call show 1
+l~zz = 'local setter'
+call show 2
+call show 2
+l~put('local put', 'ZZ')
+call show 3
+l~setEntry('ZZ', 'local setEntry')
+call show 4
+l['ZZ'] = 'local bracket'
+call show 5
+do i = 1 to 60
+  l~put(i, 'ZZFILL'i)
+end
+call show 6
+do i = 1 to 60
+  l~remove('ZZFILL'i)
+end
+l~remove('ZZ')
+call show 7
+e~zz = 'environment'
+call show 8
+l~zz = 'local shadows'
+call show 9
+l~remove('ZZ')
+l~setMethod('ZZ', 'return "local method" .counter~next')
+call show 10
+call show 10
+l~unsetMethod('ZZ')
+call show 11
+call show 11
+l~setMethod('UNKNOWN', unknown)
+call show 12
+l~unsetMethod('UNKNOWN')
+call show 12
+call show 12
+.context~package~local~zz = 'package local'
+call show 13
+.context~package~local~remove('ZZ')
+call show 14
+w = .writer~new~start('write', 'another activity')
+w~result
+call show 15
+saved = l~copy
+l~empty
+call show 16
+do name over saved~allIndexes
+  l[name] = saved[name]
+end
+call show 17
+call show 17
+.context~package~setSecurityManager(manager)
+call show 18
+exit
+show: procedure
+  use arg i
+  say i .zz
+  return
+::class counter
+::method next class
+  expose n
+  if var('n') = 0 then n = 0
+  n = n + 1
+  return n
+::class writer
+::method write
+  use arg value
+  .local~zz = value
+::class manager
+::method local
+  use arg info
+  if info~name \== 'ZZ' then return 0
+  info~result = 'manager'
+  return 1
+::method unknown
+  return 0
