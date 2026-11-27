@@ -1482,6 +1482,11 @@ pub(crate) struct ObjectModel {
     /// The scope a `List`'s chain is bound under, which every `List`
     /// method reaches.
     list: ObjRef,
+    /// The scope a `Supplier`'s state is bound under, and the class every
+    /// supplier test compares against.
+    pub(crate) supplier: ObjRef,
+    /// The class [`collection::is_queue`] tests against.
+    queue: ObjRef,
     /// The class `.Context~stackFrames` builds its elements from. Reached
     /// here rather than by name at every build, exactly as `context` beside
     /// it is.
@@ -1685,6 +1690,10 @@ impl ObjectModel {
             .lookup("WeakReference")
             .expect("WeakReference is a native class");
         let list = classes.lookup("List").expect("List is a native class");
+        let supplier = classes
+            .lookup("Supplier")
+            .expect("Supplier is a native class");
+        let queue = classes.lookup("Queue").expect("Queue is a native class");
         let stack_frame = classes
             .lookup("StackFrame")
             .expect("StackFrame is a native class");
@@ -1739,6 +1748,8 @@ impl ObjectModel {
             stem,
             weak_reference,
             list,
+            supplier,
+            queue,
             stack_frame,
             store_holders,
             nil_behaviour,
