@@ -5,14 +5,11 @@ use std::io::{IsTerminal, Write};
 
 use super::{Command, Program};
 
-/// Runs the interpreter with this process's host arguments and standard streams.
-pub fn run_cli() -> u8 {
+/// Runs the interpreter with the launcher-supplied arguments and the
+/// process's standard streams.
+pub fn run_cli(args: &[Vec<u8>]) -> u8 {
     crate::install_signal_handlers();
-    let args: Vec<Vec<u8>> = std::env::args_os()
-        .skip(1)
-        .map(std::ffi::OsString::into_encoded_bytes)
-        .collect();
-    let run = match super::parse(&args) {
+    let run = match super::parse(args) {
         Command::Usage => {
             let _ = std::io::stderr().write_all(super::USAGE);
             return super::USAGE_STATUS;

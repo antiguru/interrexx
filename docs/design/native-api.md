@@ -209,15 +209,13 @@ Raising and throwing differ, as in ooRexx:
 * On macOS the two are `librexx.4.dylib` and `librexxapi.4.dylib`, with install names under
   `@rpath`; `librexxapi` records `@loader_path/librexx.4.dylib` as a load command and opens it by
   that path. `interrexx-api/src/library_names.rs` holds the names of each host.
-* On Windows, `rexxapi.dll` forwards to `rexx.dll` in its own directory. On Windows and macOS
-  the `rexx` executable loads the interpreter library beside itself and calls its private,
-  versioned CLI entry. The CLI and a native extension's C API calls then share the library's
-  process-local registrations and interpreter state. Keep both API libraries beside the
-  executable when installing it. In a macOS Cargo build the launcher also accepts
-  `librexx.dylib`, Cargo's unversioned development filename.
-* On ELF hosts the executable compiles in the C API exports. The loader resolves an extension's
-  imports against those process exports first. In-process Rust test binaries retain their
-  own C entry points for tests that invoke the interpreter directly.
+* On Windows, `rexxapi.dll` forwards to `rexx.dll` in its own directory.
+* The `rexx` executable loads its companion interpreter library and calls a private,
+  versioned CLI entry. A native extension's C API calls then share the CLI's process-local
+  registrations and interpreter state. The launcher looks beside itself and, on Unix,
+  also supports the installed `bin/` and `lib/` layout. Cargo's unversioned library name is
+  available for development builds. In-process Rust test hosts still export their own
+  C entry points for tests that invoke the interpreter directly.
 * `RexxStart` runs a program with the classic system exits, on the calling thread or as a classic
   run other threads can halt or trace. `RexxCreateInterpreter` makes an instance; several may
   exist in one process, each isolated. `AttachThread` joins a foreign thread to an instance (see

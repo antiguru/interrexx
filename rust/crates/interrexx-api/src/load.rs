@@ -28,21 +28,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-/// Runs the version-matched CLI entry in the interpreter library next to
-/// the executable. A development macOS build uses Cargo's unversioned name.
-#[cfg(any(windows, target_os = "macos"))]
-pub fn run_cli() -> std::io::Result<u8> {
-    let executable = std::env::current_exe()?;
-    let path = executable.with_file_name(crate::library_names::host_api_libraries().librexx);
-    #[cfg(target_os = "macos")]
-    let path = if path.try_exists()? {
-        path
-    } else {
-        executable.with_file_name("librexx.dylib")
-    };
+/// Runs the private CLI entry in the interpreter shipped with the launcher.
+pub fn run_cli(arguments: &[u8]) -> std::io::Result<u8> {
+    let path = cli_library_path(&std::env::current_exe()?)?;
     // SAFETY: the path is absolute and names the interpreter installed with
-    // the launcher. On macOS package lookup also needs its public C symbols.
-    #[cfg(target_os = "macos")]
+    // the launcher. Package lookup also needs the library's public C symbols.
+    #[cfg(unix)]
     let library = unsafe {
         PlatformLibrary::open(
             Some(&path),
@@ -63,22 +54,63 @@ pub fn run_cli() -> std::io::Result<u8> {
     };
     let library = library
         .map_err(|error| std::io::Error::other(format!("loading {}: {error}", path.display())))?;
-    // SAFETY: this versioned name has this signature in the matching C API
-    // library. Keep the library alive until the entry point returns.
+    // SAFETY: the matching library is the owner of this versioned symbol
+    // and the launcher keeps the argument storage live throughout the call.
     unsafe {
         let entry = library
-            .get::<extern "C" fn() -> u8>(b"interrexx_main_v1\0")
+            .get::<unsafe extern "C" fn(*const u8, usize) -> u8>(b"interrexx_main_v1\0")
             .map_err(|error| {
                 std::io::Error::other(format!(
                     "finding the launcher entry in {}: {error}",
                     path.display()
                 ))
             })?;
-        let status = entry();
+        let status = entry(arguments.as_ptr(), arguments.len());
         // A native worker can still be unwinding as the process exits.
         std::mem::forget(library);
         Ok(status)
     }
+}
+
+fn cli_library_path(executable: &Path) -> std::io::Result<PathBuf> {
+    let name = crate::library_names::host_api_libraries().librexx;
+    let beside = executable.with_file_name(name);
+    #[cfg(unix)]
+    if !beside.try_exists()? {
+        let cargo_name = format!(
+            "{}rexx{}",
+            std::env::consts::DLL_PREFIX,
+            std::env::consts::DLL_SUFFIX
+        );
+        let development = executable.with_file_name(&cargo_name);
+        if development.try_exists()? {
+            return Ok(development);
+        }
+        if let Some(prefix) = executable.parent().and_then(Path::parent) {
+            let installed = prefix.join("lib").join(name);
+            if installed.try_exists()? {
+                return Ok(installed);
+            }
+        }
+        // Cargo's test builds put cdylibs in the build target directory,
+        // including when nextest relocates its archive.
+        let dir = executable.parent().expect("an executable has a directory");
+        let build = dir
+            .ancestors()
+            .find(|path| path.file_name().is_some_and(|name| name == "build"))
+            .map_or_else(|| dir.join("build"), Path::to_path_buf);
+        if let Ok(entries) = build.join("interrexx-capi").read_dir()
+            && let Some((_, path)) = entries
+                .filter_map(|entry| {
+                    let path = entry.ok()?.path().join("out").join(&cargo_name);
+                    Some((path.metadata().ok()?.modified().ok()?, path))
+                })
+                .max()
+        {
+            return Ok(path);
+        }
+    }
+    Ok(beside)
 }
 
 /// The C signature of the stub the `RexxMethodN` macros generate.

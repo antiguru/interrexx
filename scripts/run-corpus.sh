@@ -15,7 +15,7 @@ oracle=$root/third_party/oracle
 crate=$root/rust/target/debug
 for binary in rexx bounded-run; do
     [ -x "$crate/$binary" ] || {
-        echo "$crate/$binary is missing: run cargo build -p interrexx in rust/ first" >&2
+        echo "$crate/$binary is missing: run cargo build -p interrexx -p interrexx-capi in rust/ first" >&2
         exit 1
     }
 done

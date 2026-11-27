@@ -2,22 +2,13 @@
 
 use std::process::ExitCode;
 
-#[cfg(not(any(windows, target_os = "macos")))]
-#[path = "../../../interrexx-capi/src/rexxapi_exports.rs"]
-mod rexxapi_exports;
-
-#[cfg(not(any(windows, target_os = "macos")))]
-#[path = "../../../interrexx-capi/src/exports.rs"]
-mod rexx_exports;
-
-#[cfg(not(any(windows, target_os = "macos")))]
 fn main() -> ExitCode {
-    ExitCode::from(interrexx::launcher::run_cli())
-}
-
-#[cfg(any(windows, target_os = "macos"))]
-fn main() -> ExitCode {
-    match interrexx_api::load::run_cli() {
+    let mut arguments = Vec::new();
+    for argument in std::env::args_os().skip(1) {
+        arguments.extend(argument.into_encoded_bytes());
+        arguments.push(0);
+    }
+    match interrexx_api::load::run_cli(&arguments) {
         Ok(status) => ExitCode::from(status),
         Err(error) => {
             eprintln!("rexx: {error}");

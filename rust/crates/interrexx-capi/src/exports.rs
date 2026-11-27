@@ -570,10 +570,23 @@ pub extern "system" fn RexxSetProcessMessages(_turn_on: i32) -> i32 {
     1
 }
 
-/// Private CLI entry point. On these hosts the library can read the command
-/// line directly from the process, including non-UTF-8 host arguments.
-#[cfg(any(windows, target_os = "macos"))]
+/// Private CLI entry point.
+///
+/// # Safety
+/// `arguments` points to `length` readable bytes from the executable's
+/// command line. Each argument ends with a NUL and its bytes use the host's
+/// `OsString` encoding. The storage stays live for this call.
 #[unsafe(no_mangle)]
-pub extern "C" fn interrexx_main_v1() -> u8 {
-    interrexx::launcher::run_cli()
+pub unsafe extern "C" fn interrexx_main_v1(arguments: *const u8, length: usize) -> u8 {
+    // SAFETY: the executable owns the bytes for the duration of the call.
+    let arguments = unsafe { std::slice::from_raw_parts(arguments, length) };
+    let args = arguments
+        .strip_suffix(b"\0")
+        .map_or_else(Vec::new, |arguments| {
+            arguments
+                .split(|byte| *byte == 0)
+                .map(<[u8]>::to_vec)
+                .collect()
+        });
+    interrexx::launcher::run_cli(&args)
 }

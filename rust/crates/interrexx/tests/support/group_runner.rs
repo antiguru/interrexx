@@ -32,6 +32,8 @@ macro_rules! running_test {
 
 #[path = "group_runner/bytes/mod.rs"]
 mod bytes;
+#[path = "../../../interrexx-capi-rxapi/tests/support/cdylibs.rs"]
+mod cdylibs;
 #[cfg(test)]
 #[path = "group_runner/tests.rs"]
 mod tests;
@@ -795,6 +797,14 @@ pub fn interpreter_bin(run: &Path) -> PathBuf {
     fs::create_dir_all(&bin).expect("the interpreter bin directory");
     place(&bin.join("rexx"), env!("CARGO_BIN_EXE_rexx"));
     place(&bin.join("rexxc"), env!("CARGO_BIN_EXE_rexxc"));
+    let names = interrexx_api::library_names::host_api_libraries();
+    for (source, name) in [
+        (cdylibs::librexx(), names.librexx),
+        (cdylibs::librexxapi(), names.librexxapi),
+    ] {
+        cdylibs::stage_library(&source, &bin.join(name))
+            .expect("the CLI library beside the binary");
+    }
     let samples = bin.parent().expect("a parent").join("samples");
     match std::os::unix::fs::symlink(oracle::oracle_root().join("samples"), &samples) {
         Err(e) if e.kind() != std::io::ErrorKind::AlreadyExists => {
