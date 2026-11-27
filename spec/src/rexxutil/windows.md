@@ -145,3 +145,32 @@ or short Windows spelling of an existing file or directory. A relative name
 is interpreted against the interpreter's current directory and answered as a
 relative name. An absolute name is answered as an absolute name. A missing
 entry or a failed Windows name query answers the null string.
+
+## Windows code pages
+
+r[util.windows.code-pages]
+`SysToUnicode(text, [codepage], [flags], stem)` converts the text to
+UTF-16 little-endian bytes. `SysFromUnicode(wide, [codepage], [flags],
+[replacement], stem)` converts such bytes to the chosen code page. The
+code page can be an integer or one of `ACP`, `OEMCP`, `SYMBOL`,
+`THREAD_ACP`, `UTF7` or `UTF8`. An omitted or empty code page means
+`OEMCP`. Empty input produces an empty result. UTF-7 and UTF-8 ignore
+the replacement character.
+On success both calls write the converted bytes to `!TEXT` and answer
+zero. `SysFromUnicode` also writes `!USEDDEFAULTCHAR`, which is one
+when Windows used the replacement character and zero otherwise. On
+failure the functions answer a Windows system error code.
+
+## Windows profile files
+
+r[util.windows.ini]
+`SysIni(file, section, key[, value])` reads a key or sets it when a value
+is given. `DELETE:` as the value deletes a key and as the key deletes a
+section. With `ALL:` in place of a section or key, the next argument is
+a stem or array that receives the names at that level. A successful
+write, deletion or enumeration answers the null string. A missing key
+or failed profile operation answers `ERROR:`. Omitting the filename
+or passing an empty name uses `WIN.INI`. Windows resolves a relative
+profile file against its Windows directory. File names, section and key
+names, and values are UTF-8. The key is required for a section-specific
+call. An empty key answers `ERROR:`.

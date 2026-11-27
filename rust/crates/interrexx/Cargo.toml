@@ -190,7 +190,7 @@ sharing = ["interrexx-core/sharing"]
 jit = ["interrexx-core/jit", "dep:cranelift-codegen", "dep:cranelift-frontend", "dep:cranelift-jit", "dep:cranelift-module", "dep:cranelift-native"]
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", features = ["Wdk_System_SystemServices", "Win32_Networking_WinSock", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_IO", "Win32_System_Pipes", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_System_Time", "Win32_System_WindowsProgramming"] }
+windows-sys = { version = "0.61.2", features = ["Wdk_System_SystemServices", "Win32_Globalization", "Win32_Networking_WinSock", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_IO", "Win32_System_Pipes", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_System_Time", "Win32_System_WindowsProgramming"] }
 
 [dev-dependencies]
 interrexx-oracle = { path = "../interrexx-oracle" }

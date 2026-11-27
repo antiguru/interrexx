@@ -173,3 +173,52 @@ if size == '0 0' then do
 end
 if SysTextScreenSize('BUFFERSIZE', 32768, 80) <> 87 then exit 71
 if SysTextScreenSize('WINDOWRECT', 0, 0, 24, 32768) <> 87 then exit 72
+
+/* spec: util.windows.code-pages */
+converted = .stem~new
+if SysToUnicode('41C3A900'x, 'UTF8', 'ERR_INVALID_CHARS', converted) <> 0 then exit 110
+if converted['!TEXT'] \== '4100E9000000'x then exit 111
+if SysFromUnicode(converted['!TEXT'], 'UTF8', '0', , 'back.') <> 0 then exit 112
+if back.!TEXT \== '41C3A900'x | back.!USEDDEFAULTCHAR <> 0 then exit 113
+if SysToUnicode('FF'x, 'UTF8', 'ERR_INVALID_CHARS', converted) <> 1113 then exit 114
+if converted['!TEXT'] \== '4100E9000000'x then exit 115
+if SysFromUnicode('0026'x, 1252, , '!', 'back.') <> 0 then exit 116
+if back.!TEXT \== '!' | back.!USEDDEFAULTCHAR <> 1 then exit 117
+if SysToUnicode('', 'UTF8', , converted) <> 0 | converted['!TEXT'] \== '' then exit 118
+if SysFromUnicode('', 'UTF8', , , 'back.') <> 0 then exit 119
+if back.!TEXT \== '' | back.!USEDDEFAULTCHAR <> 0 then exit 162
+if SysFromUnicode('4100'x, 'UTF8', , '?', 'back.') <> 0 then exit 163
+if back.!TEXT \== 'A' | back.!USEDDEFAULTCHAR <> 0 then exit 164
+
+/* spec: util.windows.ini */
+iniFile = SysTempFileName(root || '\rexxutil-ini-????.ini')
+if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 120
+if SysIni(iniFile, 'interrexx', 'test', 'value') \== '' then exit 121
+signal on syntax name missingIniKey
+call SysIni iniFile, 'interrexx'
+exit 165
+missingIniKey:
+if condition('O')~code <> 88.901 then exit 166
+signal off syntax
+if SysIni(iniFile, 'interrexx', '') \== 'ERROR:' then exit 167
+if SysIni(iniFile, 'INTERREXX', 'TEST') \== 'value' then exit 122
+if SysIni(iniFile, 'ALL:', 'sections.') \== '' then exit 123
+if sections.0 <> 1 | sections.1 \== 'interrexx' then exit 124
+keys = .array~of('old1', 'old2')
+if SysIni(iniFile, 'interrexx', 'ALL:', keys) \== '' then exit 125
+if keys~items <> 1 | keys[1] \== 'test' then exit 126
+if SysIni(iniFile, 'interrexx', 'test', 'DELETE:') \== '' then exit 127
+if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 128
+if SysIni(iniFile, 'ALL:', 'sections.', '') \== '' then exit 169
+/* Deleting a section's last key leaves its header; the section can still be deleted. */
+if SysIni(iniFile, 'INTERREXX', 'DELETE:') \== '' then exit 170
+if SysIni(iniFile, 'ALL:', 'sections.') \== 'ERROR:' | sections.0 <> 0 then exit 171
+if SysIni(iniFile, 'interrexx', 'DELETE:') \== 'ERROR:' then exit 172
+/* A missing key is reported before the file name is converted. */
+signal on syntax name missingKeyBadFile
+call SysIni 'caf' || 'E9'x || '.ini', 'interrexx'
+exit 173
+missingKeyBadFile:
+if condition('O')~code <> 88.901 then exit 174
+signal off syntax
+if SysFileDelete(iniFile) <> 0 then exit 129

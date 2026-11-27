@@ -437,3 +437,209 @@ pub(crate) fn set_file_attributes(path: &std::path::Path, attributes: u32) -> bo
     // SAFETY: path is NUL terminated and remains live for the call.
     unsafe { SetFileAttributesW(path.as_ptr(), attributes) != 0 }
 }
+
+pub(crate) fn decode_code_page(page: u32, flags: u32, bytes: &[u8]) -> Result<Vec<u16>, u32> {
+    use std::ptr::null_mut;
+    use windows_sys::Win32::{
+        Foundation::{ERROR_INVALID_PARAMETER, GetLastError},
+        Globalization::MultiByteToWideChar,
+    };
+
+    if bytes.is_empty() {
+        return Ok(Vec::new());
+    }
+    let length = i32::try_from(bytes.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
+    // SAFETY: bytes contains length readable bytes. A null destination and
+    // zero capacity ask the API to compute the required number of code units.
+    let needed = unsafe { MultiByteToWideChar(page, flags, bytes.as_ptr(), length, null_mut(), 0) };
+    if needed == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    let mut wide = vec![0; needed as usize];
+    // SAFETY: wide has room for needed units and does not alias bytes.
+    let written = unsafe {
+        MultiByteToWideChar(
+            page,
+            flags,
+            bytes.as_ptr(),
+            length,
+            wide.as_mut_ptr(),
+            needed,
+        )
+    };
+    if written == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    wide.truncate(written as usize);
+    Ok(wide)
+}
+
+pub(crate) fn encode_code_page(
+    page: u32,
+    flags: u32,
+    wide: &[u16],
+    default: Option<[u8; 2]>,
+) -> Result<(Vec<u8>, bool), u32> {
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::{
+        Foundation::{ERROR_INVALID_PARAMETER, GetLastError},
+        Globalization::{CP_UTF7, CP_UTF8, WideCharToMultiByte},
+    };
+
+    if wide.is_empty() {
+        return Ok((Vec::new(), false));
+    }
+    let length = i32::try_from(wide.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
+    let mut used = 0;
+    // The UTF code pages require both substitution pointers to be null. A
+    // pseudo code page can stand for one of them (the system's ANSI or OEM
+    // code page is 65001 when Windows uses UTF-8 for its locale), so the test
+    // is made on the page it resolves to.
+    let (replacement, used_pointer) = if matches!(resolved_code_page(page), CP_UTF7 | CP_UTF8) {
+        (null(), null_mut())
+    } else {
+        (
+            default.as_ref().map_or(null(), |bytes| bytes.as_ptr()),
+            &raw mut used,
+        )
+    };
+    // SAFETY: the input has length readable units, the optional replacement
+    // has room for the longest replacement character, and a null output with
+    // zero capacity asks the API for the required buffer size.
+    let needed = unsafe {
+        WideCharToMultiByte(
+            page,
+            flags,
+            wide.as_ptr(),
+            length,
+            null_mut(),
+            0,
+            replacement,
+            used_pointer,
+        )
+    };
+    if needed == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    let mut bytes = vec![0; needed as usize];
+    // SAFETY: bytes has room for needed bytes; the remaining pointers have
+    // the same valid backing memory as in the size query.
+    let written = unsafe {
+        WideCharToMultiByte(
+            page,
+            flags,
+            wide.as_ptr(),
+            length,
+            bytes.as_mut_ptr(),
+            needed,
+            replacement,
+            used_pointer,
+        )
+    };
+    if written == 0 {
+        // SAFETY: reads the calling thread's error for the immediately preceding call.
+        return Err(unsafe { GetLastError() });
+    }
+    bytes.truncate(written as usize);
+    Ok((bytes, used != 0))
+}
+
+/// The code page `page` stands for: the pseudo code pages `CP_ACP`,
+/// `CP_OEMCP`, `CP_MACCP` and `CP_THREAD_ACP` resolve to the page Windows uses
+/// for them, and any other page is itself.
+fn resolved_code_page(page: u32) -> u32 {
+    use windows_sys::Win32::Globalization::{
+        CP_ACP, CP_MACCP, CP_OEMCP, CP_THREAD_ACP, CPINFOEXW, GetACP, GetCPInfoExW, GetOEMCP,
+    };
+
+    match page {
+        // SAFETY: both functions take no arguments and only read system state.
+        CP_ACP => unsafe { GetACP() },
+        // SAFETY: as above.
+        CP_OEMCP => unsafe { GetOEMCP() },
+        CP_MACCP | CP_THREAD_ACP => {
+            let mut info = CPINFOEXW::default();
+            // SAFETY: info is a live, writable CPINFOEXW.
+            if unsafe { GetCPInfoExW(page, 0, &mut info) } != 0 {
+                info.CodePage
+            } else {
+                page
+            }
+        }
+        page => page,
+    }
+}
+
+/// Whether two profile names (sections or keys) are the same name: the
+/// profile API matches them without regard to case.
+pub(crate) fn profile_name_eq(left: &[u16], right: &[u16]) -> bool {
+    use windows_sys::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
+
+    let (Ok(left_length), Ok(right_length)) =
+        (i32::try_from(left.len()), i32::try_from(right.len()))
+    else {
+        return false;
+    };
+    // SAFETY: both slices are readable for the lengths passed.
+    unsafe {
+        CompareStringOrdinal(left.as_ptr(), left_length, right.as_ptr(), right_length, 1)
+            == CSTR_EQUAL
+    }
+}
+
+pub(crate) fn read_profile(
+    file: &[u16],
+    section: Option<&[u16]>,
+    key: Option<&[u16]>,
+    fallback: Option<&[u16]>,
+) -> Option<Vec<u16>> {
+    use windows_sys::Win32::System::WindowsProgramming::GetPrivateProfileStringW;
+
+    let string = |value: Option<&[u16]>| value.map_or(std::ptr::null(), <[u16]>::as_ptr);
+    let mut buffer = vec![0; 256];
+    loop {
+        // SAFETY: the callers pass NUL-terminated strings, and the output
+        // buffer is writable for the specified number of units.
+        let count = unsafe {
+            GetPrivateProfileStringW(
+                string(section),
+                string(key),
+                string(fallback),
+                buffer.as_mut_ptr(),
+                buffer.len() as u32,
+                file.as_ptr(),
+            )
+        } as usize;
+        let terminator = if key.is_some() { 1 } else { 2 };
+        if count < buffer.len() - terminator {
+            buffer.truncate(count);
+            return Some(buffer);
+        }
+        // A profile read has no size limit of its own; this one stops at
+        // 16M units (32 MiB), far above any real profile file, rather than
+        // growing without bound.
+        if buffer.len() >= 1 << 24 {
+            return None;
+        }
+        buffer.resize(buffer.len() * 2, 0);
+    }
+}
+
+pub(crate) fn write_profile(
+    file: &[u16],
+    section: &[u16],
+    key: Option<&[u16]>,
+    value: Option<&[u16]>,
+) -> bool {
+    use windows_sys::Win32::System::WindowsProgramming::WritePrivateProfileStringW;
+
+    let string = |value: Option<&[u16]>| value.map_or(std::ptr::null(), <[u16]>::as_ptr);
+    // SAFETY: the callers pass live NUL-terminated strings and the optional
+    // null pointers request removal of the key or section.
+    unsafe {
+        WritePrivateProfileStringW(section.as_ptr(), string(key), string(value), file.as_ptr()) != 0
+    }
+}
