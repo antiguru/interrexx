@@ -61,7 +61,7 @@ impl Interp {
     /// Evaluates one expression node, and keeps the depth bookkeeping the
     /// evaluation-depth limit needs.
     pub(crate) fn enter_eval_node<T>(&mut self, anchor: *const T) -> Result<(), Failure> {
-        let here = anchor as usize;
+        let here = anchor.addr();
 
         self.activity.depth += 1;
         if self.activity.depth == 1 {
@@ -1777,9 +1777,6 @@ impl Interp {
             return Ok(logical(is_inequality(op)));
         }
         let right = self.required_string_value(right)?;
-        if right == ObjRef::NIL && is_equality(op) {
-            return Ok(logical(is_inequality(op)));
-        }
         match op {
             Operator::Concatenate | Operator::Abuttal => self.concat_values(left, right, None),
             Operator::Blank => self.concat_values(left, right, Some(b' ')),
@@ -2065,20 +2062,7 @@ pub(crate) fn never_a_number(bytes: &[u8]) -> bool {
         })
 }
 
-pub(crate) fn is_equality(op: Operator) -> bool {
-    use Operator::*;
-    matches!(
-        op,
-        Equal
-            | BackslashEqual
-            | StrictEqual
-            | StrictBackslashEqual
-            | LessThanGreaterThan
-            | GreaterThanLessThan
-    )
-}
-
-/// Which half of [`is_equality`] answers `1` for a value that is not `.nil`.
+/// The comparisons that answer `1` when their right operand is `.nil`.
 fn is_inequality(op: Operator) -> bool {
     use Operator::*;
     matches!(

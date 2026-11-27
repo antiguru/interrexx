@@ -1294,6 +1294,9 @@ fn save(core: &mut Core, names: Option<&[&str]>) -> Reply {
     )
 }
 
+/// A macro is added, replaced, found, reordered and dropped. A position other
+/// than before (1) or after (2) is refused with `RXMACRO_INVALID_POSITION`
+/// and changes nothing (Deviation 185).
 #[test]
 fn macros_add_replace_query_reorder_drop() {
     let mut core = Core::new();
@@ -1320,20 +1323,54 @@ fn macros_add_replace_query_reorder_drop() {
             image: Some(b"two".to_vec())
         }
     );
-    for stored in [0, 3, 99, 70000] {
+    for refused in [0, 3, 99, 65537] {
         let reorder = Request::ReorderMacro {
             name: macro_named("mac"),
-            position: stored,
+            position: refused,
         };
-        assert_eq!(status(&mut core, client(1), reorder), OK);
+        assert_eq!(
+            status(&mut core, client(1), reorder),
+            MACRO_INVALID_POSITION,
+            "{refused}"
+        );
+        assert_eq!(
+            status(&mut core, client(1), add_macro("mac", "three", refused)),
+            MACRO_INVALID_POSITION,
+            "{refused}"
+        );
+        assert_eq!(
+            status(&mut core, client(1), add_macro("other", "four", refused)),
+            MACRO_INVALID_POSITION,
+            "{refused}"
+        );
         assert_eq!(
             position(&mut core, "mac"),
             Reply::MacroPosition {
                 status: OK,
-                position: stored
+                position: 2
+            },
+            "a refused position changes nothing"
+        );
+        assert_eq!(
+            position(&mut core, "other"),
+            Reply::MacroPosition {
+                status: MACRO_NOT_FOUND,
+                position: 0
             }
         );
     }
+    let reorder = Request::ReorderMacro {
+        name: macro_named("mac"),
+        position: 1,
+    };
+    assert_eq!(status(&mut core, client(1), reorder), OK);
+    assert_eq!(
+        position(&mut core, "mac"),
+        Reply::MacroPosition {
+            status: OK,
+            position: 1
+        }
+    );
     let drop = Request::DropMacro {
         name: macro_named("MAC"),
     };
@@ -1532,4 +1569,44 @@ fn is_empty_counts_named_queues_registrations_and_macros() {
         },
     );
     assert!(core.is_empty());
+}
+
+/// A load whose macros include one of no search position, from a client that
+/// sends them without reading a file, stops at it as a cut file does: the
+/// macros before it are loaded, it and those after are not, and the load
+/// answers `RXMACRO_FILE_ERROR` (Deviation 185).
+#[test]
+fn a_load_stops_at_a_macro_of_no_search_position() {
+    let entry = |name: &str, position| Macro {
+        name: macro_named(name),
+        image: b"say 1".to_vec(),
+        position,
+    };
+    let mut core = Core::new();
+    let loaded = status(
+        &mut core,
+        client(1),
+        Request::LoadMacros {
+            names: None,
+            macros: vec![entry("first", 1), entry("bad", 0), entry("last", 2)],
+        },
+    );
+    assert_eq!(loaded, MACRO_FILE_ERROR);
+    assert_eq!(
+        position(&mut core, "first"),
+        Reply::MacroPosition {
+            status: OK,
+            position: 1
+        }
+    );
+    for name in ["bad", "last"] {
+        assert_eq!(
+            position(&mut core, name),
+            Reply::MacroPosition {
+                status: MACRO_NOT_FOUND,
+                position: 0
+            },
+            "{name}"
+        );
+    }
 }

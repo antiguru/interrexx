@@ -18,6 +18,23 @@ const RUN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60);
 const TEST_PATH: &str = "/nonexistent/ir-drive-test.rex";
 
 #[test]
+fn literal_parse_in_interpret_writes_to_the_callers_slots() {
+    let outcome = run_program(
+        TEST_PATH,
+        br#"
+a = 'A'; b = 'B'; c = 'C'
+yy = 'Y'; zz = 'Z'
+interpret "parse value 'foo bar' with zz yy; parse value 'new' with fresh"
+say a b c zz yy value('fresh')
+"#
+        .to_vec(),
+        Invocation::none().with_deadline(RUN_DEADLINE),
+    );
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(outcome.stdout, b"A B C foo bar new\n");
+}
+
+#[test]
 fn use_arg_runs_only_the_needed_defaults_after_binding_earlier_targets() {
     let outcome = run_program(
         TEST_PATH,

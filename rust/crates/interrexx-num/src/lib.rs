@@ -2,6 +2,8 @@
 
 use std::borrow::Cow;
 
+use interrexx_cast::CastFrom;
+
 mod addsub;
 mod compare;
 mod digits;
@@ -174,7 +176,7 @@ impl ArithError {
 /// (it fixes needless rounding, not a `Number`'s already-lost original
 /// spelling: no `+` after `E`, leading zeros, and so on).
 fn full_precision(n: &Number) -> String {
-    n.format(n.digits.len() as u64)
+    n.format(u64::cast_from(n.digits.len()))
 }
 
 /// `10^digits - 1`, capped at the platform's integer width.
@@ -190,7 +192,7 @@ fn max_value_for_digits(digits: usize) -> i64 {
 /// [`Number::whole_value`] for a value a caller already holds as an `i64`,
 /// where that answer needs no [`Number`] built to reach it.
 pub fn whole_i64(value: i64, digits: usize) -> Option<i64> {
-    (value.unsigned_abs() <= max_value_for_digits(digits) as u64).then_some(value)
+    (value.unsigned_abs() <= max_value_for_digits(digits).unsigned_abs()).then_some(value)
 }
 
 /// The first `length` digits, plus a carry, scaled by `10^exponent`.
@@ -263,6 +265,35 @@ fn wrapping_unsigned_value(
 /// individually.
 pub(crate) fn working_length(digits: u64) -> usize {
     usize::try_from(digits.saturating_add(1)).unwrap_or(usize::MAX)
+}
+
+/// A length as an `i64`, which holds every length: a slice is never longer
+/// than `isize::MAX`.
+#[inline(always)]
+pub(crate) fn signed_len(len: usize) -> i64 {
+    i64::try_from(len).expect("a length is at most isize::MAX")
+}
+
+/// A digit count as an `i32`, the exponent's type, saturated at `i32::MAX`.
+/// A count that large puts the number's first digit past [`MAX_EXPONENT`]
+/// whatever its exponent, so the saturated count still fails every range
+/// check the true one would.
+#[inline(always)]
+pub(crate) fn signed_count(len: usize) -> i32 {
+    i32::try_from(len).unwrap_or(i32::MAX)
+}
+
+/// The last decimal digit of `value`.
+#[inline(always)]
+pub(crate) fn last_digit<T>(value: T) -> u8
+where
+    T: std::ops::Rem<Output = T> + From<u8>,
+    u8: TryFrom<T>,
+{
+    match u8::try_from(value % T::from(10)) {
+        Ok(digit) => digit,
+        Err(_) => unreachable!("a remainder by ten is a digit"),
+    }
 }
 
 /// Fills `&1`, `&2`, … placeholders in a generated-table message with
@@ -384,7 +415,7 @@ impl Number {
         let mut magnitude = value.unsigned_abs();
         // An `i64` is at most nineteen decimal digits, which is one of the two
         // bounds `INLINE_DIGITS` is chosen above, so this never allocates.
-        let len = magnitude.ilog10() as usize + 1;
+        let len = usize::cast_from(magnitude.ilog10()) + 1;
         let mut digits = Digits::zeros(len);
         // **The slice is taken once.** `Digits` reaches `[u8]` through
         // `DerefMut`, so writing `digits[cursor]` inside the loop re-matches
@@ -399,7 +430,7 @@ impl Number {
         let mut cursor = len;
         while cursor > 0 {
             cursor -= 1;
-            out[cursor] = (magnitude % 10) as u8;
+            out[cursor] = last_digit(magnitude);
             magnitude /= 10;
         }
         Number {
@@ -413,7 +444,7 @@ impl Number {
     /// `None` when it is not written that way.
     pub fn plain_integer(&self, digits: u64) -> Option<i64> {
         let exponent = u64::try_from(self.exponent).ok()?;
-        let width = self.digits.len() as u64 + exponent;
+        let width = u64::cast_from(self.digits.len()) + exponent;
         // 19 caps the multiply loop below before `digits` -- which a program
         // may set to billions -- can turn a rejection into a long one.
         if width > digits || width > 19 {
@@ -447,7 +478,7 @@ impl Number {
         let (length, exponent) = if rounds {
             (
                 keep,
-                i64::from(self.exponent) + (self.digits.len() - keep) as i64 + i64::from(grew),
+                i64::from(self.exponent) + signed_len(self.digits.len() - keep) + i64::from(grew),
             )
         } else {
             (self.digits.len(), i64::from(self.exponent))
@@ -456,7 +487,7 @@ impl Number {
         // The two form questions, in `format_with`'s own order. `digits` is
         // saturated into i64 rather than narrowed, for the reason `format`
         // gives at its own comparison.
-        let adjusted = exponent + length as i64 - 1;
+        let adjusted = exponent + signed_len(length) - 1;
         let trigger = i64::try_from(digits).unwrap_or(i64::MAX);
         let plain = if adjusted >= trigger
             || (adjusted < 0 && exponent.abs() > trigger.saturating_mul(2))
@@ -474,7 +505,7 @@ impl Number {
             return None;
         }
 
-        if length as i64 + exponent > 19 {
+        if signed_len(length) + exponent > 19 {
             // Wider than any `i64`, so the parse this replaces failed -- with
             // one exception, a run of zeros, which is zero at any width. That
             // arm answers for a shape the canonical zero (one digit, exponent
@@ -492,7 +523,7 @@ impl Number {
         if grew {
             // The all-nines carry: `round_to` writes a `1` and then zeros,
             // and the extra position is already in `exponent` above.
-            value = 10i128.pow(length as u32 - 1);
+            value = 10i128.pow(u32::try_from(length).expect("at most 19 digits") - 1);
         } else if round_up {
             value += 1;
         }
@@ -604,7 +635,7 @@ impl Number {
             while i < bytes.len() && bytes[i].is_ascii_digit() {
                 value = value
                     .saturating_mul(10)
-                    .saturating_add((bytes[i] - b'0') as i64);
+                    .saturating_add(i64::from(bytes[i] - b'0'));
                 i += 1;
             }
             if i == start {
@@ -618,7 +649,10 @@ impl Number {
             // Zero is exempt: `0e1000000996` is simply 0.
             written_exponent = Some(signed);
             exponent = exponent.saturating_add(
-                signed.clamp(MIN_EXPONENT as i64 * 2, MAX_EXPONENT as i64 * 2) as i32,
+                i32::try_from(
+                    signed.clamp(i64::from(MIN_EXPONENT) * 2, i64::from(MAX_EXPONENT) * 2),
+                )
+                .expect("twice the exponent range fits an i32"),
             );
         }
 
@@ -636,7 +670,7 @@ impl Number {
         // exempt from both checks -- it has no magnitude to be out of range.
         if !assembled.is_zero() {
             if let Some(written) = written_exponent
-                && !(MIN_EXPONENT as i64..=MAX_EXPONENT as i64).contains(&written)
+                && !(i64::from(MIN_EXPONENT)..=i64::from(MAX_EXPONENT)).contains(&written)
             {
                 return None;
             }
@@ -704,7 +738,8 @@ impl Number {
     /// display thresholds are expressed in terms of.
     #[inline(always)]
     fn adjusted_exponent(&self) -> i32 {
-        self.exponent.saturating_add(self.digits.len() as i32 - 1)
+        self.exponent
+            .saturating_add(signed_count(self.digits.len()) - 1)
     }
 
     /// The value as a machine integer under `digits` precision, or `None` if it
@@ -892,7 +927,7 @@ impl Number {
         }
         let dropped = self.digits.len() - keep;
         let mut kept = Digits::from_slice(&self.digits[..keep]);
-        let mut exponent = self.exponent + dropped as i32;
+        let mut exponent = self.exponent + signed_count(dropped);
 
         if self.digits[keep] >= 5 {
             // Propagate the carry; an all-nines mantissa grows a digit and
@@ -925,7 +960,7 @@ impl Number {
         }
         let adjusted = n.adjusted_exponent();
         let sign = if n.negative { "-" } else { "" };
-        let d: String = n.digits.iter().map(|x| (b'0' + x) as char).collect();
+        let d: String = n.digits.iter().map(|x| char::from(b'0' + x)).collect();
 
         // Compared in i64, with `digits` *saturated* into it rather than
         // narrowed: `digits` is a bare u64 here (not bounded by `Settings`,
@@ -938,7 +973,7 @@ impl Number {
         // saturates too, for the same reason.
         let digits = i64::try_from(digits).unwrap_or(i64::MAX);
         let low_threshold = digits.saturating_mul(2).saturating_add(1);
-        if adjusted as i64 >= digits || n.exponent as i64 <= -low_threshold {
+        if i64::from(adjusted) >= digits || i64::from(n.exponent) <= -low_threshold {
             let mantissa = if d.len() == 1 {
                 d
             } else {
@@ -949,14 +984,20 @@ impl Number {
         }
 
         if n.exponent >= 0 {
-            return format!("{sign}{d}{}", "0".repeat(n.exponent as usize));
+            return format!(
+                "{sign}{d}{}",
+                "0".repeat(usize::cast_from(n.exponent.unsigned_abs()))
+            );
         }
-        let point = n.digits.len() as i32 + n.exponent;
+        let point = signed_count(n.digits.len()) + n.exponent;
         if point > 0 {
-            let point = point as usize;
+            let point = usize::cast_from(point.unsigned_abs());
             format!("{sign}{}.{}", &d[..point], &d[point..])
         } else {
-            format!("{sign}0.{}{d}", "0".repeat((-point) as usize))
+            format!(
+                "{sign}0.{}{d}",
+                "0".repeat(usize::cast_from(point.unsigned_abs()))
+            )
         }
     }
 }
@@ -970,12 +1011,12 @@ impl Number {
             return "0".to_string();
         }
         let sign = if self.negative { "-" } else { "" };
-        let d: String = self.digits.iter().map(|x| (b'0' + x) as char).collect();
+        let d: String = self.digits.iter().map(|x| char::from(b'0' + x)).collect();
         let exponent = i64::from(self.exponent);
         if exponent == 0 {
             return format!("{sign}{d}");
         }
-        let count = d.len() as i64;
+        let count = signed_len(d.len());
         let digits = i64::try_from(digits).unwrap_or(i64::MAX);
         let mut adjusted = exponent + count - 1;
         let mut shown = exponent;
@@ -994,13 +1035,18 @@ impl Number {
                 suffix = format!("E{e_sign}{}", adjusted.abs());
             }
         }
+        // `shown` is the exponent or, in exponential form, `1 - count` plus at
+        // most two, so every count below is at most an `i32` exponent's
+        // magnitude.
         let length = shown + count;
+        let width = |count: i64| usize::try_from(count).expect("an i32 exponent's magnitude");
         let body = if length <= 0 {
-            format!("0.{}{d}", "0".repeat((-length) as usize))
+            format!("0.{}{d}", "0".repeat(width(-length)))
         } else if length >= count {
-            format!("{d}{}", "0".repeat((length - count) as usize))
+            format!("{d}{}", "0".repeat(width(length - count)))
         } else {
-            format!("{}.{}", &d[..length as usize], &d[length as usize..])
+            let point = width(length);
+            format!("{}.{}", &d[..point], &d[point..])
         };
         format!("{sign}{body}{suffix}")
     }

@@ -33,7 +33,7 @@
 # module is `src/docs/directives.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #
-# derived-at: oodocs/rexxref/en-US r13532
+# derived-at: oodocs/rexxref/en-US r13624
 
 ::ANNOTATE	ATTRIBUTE	subkeyword	both	DirectiveParser.cpp:2002 case SUBDIRECTIVE_ATTRIBUTE; dire.xml:79 indexterm
 ::ANNOTATE	CLASS	subkeyword	both	DirectiveParser.cpp:1921 case SUBDIRECTIVE_CLASS; dire.xml:81 indexterm

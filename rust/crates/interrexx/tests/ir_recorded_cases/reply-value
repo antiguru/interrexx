@@ -263,12 +263,17 @@ err>        >>>   "tail"
 err>     12 *-* return
 err>        <I<
 
-# a bare REPLY stays one Op::Exec
+# a bare REPLY stays one Op::Exec; the caller's handler waits for the method
+# to end before it reports, so the two activities' lines come in one order
 program
 o = .c~new
+signal on syntax
 r = o~m
 say var('r')
+exit
+syntax:
 say o~done
+say 'caller' condition('o')~code
 ::class c
 ::method done
   return 'done'
@@ -277,15 +282,14 @@ say o~done
   reply
   say 'tail bare'
 ----
-rc> 165
+rc> 0
 out> tail bare
+out> done
+out> caller 91.999
 err>        >I>
-err>     10 *-* reply
+err>     14 *-* reply
 err>        <I<
-err>      2 *-* r = o~m
-err> Error 91 running /nonexistent/ir-dual-case.rex line 2:
-err> Error 91.999:
 err>        >I>
-err>     11 *-* say 'tail bare'
+err>     15 *-* say 'tail bare'
 err>        >>>   "tail bare"
 err>        <I<

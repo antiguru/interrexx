@@ -1570,6 +1570,11 @@ impl Interp {
 
     /// [`Interp::push_activation`] of an activation already in its box.
     pub(crate) fn push_boxed_activation(&mut self, boxed: Box<Activation>) {
+        // Rexx code starts here, so a primitive level held aside goes on the
+        // stack below it ([`Interp::deferred_level`]).
+        if self.activity.deferred_level.is_some() {
+            self.raise_deferred_level();
+        }
         // Code is about to run that could assign a tail variable, so a key a
         // compound read is holding for its clause's write is no longer known
         // to be the key that write would build.
@@ -1727,6 +1732,22 @@ impl Builtin {
             _ => return None,
         })
     }
+
+    /// The condition's slot in a [`BuiltinTraps`].
+    fn slot(self) -> usize {
+        match self {
+            Builtin::Any => 0,
+            Builtin::Error => 1,
+            Builtin::Failure => 2,
+            Builtin::Halt => 3,
+            Builtin::LostDigits => 4,
+            Builtin::NoMethod => 5,
+            Builtin::NoString => 6,
+            Builtin::NotReady => 7,
+            Builtin::NoValue => 8,
+            Builtin::Syntax => 9,
+        }
+    }
 }
 
 /// A slot per [`Builtin`], allocated only once something is armed.
@@ -1750,14 +1771,14 @@ pub(crate) struct TrapMap {
 impl TrapMap {
     pub(crate) fn get(&self, name: &[u8]) -> Option<&Trap> {
         match Builtin::of(name) {
-            Some(which) => self.builtin.as_ref()?.0[which as usize].as_ref(),
+            Some(which) => self.builtin.as_ref()?.0[which.slot()].as_ref(),
             None => self.user.as_ref()?.get(name),
         }
     }
 
     pub(crate) fn get_mut(&mut self, name: &[u8]) -> Option<&mut Trap> {
         match Builtin::of(name) {
-            Some(which) => Rc::make_mut(self.builtin.as_mut()?).0[which as usize].as_mut(),
+            Some(which) => Rc::make_mut(self.builtin.as_mut()?).0[which.slot()].as_mut(),
             None => self.user.as_mut()?.get_mut(name),
         }
     }
@@ -1768,7 +1789,7 @@ impl TrapMap {
                 let slots = self
                     .builtin
                     .get_or_insert_with(|| Rc::new(BuiltinTraps::default()));
-                Rc::make_mut(slots).0[which as usize] = Some(trap);
+                Rc::make_mut(slots).0[which.slot()] = Some(trap);
             }
             None => {
                 self.user
@@ -1782,7 +1803,7 @@ impl TrapMap {
         match Builtin::of(name) {
             Some(which) => {
                 if let Some(slots) = self.builtin.as_mut() {
-                    Rc::make_mut(slots).0[which as usize] = None;
+                    Rc::make_mut(slots).0[which.slot()] = None;
                 }
             }
             None => {

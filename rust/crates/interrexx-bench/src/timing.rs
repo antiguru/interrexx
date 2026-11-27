@@ -7,6 +7,8 @@ use std::io;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use interrexx_cast::CastLossy;
+
 /// What a timed run does with the child's standard output and standard error.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Capture {
@@ -94,7 +96,8 @@ impl Summary {
         Some(Summary {
             min: samples[0],
             median: samples[samples.len() / 2],
-            mean: samples.iter().sum::<Duration>() / samples.len() as u32,
+            mean: samples.iter().sum::<Duration>()
+                / u32::try_from(samples.len()).expect("a harness takes fewer than 2^32 samples"),
             max: samples[samples.len() - 1],
         })
     }
@@ -123,7 +126,7 @@ pub fn median_interval_indices(n: usize, target_coverage: f64) -> Option<MedianI
     if n == 0 || n > 1000 {
         return None;
     }
-    let mut term = 0.5f64.powi(n as i32);
+    let mut term = 0.5f64.powi(i32::try_from(n).expect("n is at most 1000"));
     let mut cumulative = term;
     let mut best: Option<MedianInterval> = None;
     let mut k = 0usize;
@@ -139,7 +142,7 @@ pub fn median_interval_indices(n: usize, target_coverage: f64) -> Option<MedianI
         });
         // C(n, k + 1) = C(n, k) * (n - k) / (k + 1), so the next term of the
         // binomial CDF costs one multiply and no factorial.
-        term *= (n - k) as f64 / (k + 1) as f64;
+        term *= f64::cast_lossy(n - k) / f64::cast_lossy(k + 1);
         cumulative += term;
         k += 1;
     }
@@ -175,8 +178,8 @@ mod tests {
     fn more_samples_narrow_the_interval() {
         let nine = median_interval_indices(9, 0.95).expect("9 samples");
         let fifty_one = median_interval_indices(51, 0.95).expect("51 samples");
-        let nine_width = (nine.high - nine.low) as f64 / 9.0;
-        let fifty_one_width = (fifty_one.high - fifty_one.low) as f64 / 51.0;
+        let nine_width = f64::cast_lossy(nine.high - nine.low) / 9.0;
+        let fifty_one_width = f64::cast_lossy(fifty_one.high - fifty_one.low) / 51.0;
         assert!(
             fifty_one_width < nine_width,
             "51 samples gave a relatively wider interval than 9: {fifty_one:?} vs {nine:?}"

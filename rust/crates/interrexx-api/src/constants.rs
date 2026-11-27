@@ -9,6 +9,8 @@
 use std::borrow::Cow;
 use std::ffi::c_int;
 
+use interrexx_cast::{i64_from_i32, i64_from_isize, i64_from_u32, u32_from_u16, u64_from_usize};
+
 use crate::layout::{
     CALL_INTERFACE_VERSION, CSTRING, EXIT_INTERFACE_VERSION, INSTANCE_INTERFACE_VERSION,
     METHOD_INTERFACE_VERSION, POINTER, REDIRECT_INTERFACE_VERSION, RexxArrayObject,
@@ -93,20 +95,23 @@ pub const CLASSIC_CONSTANTS: &[CConstant] = &[
     decimal("RXMETHOD", 3),
     decimal("RXSCRIPT", 4),
     // The exit function codes, the end of an exit list and the number of codes.
-    decimal("RXENDLST", exit_code::END as i64),
-    decimal("RXFNC", exit_code::FNC as i64),
-    decimal("RXCMD", exit_code::CMD as i64),
-    decimal("RXMSQ", exit_code::MSQ as i64),
-    decimal("RXSIO", exit_code::SIO as i64),
-    decimal("RXHLT", exit_code::HLT as i64),
-    decimal("RXTRC", exit_code::TRC as i64),
-    decimal("RXINI", exit_code::INI as i64),
-    decimal("RXTER", exit_code::TER as i64),
-    decimal("RXEXF", exit_code::EXF as i64),
-    decimal("RXNOVAL", exit_code::NOVAL as i64),
-    decimal("RXVALUE", exit_code::VALUE as i64),
-    decimal("RXOFNC", exit_code::OFNC as i64),
-    decimal("RXNOOFEXITS", exit_code::COUNT as i64),
+    decimal("RXENDLST", i64_from_i32(exit_code::END)),
+    decimal("RXFNC", i64_from_i32(exit_code::FNC)),
+    decimal("RXCMD", i64_from_i32(exit_code::CMD)),
+    decimal("RXMSQ", i64_from_i32(exit_code::MSQ)),
+    decimal("RXSIO", i64_from_i32(exit_code::SIO)),
+    decimal("RXHLT", i64_from_i32(exit_code::HLT)),
+    decimal("RXTRC", i64_from_i32(exit_code::TRC)),
+    decimal("RXINI", i64_from_i32(exit_code::INI)),
+    decimal("RXTER", i64_from_i32(exit_code::TER)),
+    decimal("RXEXF", i64_from_i32(exit_code::EXF)),
+    decimal("RXNOVAL", i64_from_i32(exit_code::NOVAL)),
+    decimal("RXVALUE", i64_from_i32(exit_code::VALUE)),
+    decimal("RXOFNC", i64_from_i32(exit_code::OFNC)),
+    decimal(
+        "RXNOOFEXITS",
+        u64_from_usize(exit_code::COUNT).cast_signed(),
+    ),
     // The exit subfunction codes.
     decimal("RXFNCCAL", 1),
     decimal("RXCMDHST", 1),
@@ -261,28 +266,40 @@ pub const API_VERSIONS: &[CConstant] = &[
     decimal("INSTANCE_INTERFACE_VERSION_5_3_0", 102),
     decimal(
         "INSTANCE_INTERFACE_VERSION",
-        INSTANCE_INTERFACE_VERSION as i64,
+        i64_from_isize(INSTANCE_INTERFACE_VERSION),
     ),
     decimal("THREAD_INTERFACE_VERSION_4_0_0", 100),
     decimal("THREAD_INTERFACE_VERSION_4_1_1", 101),
     decimal("THREAD_INTERFACE_VERSION_4_2_0", 102),
     decimal("THREAD_INTERFACE_VERSION_5_0_0", 103),
     decimal("THREAD_INTERFACE_VERSION_5_3_0", 104),
-    decimal("THREAD_INTERFACE_VERSION", THREAD_INTERFACE_VERSION as i64),
+    decimal(
+        "THREAD_INTERFACE_VERSION",
+        i64_from_isize(THREAD_INTERFACE_VERSION),
+    ),
     decimal("METHOD_INTERFACE_VERSION_4_0_0", 100),
     decimal("METHOD_INTERFACE_VERSION_4_2_0", 101),
     decimal("METHOD_INTERFACE_VERSION_5_0_0", 102),
-    decimal("METHOD_INTERFACE_VERSION", METHOD_INTERFACE_VERSION as i64),
+    decimal(
+        "METHOD_INTERFACE_VERSION",
+        i64_from_isize(METHOD_INTERFACE_VERSION),
+    ),
     decimal("CALL_INTERFACE_VERSION_4_0_0", 100),
     decimal("CALL_INTERFACE_VERSION_5_0_0", 101),
-    decimal("CALL_INTERFACE_VERSION", CALL_INTERFACE_VERSION as i64),
+    decimal(
+        "CALL_INTERFACE_VERSION",
+        i64_from_isize(CALL_INTERFACE_VERSION),
+    ),
     decimal("EXIT_INTERFACE_VERSION_4_0_0", 100),
     decimal("EXIT_INTERFACE_VERSION_5_0_0", 101),
-    decimal("EXIT_INTERFACE_VERSION", EXIT_INTERFACE_VERSION as i64),
+    decimal(
+        "EXIT_INTERFACE_VERSION",
+        i64_from_isize(EXIT_INTERFACE_VERSION),
+    ),
     decimal("REDIRECT_INTERFACE_VERSION_5_0_0", 100),
     decimal(
         "REDIRECT_INTERFACE_VERSION",
-        REDIRECT_INTERFACE_VERSION as i64,
+        i64_from_isize(REDIRECT_INTERFACE_VERSION),
     ),
     version("REXX_INTERPRETER_4_0_0", 0x0004_0000),
     version("REXX_INTERPRETER_4_0_1", 0x0004_0001),
@@ -298,14 +315,17 @@ pub const API_VERSIONS: &[CConstant] = &[
     version("REXX_INTERPRETER_5_3_0", 0x0005_0300),
     version(
         "REXX_CURRENT_INTERPRETER_VERSION",
-        CURRENT_INTERPRETER_VERSION as i64,
+        i64_from_i32(CURRENT_INTERPRETER_VERSION),
     ),
     version("REXX_LANGUAGE_6_03", 0x0603),
     version("REXX_LANGUAGE_6_04", 0x0604),
     version("REXX_LANGUAGE_6_05", 0x0605),
     version("REXX_LANGUAGE_6_06", 0x0606),
     version("REXX_LANGUAGE_6_07", 0x0607),
-    version("REXX_CURRENT_LANGUAGE_LEVEL", CURRENT_LANGUAGE_LEVEL as i64),
+    version(
+        "REXX_CURRENT_LANGUAGE_LEVEL",
+        u64_from_usize(CURRENT_LANGUAGE_LEVEL).cast_signed(),
+    ),
 ];
 
 /// Second names of value codes, each a platform's name for the C type of
@@ -413,11 +433,11 @@ pub const OPTION_NAMES: &[(&str, &str)] = &[
 pub const ENVIRONMENT_KINDS: &[CConstant] = &[
     decimal(
         "DIRECT_COMMAND_ENVIRONMENT",
-        DIRECT_COMMAND_ENVIRONMENT as i64,
+        i64_from_i32(DIRECT_COMMAND_ENVIRONMENT),
     ),
     decimal(
         "REDIRECTING_COMMAND_ENVIRONMENT",
-        REDIRECTING_COMMAND_ENVIRONMENT as i64,
+        i64_from_i32(REDIRECTING_COMMAND_ENVIRONMENT),
     ),
 ];
 
@@ -426,16 +446,25 @@ pub const ENVIRONMENT_KINDS: &[CConstant] = &[
 pub const ENTRY_CONSTANTS: &[CConstant] = &[
     // The type word that ends a stub's signature, and the one a result of no
     // type carries.
-    decimal("REXX_ARGUMENT_TERMINATOR", ARGUMENT_TERMINATOR as i64),
+    decimal(
+        "REXX_ARGUMENT_TERMINATOR",
+        i64_from_u32(u32_from_u16(ARGUMENT_TERMINATOR)),
+    ),
     // The flag bits of an argument descriptor.
-    hex("ARGUMENT_EXISTS", ARGUMENT_EXISTS as i64),
-    hex("SPECIAL_ARGUMENT", SPECIAL_ARGUMENT as i64),
+    hex(
+        "ARGUMENT_EXISTS",
+        i64_from_u32(u32_from_u16(ARGUMENT_EXISTS)),
+    ),
+    hex(
+        "SPECIAL_ARGUMENT",
+        i64_from_u32(u32_from_u16(SPECIAL_ARGUMENT)),
+    ),
     // The styles of a routine row and of a method row.
-    decimal("ROUTINE_TYPED_STYLE", ROUTINE_TYPED_STYLE as i64),
-    decimal("ROUTINE_CLASSIC_STYLE", ROUTINE_CLASSIC_STYLE as i64),
-    decimal("METHOD_TYPED_STYLE", METHOD_TYPED_STYLE as i64),
+    decimal("ROUTINE_TYPED_STYLE", i64_from_i32(ROUTINE_TYPED_STYLE)),
+    decimal("ROUTINE_CLASSIC_STYLE", i64_from_i32(ROUTINE_CLASSIC_STYLE)),
+    decimal("METHOD_TYPED_STYLE", i64_from_i32(METHOD_TYPED_STYLE)),
     // The `apiVersion` of a package entry.
-    decimal("REXX_PACKAGE_API_NO", PACKAGE_API_NO as i64),
+    decimal("REXX_PACKAGE_API_NO", i64_from_i32(PACKAGE_API_NO)),
 ];
 
 /// The names a routine or method declaration may give as a special argument's

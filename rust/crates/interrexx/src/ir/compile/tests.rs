@@ -1,3 +1,4 @@
+use interrexx_cast::CastFrom;
 use interrexx_parse::{SymbolId, SymbolTable};
 
 use super::{
@@ -302,9 +303,9 @@ fn two_symbols() -> (SymbolId, SymbolId) {
 #[test]
 fn a_slot_too_wide_for_a_compiled_read_is_unresolved_rather_than_refused() {
     assert_eq!(PlanSlot::of(0).resolved(), Some(0));
-    let last = u32::MAX as usize - 1;
+    let last = usize::cast_from(u32::MAX) - 1;
     assert_eq!(PlanSlot::of(last).resolved(), Some(last));
-    assert_eq!(PlanSlot::of(u32::MAX as usize).resolved(), None);
+    assert_eq!(PlanSlot::of(usize::cast_from(u32::MAX)).resolved(), None);
     assert_eq!(PlanSlot::UNRESOLVED.resolved(), None);
 }
 

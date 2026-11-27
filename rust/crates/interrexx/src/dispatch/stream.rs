@@ -11,6 +11,7 @@ pub(super) use query::{
 };
 
 mod read;
+use interrexx_cast::CastFrom;
 use read::{read_at, read_line_from, transient_has_data};
 
 use interrexx_core::{
@@ -21,7 +22,8 @@ use interrexx_num::{DIGITS64, Number};
 use super::{Cleared, new_instance};
 use crate::error::Raised;
 use crate::lines::{
-    CHUNK, as_position, line_count, line_of, lines_after, offset_of, read_from, seek_line, size_of,
+    CHUNK, as_position, line_count, line_of, lines_after, memory_count, offset_of, read_from,
+    seek_line, size_of,
 };
 use crate::{Failure, Interp};
 
@@ -726,7 +728,7 @@ pub(super) fn open(
     let write_position: i64 = match (parsed.read_only, descriptor) {
         (true, None) => 0,
         (true, Some(_)) => 1,
-        (false, _) => size as i64 + 1,
+        (false, _) => as_position(size) + 1,
     };
 
     let state = require_mut(interp, receiver)?;
@@ -877,7 +879,7 @@ fn settle_implicit_open(
     let write_position = if mode.read_only || transient {
         1
     } else {
-        size as i64 + 1
+        as_position(size) + 1
     };
     let state = require_mut(interp, receiver)?;
     state.mode = mode;
@@ -1269,7 +1271,7 @@ pub(super) fn charin(
             return Err(Raised::transient_positioning().into());
         }
         let start = as_position(positive(start)?);
-        if start > size_of(open.flushed()) as i64 {
+        if start > as_position(size_of(open.flushed())) {
             return notready(interp, receiver, StreamStatus::NotReady, Vec::new());
         }
         open.read_position = start;
@@ -1296,7 +1298,7 @@ pub(super) fn charin(
         // (rexxref streamclasses.xml:1638-1652).
         return notready(interp, receiver, StreamStatus::NotReady, Vec::new());
     }
-    open.read_position = at + read.len() as i64;
+    open.read_position = at + memory_count(read.len());
     if read.len() < wanted {
         return notready(interp, receiver, StreamStatus::NotReady, read);
     }
@@ -1443,7 +1445,7 @@ fn read_record(
         Ok(bytes) => (bytes, 0),
         Err(error) => (Vec::new(), error.raw_os_error().unwrap_or(0)),
     };
-    open.read_position = from + bytes.len() as i64;
+    open.read_position = from + memory_count(bytes.len());
     Ok(RecordRead { from, bytes, errno })
 }
 
@@ -1620,7 +1622,7 @@ pub(super) fn charout(
     let at = landing(open, append, open.write_position);
     match write_open(open, at, &data) {
         Ok(()) => {
-            open.write_position = at + data.len() as i64;
+            open.write_position = at + memory_count(data.len());
             Ok(Some(interp.text(b"0")))
         }
         Err(error) => {
@@ -1721,7 +1723,7 @@ pub(super) fn lineout(
     bytes.push(b'\n');
     match write_open(open, at, &bytes) {
         Ok(()) => {
-            open.write_position = at + bytes.len() as i64;
+            open.write_position = at + memory_count(bytes.len());
             Ok(Some(interp.text(b"0")))
         }
         Err(error) => {
@@ -1757,12 +1759,12 @@ fn complete_record(interp: &mut Interp, receiver: ObjRef) -> Result<Option<i32>,
     }
     let at = landing(open, append, open.write_position);
     let room = record_remainder(at, record_length);
-    if room as u64 >= record_length {
+    if u64::cast_from(room) >= record_length {
         return Ok(None);
     }
     match write_open(open, at, &vec![b' '; room]) {
         Ok(()) => {
-            open.write_position = at + room as i64;
+            open.write_position = at + memory_count(room);
             Ok(None)
         }
         Err(error) => Ok(Some(error.raw_os_error().unwrap_or(0))),
@@ -1815,7 +1817,7 @@ fn write_record(
     data.resize(room, b' ');
     match write_open(open, at, &data) {
         Ok(()) => {
-            open.write_position = at + data.len() as i64;
+            open.write_position = at + memory_count(data.len());
             Ok(Some(interp.text(b"0")))
         }
         Err(error) => {
@@ -1836,7 +1838,7 @@ fn within_append_extent(extent: u64, at: i64) -> bool {
 /// (rexxref funct.xml:4309-4312), and at `position` otherwise.
 fn landing(open: &interrexx_core::OpenFile, append: bool, position: i64) -> i64 {
     if append && !open.transient {
-        open.size() as i64 + 1
+        as_position(open.size()) + 1
     } else {
         position
     }
@@ -1891,7 +1893,7 @@ pub(super) fn chars(
         let waiting = transient_has_data(open);
         return Ok(Some(interp.text(if waiting { b"1" } else { b"0" })));
     }
-    let left = (size_of(open.flushed()) as i64 - (open.read_position - 1)).max(0);
+    let left = (as_position(size_of(open.flushed())) - (open.read_position - 1)).max(0);
     Ok(Some(interp.text_built(left.to_string().into_bytes())))
 }
 
@@ -1944,7 +1946,7 @@ pub(super) fn lines(
         let waiting = transient_has_data(open);
         return Ok(Some(interp.text(if waiting { b"1" } else { b"0" })));
     }
-    let size = size_of(open.flushed()) as i64;
+    let size = as_position(size_of(open.flushed()));
     if open.read_position > size {
         return Ok(Some(interp.text(b"0")));
     }
@@ -1969,10 +1971,8 @@ pub(super) fn lines(
 
 /// The text a method reads a start, a line or a count from, which is the
 /// string value of `value` as the conversion rule reads an argument of a
-/// builtin: the `makeString` answer, else the answer of `string`. An object
-/// whose `STRING` answer has no string value reads as `.nil`, which is no
-/// number, so the argument fails the check of its kind, `SYNTAX 88.907`, as a
-/// string of the wrong form does (`r[conv.string.argument-kind]`).
+/// builtin: the `makeString` answer, else the answer of `string`
+/// (`r[conv.string.object]`, `r[conv.string.answer]`).
 fn number_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let text = interp.required_string_value(value)?;
     Ok(interp.to_text(text).into_owned())
@@ -2331,7 +2331,7 @@ fn seek_open(
     } else {
         open.write_position
     };
-    let size = size_of(open.flushed()) as i64;
+    let size = as_position(size_of(open.flushed()));
     if parsed.by_char {
         // `+` and `-` move from the position the command names
         // (Deviation 49).
@@ -2349,7 +2349,7 @@ fn seek_open(
         if parsed.write {
             open.write_position = landed;
         }
-        return Seeked::Landed(landed as u64);
+        return Seeked::Landed(landed.cast_unsigned());
     }
     // Line positioning on a text stream open only for writing is an error
     // (rexxref funct.xml:4454-4455); a record stream's lines are character

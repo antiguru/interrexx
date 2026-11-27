@@ -34,12 +34,10 @@ fn stem_argument(
         return Ok(value);
     }
     let text = interp.required_string_value(value)?;
-    if text != ObjRef::NIL {
-        let name = interp.to_text(text).into_owned();
-        if let Some(stem) = interp.context_stem_named(&name) {
-            interp.roots.activity_mut().push_temp(stem);
-            return Ok(stem);
-        }
+    let name = interp.to_text(text).into_owned();
+    if let Some(stem) = interp.context_stem_named(&name) {
+        interp.roots.activity_mut().push_temp(stem);
+        return Ok(stem);
     }
     let found = interp.string_value_text(value)?;
     Err(marshalled(Raised::native_argument_not_a_stem(
@@ -501,11 +499,14 @@ fn find(
 ) -> usize {
     // Signed, because the step back from the check point may pass below `left`
     // and the loops end on that.
-    let (mut left, mut right) = (left as isize, right as isize);
+    let (mut left, mut right) = (
+        isize::try_from(left).expect("an index"),
+        isize::try_from(right).expect("an index"),
+    );
     let mut check = left;
     let mut delta = 1;
     while check <= right {
-        if compare(value, order[check as usize]) > limit {
+        if compare(value, order[check.cast_unsigned()]) > limit {
             left = check + 1;
         } else {
             right = check - 1;
@@ -516,13 +517,13 @@ fn find(
     }
     while left <= right {
         check = (left + right) / 2;
-        if compare(value, order[check as usize]) > limit {
+        if compare(value, order[check.cast_unsigned()]) > limit {
             left = check + 1;
         } else {
             right = check - 1;
         }
     }
-    (left - 1) as usize
+    (left - 1).cast_unsigned()
 }
 
 /// The stem `SysStemSort` sorts and the tail prefix its elements carry: the
@@ -692,9 +693,8 @@ fn sort_count(interp: &mut Interp, value: ObjRef) -> Result<Option<i64>, Failure
         Decoded::SmallInt(number) => u64::try_from(number).ok(),
         _ => {
             let text = interp.required_string_value(value)?;
-            Number::parse_bytes(&interp.to_text(text)).and_then(|number| {
-                number.unsigned_int64_value(interrexx_num::DEFAULT_DIGITS as usize)
-            })
+            Number::parse_bytes(&interp.to_text(text))
+                .and_then(|number| number.unsigned_int64_value(crate::DEFAULT_DIGITS))
         }
     };
     Ok(count

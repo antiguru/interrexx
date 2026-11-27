@@ -1,6 +1,8 @@
 //! Windows host operations.
 #![allow(unsafe_code)]
 
+use interrexx_cast::CastFrom;
+
 pub(crate) fn pipe() -> std::io::Result<(std::io::PipeReader, std::io::PipeWriter)> {
     std::io::pipe()
 }
@@ -314,9 +316,9 @@ fn wide_path_answer(query: impl Fn(*mut u16, u32) -> u32) -> Option<String> {
             return None;
         }
         if count < capacity {
-            return String::from_utf16(&buffer[..count as usize]).ok();
+            return String::from_utf16(&buffer[..usize::cast_from(count)]).ok();
         }
-        buffer.resize((count as usize).checked_add(1)?, 0);
+        buffer.resize(usize::cast_from(count).checked_add(1)?, 0);
     }
 }
 
@@ -333,12 +335,12 @@ pub(crate) fn volume_names(root: &std::path::Path) -> Option<(String, String)> {
         GetVolumeInformationW(
             root.as_ptr(),
             label.as_mut_ptr(),
-            label.len() as u32,
+            u32::try_from(label.len()).expect("261 units"),
             null_mut(),
             null_mut(),
             null_mut(),
             filesystem.as_mut_ptr(),
-            filesystem.len() as u32,
+            u32::try_from(filesystem.len()).expect("261 units"),
         )
     };
     if result == 0 {
@@ -369,7 +371,8 @@ pub(crate) fn windows_version() -> Option<String> {
     use windows_sys::Win32::System::SystemInformation::OSVERSIONINFOW;
 
     let mut info = OSVERSIONINFOW {
-        dwOSVersionInfoSize: std::mem::size_of::<OSVERSIONINFOW>() as u32,
+        dwOSVersionInfoSize: u32::try_from(std::mem::size_of::<OSVERSIONINFOW>())
+            .expect("a small struct"),
         ..Default::default()
     };
     // SAFETY: info is writable and its size identifies the structure version.
@@ -395,4 +398,42 @@ pub(crate) fn drive_type(letter: u8) -> u32 {
     let root = [u16::from(letter), u16::from(b':'), u16::from(b'\\'), 0];
     // SAFETY: root is NUL-terminated and lives through the query.
     unsafe { GetDriveTypeW(root.as_ptr()) }
+}
+
+/// Enumerates a Windows search path whose final component can contain wildcards.
+pub(crate) fn find_files(
+    search: &std::path::Path,
+) -> Vec<windows_sys::Win32::Storage::FileSystem::WIN32_FIND_DATAW> {
+    use windows_sys::Win32::{
+        Foundation::INVALID_HANDLE_VALUE,
+        Storage::FileSystem::{FindClose, FindFirstFileW, FindNextFileW, WIN32_FIND_DATAW},
+    };
+
+    let Ok(search) = file_path(search) else {
+        return Vec::new();
+    };
+    let mut entry = WIN32_FIND_DATAW::default();
+    // SAFETY: search is NUL terminated and entry is a live writable structure.
+    let handle = unsafe { FindFirstFileW(search.as_ptr(), &mut entry) };
+    if handle == INVALID_HANDLE_VALUE {
+        return Vec::new();
+    }
+    let mut entries = vec![entry];
+    // SAFETY: the handle came from FindFirstFileW and entry remains writable.
+    while unsafe { FindNextFileW(handle, &mut entry) } != 0 {
+        entries.push(entry);
+    }
+    // SAFETY: this is the search handle returned by FindFirstFileW.
+    unsafe { FindClose(handle) };
+    entries
+}
+
+pub(crate) fn set_file_attributes(path: &std::path::Path, attributes: u32) -> bool {
+    use windows_sys::Win32::Storage::FileSystem::SetFileAttributesW;
+
+    let Ok(path) = file_path(path) else {
+        return false;
+    };
+    // SAFETY: path is NUL terminated and remains live for the call.
+    unsafe { SetFileAttributesW(path.as_ptr(), attributes) != 0 }
 }

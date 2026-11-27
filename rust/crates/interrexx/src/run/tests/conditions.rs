@@ -667,28 +667,25 @@ fn raise_syntax_validates_its_argument() {
         (&b"40"[..], (40, 0), None),
         (&b"40.001"[..], (40, 1), None),
         (&b"99"[..], (99, 0), None),
-        (&b"40.10"[..], (98, 941), Some("40010")),
-        (&b"3.5"[..], (98, 941), Some("3005")),
-        // A major with no `(major, 0)` catalogue entry renders the
-        // original `major.sub` instead of the composed number. There are
-        // 45 such majors in 1..=99, not the two an earlier version of
-        // this comment claimed -- `50.1` below is one of the others, and
-        // is here so the row set does not accidentally describe a
-        // two-element special case.
+        // 98.941 names the code as `major.sub` (r[instr.raise.number]),
+        // whether or not the major has an error of its own.
+        (&b"40.10"[..], (98, 941), Some("40.10")),
+        (&b"3.5"[..], (98, 941), Some("3.5")),
+        (&b"93.9"[..], (98, 941), Some("93.9")),
+        (&b"93.009"[..], (98, 941), Some("93.9")),
         (&b"1"[..], (98, 941), Some("1.0")),
         (&b"2.1"[..], (98, 941), Some("2.1")),
         (&b"50.1"[..], (98, 941), Some("50.1")),
         (&b"87"[..], (98, 941), Some("87.0")),
-        // Fix round 2's NEW 2: the sub is bounded at 1000, and the
-        // boundary is what pins it -- `40.999` is a well-formed unknown
+        // The sub is bounded at 1000: `40.999` is a well-formed unknown
         // code and `40.1000` is not a code at all.
-        (&b"40.999"[..], (98, 941), Some("40999")),
+        (&b"40.999"[..], (98, 941), Some("40.999")),
         (&b"40.1000"[..], (33, 904), None),
         (&b"40.99999"[..], (33, 904), None),
         // Fix round 2's NEW 4: each half is a Rexx number, and a bare
         // decimal point is not one.
         (&b"'4E1'"[..], (40, 0), None),
-        (&b"'40.1E2'"[..], (98, 941), Some("40100")),
+        (&b"'40.1E2'"[..], (98, 941), Some("40.100")),
         (&b"'40.'"[..], (33, 904), None),
         (&b"'+40'"[..], (40, 0), None),
         (&b"0"[..], (33, 904), None),

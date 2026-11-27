@@ -23,7 +23,7 @@ impl BehaviourTable {
     }
 
     fn entry(&mut self, id: BehaviourId) -> &mut BehaviourEntry {
-        let index = id.0 as usize;
+        let index = usize::from(id.0);
         if index >= self.entries.len() {
             self.entries.resize_with(index + 1, BehaviourEntry::default);
         }
@@ -50,7 +50,7 @@ impl BehaviourTable {
                 return None;
             }
             visited.push(behaviour);
-            let entry = self.entries.get(behaviour.0 as usize)?;
+            let entry = self.entries.get(usize::from(behaviour.0))?;
             if let Some(method) = entry.methods.get(&name) {
                 return Some(*method);
             }

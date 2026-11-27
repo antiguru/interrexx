@@ -4,6 +4,7 @@
 // `loom`'s primitives outside a model (`sync.rs`).
 #![cfg(not(all(loom, test)))]
 
+use interrexx_cast::CastLossy;
 use interrexx_classes::MethodId;
 use interrexx_core::{Heap, NameMap, ObjRef, RootSet, SlotRef};
 use interrexx_num::Settings;
@@ -241,6 +242,11 @@ pub const DEADLINE_REPORT: &[u8] = b"interrexx: the run exceeded its deadline\n"
 /// getProgramName`'s answer for internal code.
 pub(crate) const LIBRARY_PACKAGE_NAME: &[u8] = b"REXX";
 
+/// [`interrexx_num::DEFAULT_DIGITS`] as the precision argument the conversions take.
+pub(crate) const DEFAULT_DIGITS: usize = 9;
+const _: () =
+    assert!(interrexx_cast::u64_from_usize(DEFAULT_DIGITS) == interrexx_num::DEFAULT_DIGITS);
+
 /// The interpreter thread's stack, in bytes.
 /// ```text
 /// interpreter stack: 536870912 bytes, eval depth reached: 100000, span: 183998160 bytes, per frame: 1840.0 bytes
@@ -437,7 +443,8 @@ impl StackSpan {
     /// Stack bytes one further level of `eval` costs, or `None` when the run
     /// never recursed and there is nothing to divide by.
     pub fn bytes_per_frame(self) -> Option<f64> {
-        (self.max_depth > 1).then(|| self.bytes as f64 / (self.max_depth - 1) as f64)
+        (self.max_depth > 1)
+            .then(|| f64::cast_lossy(self.bytes) / f64::cast_lossy(self.max_depth - 1))
     }
 }
 
@@ -779,11 +786,11 @@ impl Loud {
         }
     }
 
-    /// An extension's local handle used after the call that made it ended,
+    /// An extension's local handle used after its object was collected,
     /// which the API does not define (Deviation 95).
     fn stale_handle() -> Loud {
         Loud {
-            message: owned_message("the handle is no longer held by this activation"),
+            message: owned_message("a handle naming no live object"),
         }
     }
 
@@ -1485,11 +1492,20 @@ struct Interp {
     /// runs.
     global_references: interrexx_api::handles::Table,
     /// The space every handle table of this interpreter is made in, so that a
-    /// handle names one object in all of them.
+    /// handle names one object in all of them. On a 64-bit target it holds the
+    /// interpreter's handle key ([`interrexx_api::handles::instance_key`]),
+    /// mixed into every heap object's handle, so a handle another interpreter
+    /// minted names nothing here.
     handle_space: interrexx_api::handles::HandleSpace,
-    /// Non-rooting handles for interpreter-owned directories and native
-    /// method receivers that can be used across callbacks, each holding its
-    /// handle in [`Interp::handle_space`] until a collection drops it.
+    /// A simulated interpreter's handle key, which it holds against every
+    /// other running simulated interpreter until it drops ([`sim::LiveKey`]).
+    sim_key: Option<sim::LiveKey>,
+    /// Non-rooting handles for interpreter-owned directories, and on a 32-bit
+    /// target every lent object whose handle is a number, which resolve
+    /// across callbacks, each holding its handle in [`Interp::handle_space`]
+    /// until a collection drops it. On a 64-bit target any other object a
+    /// native call was handed is marked lent on the heap instead
+    /// ([`interrexx_core::Object::lent`]).
     borrowed_native_handles: FxHashMap<usize, ObjRef>,
     /// The terminated copies `StringData` and its kin answered, by the object
     /// they copy. Not roots: a collection drops the copy of an object it
@@ -2478,6 +2494,7 @@ impl Interp {
             classic_subcoms: FxHashMap::default(),
             global_references: interrexx_api::handles::Table::new(&handle_space),
             handle_space,
+            sim_key: None,
             borrowed_native_handles: FxHashMap::default(),
             command_handlers: FxHashMap::default(),
             environments: command::Environments::default(),
@@ -3607,6 +3624,7 @@ impl Interp {
             global_references,
             // Numbers for handles, which name objects but root none.
             handle_space: _,
+            sim_key: _,
             borrowed_native_handles: _,
             // Entry points, not objects.
             command_handlers: _,
@@ -3906,7 +3924,7 @@ impl Interp {
         let mut release = |chunk: &crate::ir::Chunk| {
             interned.extend(chunk.interned_values());
             pinned.extend(chunk.pinned_copies());
-            holds += chunk.site_holds().count() as u32;
+            holds += u32::try_from(chunk.site_holds().count()).expect("fewer than 2^32 holds");
         };
         self.chunks.retain(|(key, _), chunk| {
             let keep = !dead(&key.program);
@@ -4123,6 +4141,39 @@ fn hash_seed_of(
 }
 
 impl Interp {
+    /// Keys this interpreter's handles with `key` from now on, before any
+    /// native call has been handed one: every table of its space mints with
+    /// it, and the directories' handles, if built already, are re-keyed. A
+    /// 32-bit target's handles carry no key, and nothing changes there.
+    #[cfg_attr(
+        not(target_pointer_width = "64"),
+        expect(
+            clippy::needless_pass_by_ref_mut,
+            reason = "a 64-bit target re-keys the space; the signature is one for every target"
+        )
+    )]
+    fn set_handle_key(&mut self, key: u64) {
+        debug_assert!(
+            self.global_references.roots().next().is_none(),
+            "a global reference was minted under the old key"
+        );
+        #[cfg(target_pointer_width = "64")]
+        {
+            self.handle_space.set_key(key);
+            let directories: Vec<ObjRef> = self
+                .borrowed_native_handles
+                .drain()
+                .map(|(_, object)| object)
+                .collect();
+            for object in directories {
+                let address = self.handle_space.hold(object);
+                self.borrowed_native_handles.insert(address, object);
+            }
+        }
+        #[cfg(not(target_pointer_width = "64"))]
+        let _ = key;
+    }
+
     /// Writes to the run's standard error that its [`HASH_SEED_ENV`] value
     /// was refused, and the seed drawn as if it were unset, where it was: an
     /// embedding cannot be refused a run the way the `rexx` command refuses
@@ -4470,6 +4521,30 @@ fn parse_failure_outcome(path: &[u8], rejected: &interrexx_parse::Rejected) -> O
 /// condition displayed with no position, as a failure to start.
 #[cold]
 #[inline(never)]
+/// A simulated run refused before it starts, as the `rexx` command refuses a
+/// `REXX_SWITCH_MODE` it cannot read: `message` on standard error, status 2.
+fn switch_mode_refused(message: &str) -> Outcome {
+    Outcome {
+        exit_code: 2,
+        result: None,
+        error: None,
+        stdout: Vec::new(),
+        stderr: format!("rexx: REXX_SWITCH_MODE: {message}\n").into_bytes(),
+        stack: StackSpan::default(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        #[cfg(test)]
+        failure_level_roots: 0,
+        chunks_refused: 0,
+        sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
+    }
+}
+
 fn unrestorable_outcome(raised: Raised) -> Outcome {
     let number = i32::from(raised.number);
     let (stderr, exit_code) = launcher::positionless(raised);
@@ -4553,7 +4628,7 @@ fn execute_kept(
     stack: Option<usize>,
 ) -> (Outcome, Option<Interp>) {
     let probe = 0u8;
-    let base = &raw const probe as usize;
+    let base = (&raw const probe).addr();
     // `rexxc` translates its input as source, an image included: `rexxc`
     // answers 13.1 at the `@` of a `.rxo` it is given.
     let source = if matches!(entry, Entry::Translate(_)) {
@@ -4635,6 +4710,15 @@ fn execute_kept(
     {
         config.knobs.hash = Some(seed);
     }
+    // So is the handle key, where a replay could not make it again; it is
+    // set below, before the bootstrap mints the first handles.
+    let sim_key = match &mut switch_mode {
+        Some(SwitchMode::Sim(config)) => match sim::reserve_handle_key(config) {
+            Ok(live) => Some(live),
+            Err(refusal) => return (switch_mode_refused(&refusal), None),
+        },
+        _ => None,
+    };
     let sim_config = match &switch_mode {
         Some(SwitchMode::Sim(config)) => Some(config),
         _ => None,
@@ -4644,6 +4728,12 @@ fn execute_kept(
     // one is made.
     interp.hash_seed = hash_seed_of(&interp.env, sim_config);
     interp.warn_of_refused_hash_seed();
+    // Before the bootstrap too, which mints the first handles: a simulated
+    // run's handles follow its seed.
+    if let Some(live) = sim_key {
+        interp.set_handle_key(live.key());
+        interp.sim_key = Some(live);
+    }
     // Armed here rather than in `Interp::new`, and after the parse, so that
     // what it bounds is the running of this program. `Interp::bootstrap_library`
     // below runs clauses of its own and is inside the bound, which is what a
@@ -4713,14 +4803,25 @@ fn execute_kept(
     // A propagated SYNTAX condition shows its object's `TRACEBACK`, every line
     // by its string value (`r[instr.raise.propagate.traceback]`).
     // Read while the activity still holds the object, which roots it: the
-    // read allocates.
+    // read allocates. The echo lines are replaced and the position is not:
+    // the major line still names the clause the condition was raised again
+    // in (`r[instr.raise.propagate]`).
     if let Some(object) = interp.activity.traceback_object
         && matches!(&result, Err(Failure::Raised(raised)) if raised.condition == "SYNTAX")
         && let Ok(lines) = interp.traceback_lines(object)
     {
+        let position = failure_sites
+            .iter()
+            .find(|site| site.positions())
+            .and_then(|site| {
+                let line = site.line()?;
+                let name = site.reported_name().map(<[u8]>::to_vec);
+                Some(FailureSite::Reraised { line, name })
+            });
         failure_sites = lines
             .into_iter()
             .map(|text| FailureSite::Rendered { text })
+            .chain(position)
             .collect();
     }
     interp.activity.traceback_object = None;
@@ -4923,7 +5024,7 @@ pub(crate) fn run_instance(
 ) -> (Outcome, Option<Interp>) {
     use interrexx_api::callbacks::Surface as _;
     let probe = 0u8;
-    let base = &raw const probe as usize;
+    let base = (&raw const probe).addr();
     let program = interrexx_parse::program_from(interrexx_parse::ProgramSource::new(
         INSTANCE_ROOT.to_vec(),
         interrexx_parse::SourceKind::Program,

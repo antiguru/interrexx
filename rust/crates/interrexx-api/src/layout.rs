@@ -1200,7 +1200,14 @@ macro_rules! entry_address {
         None
     };
     ($member:expr, $($kind:tt)*) => {
-        Some($member as usize)
+        Some({
+            #[expect(
+                clippy::as_conversions,
+                reason = "a function pointer has no method that answers its address"
+            )]
+            let address = $member as usize;
+            address
+        })
     };
 }
 
@@ -1603,6 +1610,7 @@ interface! {
         },
         GetInterpreterInstance: { aborts call(*mut RexxThreadContext_) -> *mut RexxInstance_ },
         RaiseConditionObject: { call(*mut RexxThreadContext_, RexxDirectoryObject) },
+        ThrowObject: { unwinds call(*mut RexxThreadContext_, RexxDirectoryObject) },
     }
 }
 
@@ -1656,6 +1664,15 @@ interface! {
                 RexxObjectPtr
             )
         },
+        Throw: {
+            unwinds call(
+                *mut RexxMethodContext_,
+                CSTRING,
+                RexxObjectPtr,
+                RexxStringObject,
+                RexxObjectPtr
+            )
+        },
     }
 }
 
@@ -1696,6 +1713,15 @@ interface! {
                 RexxObjectPtr
             )
         },
+        Throw: {
+            unwinds call(
+                *mut RexxCallContext_,
+                CSTRING,
+                RexxObjectPtr,
+                RexxStringObject,
+                RexxObjectPtr
+            )
+        },
     }
 }
 
@@ -1723,6 +1749,15 @@ interface! {
                 CSTRING,
                 RexxStringObject,
                 RexxObjectPtr,
+                RexxObjectPtr
+            )
+        },
+        Throw: {
+            unwinds call(
+                *mut RexxExitContext_,
+                CSTRING,
+                RexxObjectPtr,
+                RexxStringObject,
                 RexxObjectPtr
             )
         },

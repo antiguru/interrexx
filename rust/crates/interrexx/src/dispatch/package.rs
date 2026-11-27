@@ -292,7 +292,7 @@ fn options(
             if digits < 1 {
                 return Err(Raised::method_argument_not_positive(2, &text).into());
             }
-            let digits = digits as u64;
+            let digits = digits.unsigned_abs();
             let fuzz = changed.numeric.fuzz();
             if digits <= fuzz {
                 return Err(crate::run::raised_from_settings(
@@ -307,7 +307,7 @@ fn options(
             let Some(fuzz) = whole_argument(interp, value).filter(|fuzz| *fuzz >= 0) else {
                 return Err(Raised::argument_not_non_negative(2, &text).into());
             };
-            let fuzz = fuzz as u64;
+            let fuzz = fuzz.unsigned_abs();
             let digits = changed.numeric.digits();
             if fuzz >= digits {
                 return Err(Raised::whole_number_user_defined(&format!(

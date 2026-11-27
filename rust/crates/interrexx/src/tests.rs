@@ -960,8 +960,9 @@ fn every_class_the_library_declares_carries_the_rexx_defined_flag() {
 }
 
 /// A native activation's local references are roots while its table is on
-/// [`Activity::native_handles`] and nothing once it is popped, which is what
-/// makes a handle outliving its activation a lookup miss (D5).
+/// [`Activity::native_handles`] and nothing once it is popped: a handle that
+/// outlives its activation keeps nothing alive, and names its object only
+/// while something else does (D5, Deviation 95).
 #[test]
 fn a_native_activations_local_references_are_roots_only_while_it_lives() {
     let mut interp = Interp::new();

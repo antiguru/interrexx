@@ -1,5 +1,6 @@
 //! `rexxc`, the command-line compiler.
 
+use interrexx_cast::CastTruncate;
 use std::io::Write;
 use std::process::ExitCode;
 
@@ -44,7 +45,7 @@ fn main() -> ExitCode {
     let _ = std::io::stderr().write_all(&outcome.stderr);
     if outcome.exit_code != 0 {
         // A process exit status is one byte.
-        return ExitCode::from(outcome.exit_code as u8);
+        return ExitCode::from(u8::cast_truncate(outcome.exit_code.cast_unsigned()));
     }
     if let (Some(output), Some(image)) = (&compile.output, image)
         && launcher::write_compiled_file(output, &image).is_err()
@@ -57,5 +58,5 @@ fn main() -> ExitCode {
 /// Writes a report the launcher makes itself and exits with its status.
 fn report((text, status): (Vec<u8>, i32)) -> ExitCode {
     let _ = std::io::stderr().write_all(&text);
-    ExitCode::from(status as u8)
+    ExitCode::from(u8::cast_truncate(status.cast_unsigned()))
 }

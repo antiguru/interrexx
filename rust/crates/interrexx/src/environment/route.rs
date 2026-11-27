@@ -2,6 +2,7 @@
 //! delivered, through `.local`'s `OUTPUT` and `TRACEOUTPUT` entries.
 
 use super::{Body, EnvScope, Failure, Interp, ObjRef, env_seam, hash};
+use interrexx_cast::CastFrom;
 
 /// Where a `TraceObject` went.
 enum Delivered {
@@ -500,9 +501,9 @@ impl Interp {
             self.trace_object_put(object, b"TRACELINE", traced)?;
             let interpreter = self.counted(1);
             self.trace_object_put(object, b"INTERPRETER", interpreter)?;
-            let thread = self.counted(thread as usize);
+            let thread = self.counted(usize::cast_from(thread));
             self.trace_object_put(object, b"THREAD", thread)?;
-            let invocation = self.counted(invocation as usize);
+            let invocation = self.counted(usize::cast_from(invocation));
             self.trace_object_put(object, b"INVOCATION", invocation)?;
             let stack_frame = match frame {
                 Some(frame) => self.frame_table(Some(frame))?,
@@ -518,11 +519,11 @@ impl Interp {
             }
             if let Some((key, guarded, reserved)) = method {
                 let pool = self.activities.guards.pool_number(key);
-                let pool = self.counted(pool as usize);
+                let pool = self.counted(usize::cast_from(pool));
                 self.trace_object_put(object, b"ATTRIBUTEPOOL", pool)?;
                 self.trace_object_put(object, b"ISGUARDED", crate::eval::logical(guarded))?;
                 let count = self.guard_count(key);
-                let count = self.counted(count as usize);
+                let count = self.counted(usize::cast_from(count));
                 self.trace_object_put(object, b"SCOPELOCKCOUNT", count)?;
                 self.trace_object_put(object, b"HASSCOPELOCK", crate::eval::logical(reserved))?;
                 self.trace_object_put(object, b"RECEIVER", key.object)?;
@@ -740,7 +741,7 @@ impl Interp {
             Some(crate::activity::Spawner::Table(table)) => Ok(table),
             Some(crate::activity::Spawner::Frame { thread, frame }) => {
                 let table = self.frame_table(frame)?;
-                let thread = self.counted(thread as usize);
+                let thread = self.counted(usize::cast_from(thread));
                 self.roots.activity_mut().push_temp(thread);
                 crate::dispatch::hash::directory_put(self, table, b"THREAD", thread)?;
                 self.activity.spawner = Some(crate::activity::Spawner::Table(table));

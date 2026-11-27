@@ -4,10 +4,12 @@
 //! chunk cache's "compiled once" guarantee, and the cases that build their
 //! source or check the interpreter.
 
+use interrexx_cast::CastFrom;
 use std::rc::Rc;
 
 use interrexx_parse::{ExprKind, InstructionKind, parse_program};
 
+use super::Op;
 use super::golden::render;
 use super::{Chunk, ChunkTooLarge, NodePath};
 use crate::Interp;
@@ -319,7 +321,7 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
 
 /// An expression whose qualified call is deeper than a call op can address.
 fn unaddressable_call() -> String {
-    let depth = u32::BITS as usize;
+    let depth = usize::cast_from(u32::BITS);
     format!("{}zn:zf(){}", "0 + (".repeat(depth), ")".repeat(depth))
 }
 
@@ -515,7 +517,9 @@ fn one_body_under_two_trace_settings_is_two_cached_chunks() {
 /// the cache is forgotten too.
 #[test]
 fn making_the_trace_switchable_recompiles_each_body_unsettled() {
+    #[cfg(debug_assertions)]
     use super::trace_flow::Setting;
+
     let program = parse_program(b"x = 1\nsay x\n".to_vec()).expect("test program parses");
     let key = BodyKey {
         program: ProgramId::nth(0),
@@ -534,6 +538,8 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
     let settled = interp
         .chunk_for(key, untraced, &program.main, &plan)
         .expect("compiles");
+    assert!(settled.settled());
+    #[cfg(debug_assertions)]
     assert_eq!(settled.setting_at(0), Some(Setting::Known(untraced)));
 
     interp.make_trace_switchable();
@@ -544,6 +550,8 @@ fn making_the_trace_switchable_recompiles_each_body_unsettled() {
         !Rc::ptr_eq(&settled, &unsettled),
         "the lookup after the switch answered the chunk compiled before it"
     );
+    assert!(!unsettled.settled());
+    #[cfg(debug_assertions)]
     assert_eq!(unsettled.setting_at(0), Some(Setting::Unknown));
     assert!(
         Rc::ptr_eq(
@@ -646,6 +654,67 @@ fn a_template_of_literals_is_one_parse_begin() {
          1: Load read=Simple at=0 dst=0\n\
          2: ParseBegin index=0 src=0 base=omitted to=5 opening=Value strings=0\n"
     );
+}
+
+#[test]
+fn precomputed_parse_requires_fixed_inline_pieces() {
+    let literal = b"parse value 'Foo Bar' with p +5 q .\n";
+    let chunk = compile_for_test(literal).expect("the chunk fits");
+    let writes: Vec<_> = chunk
+        .ops
+        .iter()
+        .filter_map(|op| match *op {
+            Op::ParseStore { value, .. } => Some(value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        writes,
+        [
+            crate::ObjRef::inline_text(b"Foo B").unwrap(),
+            crate::ObjRef::inline_text(b"ar").unwrap(),
+        ]
+    );
+    let unsettled = compile_for_test(b"trace value arg(1)\nparse value 'Foo Bar' with p +5 q .\n")
+        .expect("the chunk fits");
+    assert!(
+        unsettled
+            .ops
+            .iter()
+            .any(|op| matches!(op, Op::ParseStore { .. }))
+    );
+
+    for (source, trace) in [
+        (&literal[..], intermediates()),
+        (
+            b"parse value 'longword' with p\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value 'Foo Bar' with p +10 q\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value '123' with p\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value 'Foo Bar' with p (sep) q\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+        (
+            b"parse value 'Foo Bar' with p. q\n",
+            ChunkTrace::of(TraceMode::NORMAL),
+        ),
+    ] {
+        let chunk = compile_for_test_under(source, trace).expect("the chunk fits");
+        assert!(
+            !chunk
+                .ops
+                .iter()
+                .any(|op| matches!(op, Op::ParseStore { .. }))
+        );
+    }
 }
 
 #[test]

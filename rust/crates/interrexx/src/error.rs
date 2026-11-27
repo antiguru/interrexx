@@ -1523,7 +1523,6 @@ impl Raised {
 
     /// 40.21: `Error_Incorrect_call_null`, the argument at `position` of the
     /// routine named `routine` is the null string.
-    #[cfg(unix)]
     pub(crate) fn routine_null_argument(routine: &str, position: usize) -> Raised {
         Raised::syntax(
             40,

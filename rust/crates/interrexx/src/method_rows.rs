@@ -1,5 +1,6 @@
 //! A table of per-method rows indexed by [`MethodId`].
 
+use interrexx_cast::CastFrom;
 use interrexx_classes::MethodId;
 use rustc_hash::FxHashMap;
 
@@ -39,7 +40,7 @@ impl<T: Copy> MethodRows<T> {
 
     #[inline]
     pub(crate) fn get(&self, method: MethodId) -> Option<&T> {
-        match self.dense.get(method.0 as usize) {
+        match self.dense.get(usize::cast_from(method.0)) {
             Some(row) => row.as_ref(),
             None if self.minted.is_empty() => None,
             None => self.minted.get(&method),
@@ -49,7 +50,7 @@ impl<T: Copy> MethodRows<T> {
     pub(crate) fn get_mut(&mut self, method: MethodId) -> Option<&mut T> {
         self.debug_assert_not_minted_below(method);
         self.version += 1;
-        match self.dense.get_mut(method.0 as usize) {
+        match self.dense.get_mut(usize::cast_from(method.0)) {
             Some(row) => row.as_mut(),
             None => self.minted.get_mut(&method),
         }
@@ -59,14 +60,14 @@ impl<T: Copy> MethodRows<T> {
     /// is what lets a lookup the vector answers skip the map.
     fn debug_assert_not_minted_below(&self, method: MethodId) {
         debug_assert!(
-            (method.0 as usize) >= self.dense.len() || !self.minted.contains_key(&method),
+            usize::cast_from(method.0) >= self.dense.len() || !self.minted.contains_key(&method),
             "minted row {method:?} sits below the vector's end"
         );
     }
 
     pub(crate) fn insert(&mut self, method: MethodId, row: T) {
         self.version += 1;
-        let index = method.0 as usize;
+        let index = usize::cast_from(method.0);
         if index < self.dense.len() {
             self.dense[index] = Some(row);
         } else if self.sealed {
@@ -87,7 +88,7 @@ impl<T: Copy> MethodRows<T> {
     pub(crate) fn remove(&mut self, method: MethodId) {
         self.debug_assert_not_minted_below(method);
         self.version += 1;
-        match self.dense.get_mut(method.0 as usize) {
+        match self.dense.get_mut(usize::cast_from(method.0)) {
             Some(row) => *row = None,
             None => {
                 self.minted.remove(&method);
@@ -104,10 +105,12 @@ impl<T: Copy> MethodRows<T> {
     pub(crate) fn retain_entries(&mut self, mut keep: impl FnMut(MethodId, &T) -> bool) {
         self.version += 1;
         for (index, row) in self.dense.iter_mut().enumerate() {
-            if row
-                .as_ref()
-                .is_some_and(|row| !keep(MethodId(index as u32), row))
-            {
+            if row.as_ref().is_some_and(|row| {
+                !keep(
+                    MethodId(u32::try_from(index).expect("a row a MethodId placed")),
+                    row,
+                )
+            }) {
                 *row = None;
             }
         }
@@ -119,7 +122,14 @@ impl<T: Copy> MethodRows<T> {
         self.dense
             .iter()
             .enumerate()
-            .filter_map(|(index, row)| row.as_ref().map(|row| (MethodId(index as u32), row)))
+            .filter_map(|(index, row)| {
+                row.as_ref().map(|row| {
+                    (
+                        MethodId(u32::try_from(index).expect("a row a MethodId placed")),
+                        row,
+                    )
+                })
+            })
             .chain(self.minted.iter().map(|(method, row)| (*method, row)))
     }
 

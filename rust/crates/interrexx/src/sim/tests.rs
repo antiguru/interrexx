@@ -441,6 +441,14 @@ const DECIDING: &str = "m = .message~new('abc', 'length')\n\
 
 #[test]
 fn a_recorded_trace_replays_to_the_same_output_and_hash() {
+    // Alone in its own process (#1099): a replay takes exactly its recording's
+    // handle key and is refused while another simulated interpreter in this
+    // process holds it, and the tests beside this one run seeds of their own.
+    if !crate::test_process::alone(
+        "sim::tests::a_recorded_trace_replays_to_the_same_output_and_hash",
+    ) {
+        return;
+    }
     let dir = std::env::temp_dir().join(format!("rexx-sim-trace-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("a directory");
     let file = dir.join("trace.txt");
@@ -454,7 +462,20 @@ fn a_recorded_trace_replays_to_the_same_output_and_hash() {
         "sim:3,uniform:0.2,gc=0.05 hash={:016x}",
         hash(&recorded).expect("a hash")
     );
-    assert_eq!(lines.next(), Some(header.as_str()));
+    // A run beside another simulated interpreter of the same seed and key
+    // records its live ordinal too (`ordinal=N`, before ` hash=`), which this
+    // test's threads can give it.
+    let first = lines.next().expect("a header");
+    let without_ordinal = match first.find(",ordinal=") {
+        Some(at) => {
+            let end = first[at + 1..]
+                .find([',', ' '])
+                .map_or(first.len(), |offset| at + 1 + offset);
+            format!("{}{}", &first[..at], &first[end..])
+        }
+        None => first.to_owned(),
+    };
+    assert_eq!(without_ordinal, header);
     for kind in ["preempt ", "pick ", "collect "] {
         assert!(written.contains(kind), "no {kind}in {written}");
     }
@@ -475,6 +496,14 @@ fn a_recorded_trace_replays_to_the_same_output_and_hash() {
 
 #[test]
 fn a_shrink_trial_defaults_omissions_and_replays_its_recorded_choices() {
+    // Alone in its own process (#1099): a replay takes exactly its recording's
+    // handle key and is refused while another simulated interpreter in this
+    // process holds it, and the tests beside this one run seeds of their own.
+    if !crate::test_process::alone(
+        "sim::tests::a_shrink_trial_defaults_omissions_and_replays_its_recorded_choices",
+    ) {
+        return;
+    }
     use super::{Decision, Point, Replay, Replaying};
 
     let mut trial = Replaying::new(&Replay {
@@ -588,6 +617,12 @@ fn replay(source: &str, file: &std::path::Path) -> Outcome {
 /// what the run did; the same file replays on its own program.
 #[test]
 fn a_replay_that_diverges_is_refused() {
+    // Alone in its own process (#1099): a replay takes exactly its recording's
+    // handle key and is refused while another simulated interpreter in this
+    // process holds it, and the tests beside this one run seeds of their own.
+    if !crate::test_process::alone("sim::tests::a_replay_that_diverges_is_refused") {
+        return;
+    }
     let dir = trace_dir("diverge");
     let file = dir.join("t.txt");
     let decisions = record_deciding(&file);

@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use crate::ObjRef;
 use crate::frame::{FrameArena, FrameBlock};
+use interrexx_cast::CastFrom;
 
 /// One variable slot: a value, or unset.
 ///
@@ -299,7 +300,7 @@ impl RootSet {
             panic!("promote on a slot that already resolves to a cell");
         };
         let position = self.activity.position(frame, index);
-        let storage = &mut self.cells[cell as usize];
+        let storage = &mut self.cells[usize::cast_from(cell)];
         storage.value = std::mem::replace(&mut self.activity.slots[position], VarSlot::UNSET).get();
         let target = Target::Cell(CellRef {
             object,
@@ -313,13 +314,13 @@ impl RootSet {
     /// The value cell `cell` holds, for the collector, which marks it with
     /// the cell's object.
     pub fn cell_value(&self, cell: u32) -> Option<ObjRef> {
-        self.cells[cell as usize].value
+        self.cells[usize::cast_from(cell)].value
     }
 
     /// Empties the cells whose objects a collection freed, for reuse.
     pub fn release_cells(&mut self, freed: &[u32]) {
         for &cell in freed {
-            let storage = &mut self.cells[cell as usize];
+            let storage = &mut self.cells[usize::cast_from(cell)];
             storage.generation = storage.generation.wrapping_add(1);
             storage.value = None;
             self.free_cells.push(cell);
@@ -457,7 +458,7 @@ impl RootSet {
     /// traced.
     #[inline(always)]
     fn cell(&self, cell: CellRef) -> &Cell {
-        let storage = &self.cells[cell.index as usize];
+        let storage = &self.cells[usize::cast_from(cell.index)];
         assert_eq!(
             storage.generation, cell.generation,
             "a variable's cell {cell:?} was collected while something still held it"
@@ -486,7 +487,7 @@ impl RootSet {
             }
             Target::Cell(cell) => {
                 self.cell(cell);
-                self.cells[cell.index as usize].value = value;
+                self.cells[usize::cast_from(cell.index)].value = value;
             }
         }
     }
@@ -602,6 +603,40 @@ impl ActivityRoots {
             "the frame block size is set before the first frame"
         );
         self.frames = Rc::new(FrameArena::new(size));
+    }
+
+    /// The register frame arena, for another activity to adopt, where it has
+    /// exactly one block (so a pool of arenas holds a bounded amount of
+    /// memory), no frame reserved ([`FrameArena::is_idle`], which counts a
+    /// parked frame and a frame of length 0) and no other handle, so that no
+    /// `RegFrame` borrows it; this activity is left an empty arena of the
+    /// same size.
+    pub fn take_idle_frames(&mut self) -> Option<FrameArena> {
+        let frames = &self.frames;
+        if frames.blocks() != 1 || !frames.is_idle() || Rc::strong_count(frames) != 1 {
+            return None;
+        }
+        let empty = Rc::new(FrameArena::new(frames.size()));
+        Rc::into_inner(std::mem::replace(&mut self.frames, empty))
+    }
+
+    /// Replaces the register frame arena with `arena`, which
+    /// [`ActivityRoots::take_idle_frames`] answered. Like
+    /// [`ActivityRoots::set_frame_block`], it sets the block size, to
+    /// `arena`'s.
+    ///
+    /// # Panics
+    ///
+    /// If the current arena has ever reserved a frame or is held elsewhere,
+    /// or `arena` has a frame reserved or other than one block.
+    pub fn adopt_frames(&mut self, arena: FrameArena) {
+        assert!(
+            self.frames.blocks() == 0 && Rc::strong_count(&self.frames) == 1,
+            "an arena is adopted before the first frame"
+        );
+        assert!(arena.is_idle(), "an adopted arena has no frame reserved");
+        assert_eq!(arena.blocks(), 1, "an adopted arena has one block");
+        self.frames = Rc::new(arena);
     }
 
     /// How many temporaries are currently rooted.

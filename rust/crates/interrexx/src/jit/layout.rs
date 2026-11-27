@@ -107,6 +107,8 @@ pub(crate) struct LoopRecord {
     /// loop's own state has not been given.
     pub(crate) value: i64,
     pub(crate) dirty: u64,
+    /// Remaining passes of a controlled loop with `FOR`.
+    pub(crate) for_remaining: u64,
 }
 
 /// How many loops a compiled pass holds at most: its own and the inner ones.
@@ -115,7 +117,7 @@ pub(crate) const MAX_LOOPS: usize = 4;
 /// [`Native::clause_at`] for the header clause of the loop whose record is
 /// `k`.
 pub(crate) const fn clause_header(k: usize) -> u64 {
-    u64::MAX - 1 - k as u64
+    u64::MAX - 1 - interrexx_cast::u64_from_usize(k)
 }
 
 /// The offset of `field` of record `k` in [`Native`].
@@ -126,8 +128,11 @@ pub(crate) const fn loop_field(k: usize, field: usize) -> i32 {
 
 /// An offset into [`Native`], as the code generator takes it.
 const fn at(offset: usize) -> i32 {
-    assert!(offset < i32::MAX as usize);
-    offset as i32
+    let wide = interrexx_cast::u64_from_usize(offset);
+    assert!(wide < interrexx_cast::u64_from_u32(i32::MAX.cast_unsigned()));
+    // Below `i32::MAX`, so its low four bytes are the whole of it.
+    let [a, b, c, d, ..] = wide.to_le_bytes();
+    i32::from_le_bytes([a, b, c, d])
 }
 
 pub(crate) const REGISTERS: i32 = at(offset_of!(Native, registers));
@@ -149,6 +154,7 @@ pub(crate) const LOOP_STEP: usize = offset_of!(LoopRecord, step);
 pub(crate) const LOOP_TO: usize = offset_of!(LoopRecord, to);
 pub(crate) const LOOP_VALUE: usize = offset_of!(LoopRecord, value);
 pub(crate) const LOOP_DIRTY: usize = offset_of!(LoopRecord, dirty);
+pub(crate) const LOOP_FOR_REMAINING: usize = offset_of!(LoopRecord, for_remaining);
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
 pub(crate) const INTERMEDIATES: i32 = at(offset_of!(Native, intermediates));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
@@ -156,7 +162,8 @@ pub(crate) const JUMP_TO: i32 = at(offset_of!(Native, jump_to));
 pub(crate) const OPENED: i32 = at(offset_of!(Native, opened));
 
 /// A variable slot's size, and where its two words are.
-pub(crate) const SLOT_SIZE: i64 = size_of::<VarSlot>() as i64;
+pub(crate) const SLOT_SIZE: i64 =
+    interrexx_cast::u64_from_usize(size_of::<VarSlot>()).cast_signed();
 pub(crate) const SLOT_SET_AT: i32 = at(VarSlot::SET_AT);
 pub(crate) const SLOT_VALUE_AT: i32 = at(VarSlot::VALUE_AT);
 
@@ -168,15 +175,16 @@ const fn small(value: i64) -> u64 {
         None => panic!("0 and 1 are small integers"),
     }
 }
-pub(crate) const TAG_INT: i64 = small(0) as i64;
-pub(crate) const TAG_BITS: i64 = (small(1) - small(0)).trailing_zeros() as i64;
+pub(crate) const TAG_INT: i64 = small(0).cast_signed();
+pub(crate) const TAG_BITS: i64 =
+    interrexx_cast::i64_from_u32((small(1) - small(0)).trailing_zeros());
 pub(crate) const TAG_MASK: i64 = (1 << TAG_BITS) - 1;
 /// What a comparison answers, and the small integers a condition also
 /// accepts as logical (`crate::eval::truth_without_conversion`).
-pub(crate) const TRUE_BITS: i64 = crate::eval::LOGICAL_TRUE.bits() as i64;
-pub(crate) const FALSE_BITS: i64 = crate::eval::LOGICAL_FALSE.bits() as i64;
-pub(crate) const ONE_BITS: i64 = small(1) as i64;
-pub(crate) const ZERO_BITS: i64 = small(0) as i64;
+pub(crate) const TRUE_BITS: i64 = crate::eval::LOGICAL_TRUE.bits().cast_signed();
+pub(crate) const FALSE_BITS: i64 = crate::eval::LOGICAL_FALSE.bits().cast_signed();
+pub(crate) const ONE_BITS: i64 = small(1).cast_signed();
+pub(crate) const ZERO_BITS: i64 = small(0).cast_signed();
 /// What a cleared register holds.
 pub(crate) const NIL_BITS: u64 = ObjRef::NIL.bits();
 
@@ -199,12 +207,23 @@ mod tests {
             interrexx_core::SMALL_INT_MIN + 1,
         ] {
             let bits = ObjRef::small_int(value).expect("in range").bits();
-            assert_eq!(bits & TAG_MASK as u64, TAG_INT as u64, "{value}");
-            assert_eq!((bits as i64) >> TAG_BITS, value, "{value}");
-            assert_eq!(((value << TAG_BITS) | TAG_INT) as u64, bits, "{value}");
+            assert_eq!(
+                bits & TAG_MASK.cast_unsigned(),
+                TAG_INT.cast_unsigned(),
+                "{value}"
+            );
+            assert_eq!(bits.cast_signed() >> TAG_BITS, value, "{value}");
+            assert_eq!(
+                ((value << TAG_BITS) | TAG_INT).cast_unsigned(),
+                bits,
+                "{value}"
+            );
         }
         for other in [ObjRef::NIL, ObjRef::inline_byte(b'a')] {
-            assert_ne!(other.bits() & TAG_MASK as u64, TAG_INT as u64);
+            assert_ne!(
+                other.bits() & TAG_MASK.cast_unsigned(),
+                TAG_INT.cast_unsigned()
+            );
         }
     }
 }

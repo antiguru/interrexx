@@ -9,11 +9,16 @@
 
 use std::cmp::Ordering;
 
-use crate::{CompareOp, Digits, MAX_EXPONENT, MIN_EXPONENT, Number};
+use interrexx_cast::CastFrom;
+
+use crate::{CompareOp, Digits, MAX_EXPONENT, MIN_EXPONENT, Number, last_digit};
 
 /// The widest mantissa held: eighteen decimal digits always fit an `i64`,
 /// with room left for the sum of two of them.
 const WIDEST: u32 = 18;
+
+/// [`WIDEST`] as an index.
+const WIDEST_INDEX: usize = interrexx_cast::usize_from_u32(WIDEST);
 
 /// `mantissa * 10^exponent`, with the [`Number`]'s own digit count: a
 /// trailing zero is a digit here as it is there (`1.10` is `110` at `-2`).
@@ -28,7 +33,7 @@ pub struct Scaled {
 impl Number {
     /// This number as a [`Scaled`], when its digits fit one.
     pub fn scaled(&self) -> Option<Scaled> {
-        let length = self.digits.len() as u32;
+        let length = u32::try_from(self.digits.len()).ok()?;
         if length > WIDEST {
             return None;
         }
@@ -45,8 +50,8 @@ impl Number {
 }
 
 /// `10^n` for every `n` a [`WIDEST`]-digit value can be shifted by.
-const POWERS: [i64; WIDEST as usize + 1] = {
-    let mut powers = [1i64; WIDEST as usize + 1];
+const POWERS: [i64; WIDEST_INDEX + 1] = {
+    let mut powers = [1i64; WIDEST_INDEX + 1];
     let mut n = 1;
     while n < powers.len() {
         powers[n] = powers[n - 1] * 10;
@@ -59,16 +64,21 @@ const POWERS: [i64; WIDEST as usize + 1] = {
 /// below `10^WIDEST`.
 fn digit_length(magnitude: u64) -> u32 {
     let mut length = 1;
-    while length < WIDEST && magnitude >= POWERS[length as usize] as u64 {
+    while length < WIDEST && magnitude >= power(length) {
         length += 1;
     }
     length
 }
 
+/// `10^n` for `n` at most [`WIDEST`].
+fn power(n: u32) -> u64 {
+    POWERS[usize::cast_from(n)].unsigned_abs()
+}
+
 /// `value * 10^shift`, where the caller has bounded the result to [`WIDEST`]
 /// digits.
 fn shifted(value: i64, shift: u32) -> i64 {
-    value * POWERS[shift as usize]
+    value * POWERS[usize::cast_from(shift)]
 }
 
 /// `product` (nonzero) rounded to its first `digits` digits, half up on
@@ -82,29 +92,34 @@ fn rounded(product: u128, digits: u64) -> Option<(u64, i32)> {
         Err(_) => product.ilog10() + 1,
     };
     if u64::from(length) <= digits {
-        return (length <= WIDEST).then_some((product as u64, 0));
+        // Lazily: only a product of at most WIDEST digits fits the `u64`.
+        return (length <= WIDEST)
+            .then(|| (u64::try_from(product).expect("at most WIDEST digits"), 0));
     }
     // DIGITS is below `length`, which is at most thirty-eight.
-    let keep = digits as u32;
+    let keep = u32::try_from(digits).expect("below the length");
     if keep > WIDEST {
         return None;
     }
     let dropped = length - keep;
-    let (mut kept, first_dropped) = if product <= u128::from(u64::MAX) {
+    let (mut kept, first_dropped) = if let Ok(product) = u64::try_from(product) {
         // The common case, without a 128-bit division.
-        let product = product as u64;
         let unit = 10u64.pow(dropped - 1);
         let tail = product / unit;
         (tail / 10, tail % 10)
     } else {
         let unit = 10u128.pow(dropped - 1);
         let tail = product / unit;
-        ((tail / 10) as u64, (tail % 10) as u64)
+        // The kept part has `keep` digits, at most WIDEST.
+        (
+            u64::try_from(tail / 10).expect("at most WIDEST digits"),
+            u64::from(last_digit(tail)),
+        )
     };
-    let mut moved = dropped as i32;
+    let mut moved = i32::try_from(dropped).expect("at most 38 digits dropped");
     if first_dropped >= 5 {
         kept += 1;
-        if kept == POWERS[keep as usize] as u64 {
+        if kept == power(keep) {
             kept /= 10;
             moved += 1;
         }
@@ -125,8 +140,9 @@ impl Writer<'_> {
         self.at += bytes.len();
     }
 
+    /// `count` is not negative, and the buffer was checked to hold it.
     fn repeat(&mut self, byte: u8, count: i64) {
-        let count = count as usize;
+        let count = usize::try_from(count).expect("a count the buffer holds");
         self.out[self.at..self.at + count].fill(byte);
         self.at += count;
     }
@@ -145,11 +161,11 @@ impl Scaled {
             return Number::zero();
         }
         let mut magnitude = self.mantissa.unsigned_abs();
-        let length = self.length as usize;
+        let length = usize::cast_from(self.length);
         let mut digits = Digits::zeros(length);
         let out = &mut digits[..];
         for slot in out.iter_mut().rev() {
-            *slot = (magnitude % 10) as u8;
+            *slot = last_digit(magnitude);
             magnitude /= 10;
         }
         Number {
@@ -195,14 +211,14 @@ impl Scaled {
         Some(Scaled {
             mantissa: if negative { -magnitude } else { magnitude },
             exponent: -decimals,
-            length: digit_length(magnitude as u64),
+            length: digit_length(magnitude.unsigned_abs()),
         })
     }
 
     /// `value` as a `Scaled`, as [`Number::from_i64`] spells it.
     pub fn from_i64(value: i64) -> Option<Scaled> {
         let magnitude = value.unsigned_abs();
-        if magnitude >= POWERS[WIDEST as usize] as u64 {
+        if magnitude >= power(WIDEST) {
             return None;
         }
         Some(Scaled {
@@ -341,7 +357,7 @@ impl Scaled {
         let b = shifted(right.mantissa.abs(), right_shift);
         let (raw, negative, raw_length) = if left.is_negative() == right.is_negative() {
             let sum = a + b;
-            let carried = sum >= POWERS[widest as usize];
+            let carried = sum >= POWERS[usize::cast_from(widest)];
             (sum, left.is_negative(), widest + u32::from(carried))
         } else {
             match a.cmp(&b) {
@@ -356,9 +372,9 @@ impl Scaled {
         let (mut magnitude, mut exponent) = (raw, exponent);
         if u64::from(raw_length) > digits {
             // `raw_length` is at most `WIDEST + 1` and DIGITS is below it.
-            let keep = digits as u32;
+            let keep = u32::try_from(digits).expect("below WIDEST + 1");
             let dropped = raw_length - keep;
-            exponent = exponent.checked_add(dropped as i32)?;
+            exponent = exponent.checked_add(i32::try_from(dropped).expect("at most WIDEST + 1"))?;
             let unit = 10i64.pow(dropped);
             let round_up = (magnitude / (unit / 10)) % 10 >= 5;
             magnitude /= unit;
@@ -374,13 +390,13 @@ impl Scaled {
             return Some(Scaled::ZERO);
         }
         // A sum of nineteen digits that DIGITS keeps whole.
-        if magnitude >= POWERS[WIDEST as usize] {
+        if magnitude >= POWERS[WIDEST_INDEX] {
             return None;
         }
         let result = Scaled {
             mantissa: if negative { -magnitude } else { magnitude },
             exponent,
-            length: digit_length(magnitude as u64),
+            length: digit_length(magnitude.unsigned_abs()),
         };
         // `add`'s range check, which only a value at the edge of the
         // exponent range can fail.
@@ -397,11 +413,12 @@ impl Scaled {
     fn shortened(self, count: i64) -> Option<Scaled> {
         let length = i64::from(self.length);
         let kept = (length - count.max(0)).max(1);
-        let dropped = (length - kept) as usize;
+        // `1 <= kept <= length <= WIDEST`.
+        let dropped = usize::try_from(length - kept).expect("at most the length");
         Some(Scaled {
             mantissa: self.mantissa / POWERS[dropped],
             exponent: self.exponent.checked_add(i32::try_from(count).ok()?)?,
-            length: kept as u32,
+            length: u32::try_from(kept).expect("at most the length"),
         })
     }
 
@@ -433,7 +450,7 @@ impl Scaled {
         if adjusted > i64::from(MAX_EXPONENT) || exponent < MIN_EXPONENT {
             return None;
         }
-        let mantissa = magnitude as i64;
+        let mantissa = i64::try_from(magnitude).expect("at most WIDEST digits");
         Some(Scaled {
             mantissa: if self.is_negative() != other.is_negative() {
                 -mantissa
@@ -496,7 +513,7 @@ impl Scaled {
             if (residue == 0 && quotient % 10 == 0) || quotient_length > WIDEST {
                 return None;
             }
-            let magnitude = quotient as i64;
+            let magnitude = i64::try_from(quotient).expect("at most WIDEST digits");
             return Some(Scaled {
                 mantissa: if self.is_negative() != other.is_negative() {
                     -magnitude
@@ -517,7 +534,7 @@ impl Scaled {
             (residue, exponent)
         };
         let (kept, moved) = rounded(magnitude, digits)?;
-        let mantissa = kept as i64;
+        let mantissa = i64::try_from(kept).expect("at most WIDEST digits");
         Some(Scaled {
             mantissa: if self.is_negative() {
                 -mantissa
@@ -584,15 +601,16 @@ impl Scaled {
                 if drop > i64::from(length) {
                     magnitude = 0;
                 } else {
-                    let drop = drop as u32;
-                    let tail = magnitude / POWERS[drop as usize - 1] as u64;
+                    let drop = u32::try_from(drop).expect("at most the length");
+                    let tail = magnitude / power(drop - 1);
                     magnitude = tail / 10 + u64::from(tail % 10 >= 5);
                 }
                 if magnitude == 0 {
                     negative = false;
                 }
                 length = digit_length(magnitude);
-                exponent = target as i32;
+                // Above the exponent, which is an `i32`, and not positive.
+                exponent = i32::try_from(target).expect("between the exponent and zero");
                 // A carry into exponential form.
                 if i64::from(exponent) + i64::from(length) > trigger {
                     return None;
@@ -628,16 +646,18 @@ impl Scaled {
             }
         };
         let total = pad + sign + whole + decimals.map_or(0, |(natural, extra)| 1 + natural + extra);
-        if total > out.len() as i64 {
+        if total > crate::signed_len(out.len()) {
             return None;
         }
-        let mut spelled = [0u8; WIDEST as usize];
-        let spelled = &mut spelled[..length as usize];
+        let mut spelled = [0u8; WIDEST_INDEX];
+        let spelled = &mut spelled[..usize::cast_from(length)];
         let mut rest = magnitude;
         for slot in spelled.iter_mut().rev() {
-            *slot = b'0' + (rest % 10) as u8;
+            *slot = b'0' + last_digit(rest);
             rest /= 10;
         }
+        // A positive `point` with a negative exponent is inside the digits.
+        let inside = |point: i64| usize::try_from(point).expect("inside the digits");
         let mut writer = Writer { out, at: 0 };
         writer.repeat(b' ', pad);
         if negative {
@@ -647,7 +667,7 @@ impl Scaled {
             writer.put(spelled);
             writer.repeat(b'0', i64::from(exponent));
         } else if point > 0 {
-            writer.put(&spelled[..point as usize]);
+            writer.put(&spelled[..inside(point)]);
         } else {
             writer.put(b"0");
         }
@@ -655,7 +675,7 @@ impl Scaled {
             writer.put(b".");
             if exponent < 0 {
                 if point > 0 {
-                    writer.put(&spelled[point as usize..]);
+                    writer.put(&spelled[inside(point)..]);
                 } else {
                     writer.repeat(b'0', -point);
                     writer.put(spelled);
@@ -664,7 +684,7 @@ impl Scaled {
             writer.repeat(b'0', extra);
         }
         let at = writer.at;
-        debug_assert_eq!(at as i64, total);
+        debug_assert_eq!(crate::signed_len(at), total);
         Some(at)
     }
 
@@ -673,10 +693,10 @@ impl Scaled {
         if self.exponent >= 0 || u64::from(self.length) > digits {
             return None;
         }
-        let count = self.length as usize;
-        let places = self.exponent.unsigned_abs() as usize;
-        let adjusted = i64::from(self.exponent) + count as i64 - 1;
-        if adjusted < 0 && places as u64 > digits.saturating_mul(2) {
+        let count = usize::cast_from(self.length);
+        let places = usize::cast_from(self.exponent.unsigned_abs());
+        let adjusted = i64::from(self.exponent) + i64::from(self.length) - 1;
+        if adjusted < 0 && u64::from(self.exponent.unsigned_abs()) > digits.saturating_mul(2) {
             return None;
         }
         let negative = self.mantissa < 0;
@@ -691,7 +711,7 @@ impl Scaled {
         let mut at = length;
         for _ in 0..places {
             at -= 1;
-            out[at] = b'0' + (magnitude % 10) as u8;
+            out[at] = b'0' + last_digit(magnitude);
             magnitude /= 10;
         }
         at -= 1;
@@ -702,7 +722,7 @@ impl Scaled {
         } else {
             for _ in 0..whole {
                 at -= 1;
-                out[at] = b'0' + (magnitude % 10) as u8;
+                out[at] = b'0' + last_digit(magnitude);
                 magnitude /= 10;
             }
         }
@@ -717,6 +737,8 @@ impl Scaled {
 
 #[cfg(test)]
 mod tests {
+    use interrexx_cast::CastFrom;
+
     use super::Scaled;
     use crate::Number;
 
@@ -734,14 +756,15 @@ mod tests {
         };
         let mut taken = 0;
         for _ in 0..200_000 {
-            let length = next(22) as usize;
+            let length = usize::try_from(next(22)).expect("below the bound");
             let bytes: Vec<u8> = (0..length)
                 .map(|_| {
                     // Mostly digits, so that plain spellings are common.
                     if next(3) == 0 {
-                        alphabet[next(alphabet.len() as u64) as usize]
+                        alphabet[usize::try_from(next(u64::cast_from(alphabet.len())))
+                            .expect("an index")]
                     } else {
-                        b'0' + next(10) as u8
+                        b'0' + u8::try_from(next(10)).expect("below the bound")
                     }
                 })
                 .collect();
@@ -785,7 +808,7 @@ mod tests {
         };
         let (mut taken, mut rounded) = (0, 0);
         for _ in 0..200_000 {
-            let length = 1 + next(12) as usize;
+            let length = 1 + usize::try_from(next(12)).expect("below the bound");
             let mut text = String::new();
             if next(2) == 0 {
                 text.push('-');
@@ -793,12 +816,12 @@ mod tests {
             for i in 0..length {
                 let digit = match next(3) {
                     0 => 9,
-                    1 => next(5) as u8 + 4,
-                    _ => next(10) as u8,
+                    1 => u8::try_from(next(5)).expect("below the bound") + 4,
+                    _ => u8::try_from(next(10)).expect("below the bound"),
                 };
                 text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
             }
-            text.push_str(&format!("E{}", next(30) as i64 - 18));
+            text.push_str(&format!("E{}", next(30).cast_signed() - 18));
             if next(20) == 0 {
                 text = String::from("0");
             }
@@ -807,8 +830,8 @@ mod tests {
                 continue;
             };
             let digits = 1 + next(20);
-            let before = (next(3) != 0).then(|| next(14) as u32);
-            let after = (next(4) != 0).then(|| next(10) as u32);
+            let before = (next(3) != 0).then(|| u32::try_from(next(14)).expect("below the bound"));
+            let after = (next(4) != 0).then(|| u32::try_from(next(10)).expect("below the bound"));
             let mut out = [0u8; 48];
             let Some(written) = scaled.format_plain(digits, before, after, &mut out) else {
                 continue;
@@ -842,7 +865,7 @@ mod tests {
             state % bound
         };
         let number = |next: &mut dyn FnMut(u64) -> u64| {
-            let length = 1 + next(18) as usize;
+            let length = 1 + usize::try_from(next(18)).expect("below the bound");
             let mut text = String::new();
             if next(2) == 0 {
                 text.push('-');
@@ -852,11 +875,11 @@ mod tests {
                 let digit = match next(3) {
                     0 => 9,
                     1 => 0,
-                    _ => next(10) as u8,
+                    _ => u8::try_from(next(10)).expect("below the bound"),
                 };
                 text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
             }
-            text.push_str(&format!("E{}", next(20) as i64 - 10));
+            text.push_str(&format!("E{}", next(20).cast_signed() - 10));
             if next(16) == 0 {
                 text = String::from("0");
             }
@@ -885,7 +908,7 @@ mod tests {
             );
             taken += 1;
             let width = left.digits.len() + right.digits.len();
-            if width as u64 > digits + 1 {
+            if u64::cast_from(width) > digits + 1 {
                 rounded += 1;
             }
             if width > 19 {
@@ -914,7 +937,7 @@ mod tests {
             state % bound
         };
         let number = |next: &mut dyn FnMut(u64) -> u64| {
-            let length = 1 + next(12) as usize;
+            let length = 1 + usize::try_from(next(12)).expect("below the bound");
             let mut text = String::new();
             if next(2) == 0 {
                 text.push('-');
@@ -923,11 +946,11 @@ mod tests {
                 let digit = match next(4) {
                     0 => 9,
                     1 => 0,
-                    _ => next(10) as u8,
+                    _ => u8::try_from(next(10)).expect("below the bound"),
                 };
                 text.push(char::from(b'0' + if i == 0 { digit.max(1) } else { digit }));
             }
-            text.push_str(&format!("E{}", next(9) as i64 - 4));
+            text.push_str(&format!("E{}", next(9).cast_signed() - 4));
             if next(24) == 0 {
                 text = String::from("0");
             }

@@ -3,6 +3,8 @@
 //! file console.
 
 /// How much of a file one read asks the system for.
+use interrexx_cast::CastFrom;
+
 pub(crate) const CHUNK: usize = 4096;
 
 /// A validated positive argument as a character position. The validator
@@ -11,6 +13,13 @@ pub(crate) const CHUNK: usize = 4096;
 /// negative.
 pub(crate) fn as_position(value: u64) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+/// A count of things held in memory -- bytes read or written, or the lines
+/// among them -- as a position offset. A count in memory is at most
+/// `isize::MAX`, which an `i64` holds on every target.
+pub(crate) fn memory_count(count: usize) -> i64 {
+    i64::try_from(count).expect("a count in memory is at most isize::MAX")
 }
 
 /// A logical character position as a file offset. A position below 1 is not a
@@ -46,8 +55,8 @@ pub(crate) fn count_lines_from(file: &mut std::fs::File, position: u64) -> std::
         if chunk.is_empty() {
             return Ok(count);
         }
-        count += chunk.iter().filter(|byte| **byte == b'\n').count() as u64;
-        at += chunk.len() as u64;
+        count += u64::cast_from(chunk.iter().filter(|byte| **byte == b'\n').count());
+        at += u64::cast_from(chunk.len());
         if chunk.len() < CHUNK {
             // A tail with no newline after the last one is a line of its own.
             if chunk.last() != Some(&b'\n') {
@@ -103,7 +112,7 @@ pub(crate) fn line_count(
     let total = count_lines_from(open.flushed(), 1)?;
     open.set_line_total(total, size);
     if cfg!(debug_assertions) {
-        let end = size_of(open.flushed()) as i64 + 1;
+        let end = as_position(size_of(open.flushed())) + 1;
         open.line_total_digest = digest_before(open.flushed(), end);
     }
     Ok(total)
@@ -130,7 +139,7 @@ pub(crate) fn mark_intact(open: &mut interrexx_core::OpenFile) -> bool {
 /// Debug builds: whether the file the line count was counted over is as it
 /// was.
 pub(crate) fn total_intact(open: &mut interrexx_core::OpenFile) -> bool {
-    let end = size_of(open.flushed()) as i64 + 1;
+    let end = as_position(size_of(open.flushed())) + 1;
     open.line_total_digest.is_some() && digest_before(open.flushed(), end) == open.line_total_digest
 }
 
@@ -229,11 +238,11 @@ pub(crate) fn seek_forward_lines(
             if *byte == b'\n' {
                 moved += 1;
                 if moved == count {
-                    return Ok((moved, at + index as i64 + 1));
+                    return Ok((moved, at + memory_count(index) + 1));
                 }
             }
         }
-        at += chunk.len() as i64;
+        at += memory_count(chunk.len());
     }
     Ok((moved, at))
 }
@@ -250,7 +259,7 @@ pub(crate) fn line_of(
     if record_length > 0 {
         return Ok((position.max(1) - 1) / as_position(record_length) + 1);
     }
-    let position = position.clamp(1, size_of(open.flushed()) as i64 + 1);
+    let position = position.clamp(1, as_position(size_of(open.flushed())) + 1);
     let (from, from_line) = match open.line_mark {
         Some((mark, mark_line)) if mark <= position => (mark, mark_line),
         _ => (1, 1),
@@ -278,13 +287,13 @@ pub(crate) fn line_ends_between(
     let mut count = 0;
     let mut at = offset_of(from);
     while at < end {
-        let want = usize::try_from((end - at).min(CHUNK as u64)).unwrap_or(CHUNK);
+        let want = usize::try_from((end - at).min(u64::cast_from(CHUNK))).unwrap_or(CHUNK);
         let chunk = read_from(file, at, want)?;
         if chunk.is_empty() {
             break;
         }
-        count += chunk.iter().filter(|byte| **byte == b'\n').count() as i64;
-        at += chunk.len() as u64;
+        count += memory_count(chunk.iter().filter(|byte| **byte == b'\n').count());
+        at += u64::cast_from(chunk.len());
     }
     Ok(count)
 }

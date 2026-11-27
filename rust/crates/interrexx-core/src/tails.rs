@@ -420,6 +420,9 @@ impl Tails {
 }
 
 #[cfg(test)]
+mod model;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

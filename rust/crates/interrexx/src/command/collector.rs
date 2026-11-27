@@ -1,4 +1,6 @@
 use super::{Piece, UNKNOWN_COMMAND, Waited, exit_code};
+#[cfg(windows)]
+use interrexx_cast::CastFrom;
 use std::io::Read;
 #[cfg(unix)]
 use std::os::fd::AsFd;
@@ -42,7 +44,10 @@ fn read_all<R: Read + AsFd + Send + 'static>(
                 Err(_) => return,
             }
             if !polled[1].revents().is_empty() {
-                let mut left = rustix::io::ioctl_fionread(&reader).unwrap_or(0) as usize;
+                let mut left = rustix::io::ioctl_fionread(&reader)
+                    .ok()
+                    .and_then(|n| usize::try_from(n).ok())
+                    .unwrap_or(0);
                 while left > 0 {
                     match reader.read(&mut piece[..left.min(4096)]) {
                         Ok(0) => return,
@@ -88,10 +93,12 @@ fn read_all<R: Read + std::os::windows::io::AsRawHandle + Send + 'static>(
                 let Some(available) = crate::host::bytes_waiting(&reader) else {
                     break;
                 };
-                let available = available as usize;
+                let available = usize::cast_from(available);
                 if remaining.is_none() && crate::host::child_ended(process, available == 0) {
                     // Take only the data already written when the child exits.
-                    remaining = Some(crate::host::bytes_waiting(&reader).unwrap_or(0) as usize);
+                    remaining = Some(usize::cast_from(
+                        crate::host::bytes_waiting(&reader).unwrap_or(0),
+                    ));
                 }
                 if remaining == Some(0) {
                     std::thread::spawn(move || {

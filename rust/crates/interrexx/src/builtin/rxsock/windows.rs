@@ -20,6 +20,12 @@ fn os(error: rustix::io::Errno) -> i32 {
     error.raw_os_error()
 }
 
+/// The Winsock `SOCKET` a descriptor number names. A `RawSocket` is a
+/// `SOCKET` widened to 64 bits.
+fn socket_of(fd: RawFd) -> wsa::SOCKET {
+    wsa::SOCKET::try_from(fd).expect("a SOCKET widened to 64 bits")
+}
+
 fn socket_modes() -> &'static Mutex<HashMap<RawFd, bool>> {
     // Winsock can set FIONBIO but cannot read back the mode. Store whether
     // each socket released to Rexx is nonblocking. The pool's own sockets
@@ -59,7 +65,7 @@ pub(crate) fn close(fd: RawFd) -> Os<()> {
         return Err(wsa::WSAENOTSOCK);
     }
     // SAFETY: closesocket accepts an arbitrary socket number and validates it.
-    if unsafe { wsa::closesocket(fd as wsa::SOCKET) } != 0 {
+    if unsafe { wsa::closesocket(socket_of(fd)) } != 0 {
         return Err(raw_error());
     }
     modes.remove(&fd);
@@ -80,7 +86,7 @@ fn get_int(fd: RawFd, option: i32) -> Os<i32> {
     // SAFETY: value is a writable 4-byte integer and len is writable.
     let result = unsafe {
         wsa::getsockopt(
-            fd as wsa::SOCKET,
+            socket_of(fd),
             wsa::SOL_SOCKET,
             option,
             (&raw mut value).cast(),
@@ -125,7 +131,7 @@ pub(crate) fn get_option(fd: RawFd, option: Option<i32>) -> Os<String> {
         // SAFETY: linger is a writable pair of 16-bit fields and len is writable.
         let result = unsafe {
             wsa::getsockopt(
-                fd as wsa::SOCKET,
+                socket_of(fd),
                 wsa::SOL_SOCKET,
                 option,
                 (&raw mut linger).cast(),
@@ -164,7 +170,7 @@ pub(crate) fn set_option(fd: RawFd, option: i32, numeric: i32, linger: (u16, u16
         (&raw const numeric).cast()
     };
     // SAFETY: both possible values occupy 4 bytes and live across the call.
-    let result = unsafe { wsa::setsockopt(fd as wsa::SOCKET, wsa::SOL_SOCKET, option, value, 4) };
+    let result = unsafe { wsa::setsockopt(socket_of(fd), wsa::SOL_SOCKET, option, value, 4) };
     if result == 0 {
         Ok(())
     } else {
@@ -198,7 +204,13 @@ pub(crate) fn no_sigpipe_flags(_: BorrowedFd<'_>) -> rustix::net::SendFlags {
 pub(crate) fn prepare_socket(socket: BorrowedFd<'_>) -> rustix::io::Result<()> {
     use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
     // SAFETY: the socket is a live borrowed kernel handle.
-    let ok = unsafe { SetHandleInformation(socket.as_raw_fd() as _, HANDLE_FLAG_INHERIT, 0) };
+    let ok = unsafe {
+        SetHandleInformation(
+            std::ptr::without_provenance_mut(socket_of(socket.as_raw_fd())),
+            HANDLE_FLAG_INHERIT,
+            0,
+        )
+    };
     if ok == 0 {
         Err(rustix::io::Errno::INVAL)
     } else {

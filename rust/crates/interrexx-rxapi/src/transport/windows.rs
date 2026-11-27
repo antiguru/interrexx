@@ -7,6 +7,7 @@ use interprocess::os::windows::{
     named_pipe::{DuplexPipeStream, PipeListener, PipeListenerOptions, pipe_mode::Bytes},
     security_descriptor::SecurityDescriptor,
 };
+use interrexx_cast::CastFrom;
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::os::windows::process::CommandExt;
@@ -42,7 +43,7 @@ impl Pipe {
         let deadline = Instant::now() + HANDSHAKE;
         let mut taken = 0;
         while taken < bytes.len() {
-            let available = sys::readable(&*self.0)? as usize;
+            let available = usize::cast_from(sys::readable(&*self.0)?);
             if Instant::now() >= deadline {
                 return Err(io::ErrorKind::TimedOut.into());
             }

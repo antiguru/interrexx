@@ -16,6 +16,7 @@ mod error_text;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
+use interrexx_cast::CastFrom;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -443,7 +444,8 @@ fn decode(text: &[u8]) -> Vec<u8> {
             let value = quartet
                 .iter()
                 .fold(0u32, |all, &byte| all << 6 | digit(byte));
-            [(value >> 16) as u8, (value >> 8) as u8, value as u8]
+            let [_, high, middle, low] = value.to_be_bytes();
+            [high, middle, low]
         })
         .collect()
 }
@@ -458,7 +460,7 @@ fn encode(bytes: &[u8]) -> Vec<u8> {
         });
         for at in 0..4 {
             text.push(if at <= group.len() {
-                DIGITS[(value >> (18 - 6 * at) & 63) as usize]
+                DIGITS[usize::cast_from(value >> (18 - 6 * at) & 63)]
             } else {
                 b'='
             });

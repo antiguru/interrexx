@@ -1,5 +1,6 @@
 //! `rexx`, the command-line interpreter.
 
+use interrexx_cast::CastTruncate;
 use std::io::{IsTerminal, Write};
 use std::process::ExitCode;
 
@@ -170,13 +171,13 @@ fn main() -> ExitCode {
         outcome.exit_code
     };
     // A process exit status is one byte.
-    ExitCode::from(status as u8)
+    ExitCode::from(u8::cast_truncate(status.cast_unsigned()))
 }
 
 /// Writes a report the launcher makes itself and exits with its status.
 fn report((text, status): (Vec<u8>, i32)) -> ExitCode {
     let _ = std::io::stderr().write_all(&text);
-    ExitCode::from(status as u8)
+    ExitCode::from(u8::cast_truncate(status.cast_unsigned()))
 }
 
 /// Whether standard input, output and error are each a terminal or a pipe, from

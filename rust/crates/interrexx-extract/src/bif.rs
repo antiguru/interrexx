@@ -854,13 +854,13 @@ fn symbol_runs(text: &str) -> Vec<SymbolRun> {
             just_closed_quote = true;
             continue;
         }
-        if !is_symbol_char(byte as char) {
+        if !is_symbol_char(char::from(byte)) {
             at += 1;
             just_closed_quote = false;
             continue;
         }
         let start = at;
-        while at < bytes.len() && is_symbol_char(bytes[at] as char) {
+        while at < bytes.len() && is_symbol_char(char::from(bytes[at])) {
             at += 1;
         }
         let is_suffix = just_closed_quote

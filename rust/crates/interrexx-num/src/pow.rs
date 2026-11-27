@@ -1,5 +1,7 @@
 //! The `**` operator.
 
+use interrexx_cast::CastFrom;
+
 use crate::muldiv::{strip_leading, subtract_multiple};
 use crate::{ArithError, Digits, MAX_EXPONENT, Number};
 
@@ -27,14 +29,14 @@ impl Number {
         // wrong answer, in release and debug alike. Saturation is exact:
         // the left side is a digit count plus an exponent, nowhere near
         // i64::MAX.
-        if self_.digits.len() as i64 + self_.exponent as i64
+        if crate::signed_len(self_.digits.len()) + i64::from(self_.exponent)
             > i64::try_from(digits).unwrap_or(i64::MAX)
         {
             return None;
         }
         if self_.exponent < 0 {
             // Any digit past the decimal point makes it non-whole.
-            let frac = (-self_.exponent) as usize;
+            let frac = usize::cast_from(self_.exponent.unsigned_abs());
             if frac >= self_.digits.len()
                 || self_.digits[self_.digits.len() - frac..]
                     .iter()
@@ -44,7 +46,7 @@ impl Number {
             }
         }
         if self_.exponent >= 0 {
-            self_.plain_integer(crate::ARGUMENT_DIGITS as u64)
+            self_.plain_integer(u64::cast_from(crate::ARGUMENT_DIGITS))
         } else {
             self_.whole_value(crate::ARGUMENT_DIGITS)
         }
@@ -86,8 +88,8 @@ impl Number {
         // getting rounded to this crate's default precision instead of
         // their own, `123456789012345678 ** 999999999` at DIGITS 15 (which
         // still reports the base at its full 18-digit precision).
-        let magnitude = (left.adjusted_exponent().unsigned_abs() as u64).saturating_mul(power);
-        if magnitude > MAX_EXPONENT as u64 {
+        let magnitude = u64::from(left.adjusted_exponent().unsigned_abs()).saturating_mul(power);
+        if magnitude > u64::from(MAX_EXPONENT.unsigned_abs()) {
             return Err(ArithError::PowerOverflow {
                 base: self.clone(),
                 exponent: exponent.clone(),
@@ -102,7 +104,7 @@ impl Number {
         // exponent, plus one, so the repeated squaring does not accumulate
         // visible error. Saturating: `digits` is a bare u64, and precision
         // must stay huge rather than wrap.
-        let extra = power.to_string().len() as u64;
+        let extra = u64::cast_from(power.to_string().len());
         let work = digits.saturating_add(extra + 1);
 
         // Square and multiply, high bit first, exactly as the interpreter
@@ -147,6 +149,12 @@ impl Number {
     }
 }
 
+/// A digit of the reciprocal: the remainder enters each step below ten times
+/// the divisor, so its guesses add up to at most nine.
+fn quotient_digit(digit: i32) -> u8 {
+    u8::try_from(digit).expect("a quotient digit")
+}
+
 /// The reciprocal `1 / accum` for a negative power.
 fn divide_power(accum: &Number, digits: u64) -> Number {
     debug_assert!(!accum.is_zero(), "pow never inverts a zero accumulator");
@@ -159,13 +167,13 @@ fn divide_power(accum: &Number, digits: u64) -> Number {
 
     // The expected exponent of the result's last digit; every extension of the
     // dividend below moves it down one. Carried wide, as a 64-bit whole number.
-    let mut calc_exp = -(accum.exponent as i64) - n as i64 + 1;
+    let mut calc_exp = -i64::from(accum.exponent) - crate::signed_len(n) + 1;
 
     // Digit guesses divide by the divisor's first two digits plus one, so a
     // guess is either correct or errs low, never high.
-    let mut div_char = divisor[0] as i32 * 10;
+    let mut div_char = i32::from(divisor[0]) * 10;
     if n > 1 {
-        div_char += divisor[1] as i32;
+        div_char += i32::from(divisor[1]);
     }
     div_char += 1;
 
@@ -189,14 +197,14 @@ fn divide_power(accum: &Number, digits: u64) -> Number {
                     // Exactly equal: the current digit is one too small.
                     // Adjust it and the entire division is done.
                     std::cmp::Ordering::Equal => {
-                        result.push((this_digit + 1) as u8);
+                        result.push(quotient_digit(this_digit + 1));
                         break 'outer;
                     }
-                    std::cmp::Ordering::Greater => multiplier = left[0] as i32,
+                    std::cmp::Ordering::Greater => multiplier = i32::from(left[0]),
                 }
             } else if left.len() > n {
                 // The remainder is longer, so it has at least two digits.
-                multiplier = left[0] as i32 * 10 + left[1] as i32;
+                multiplier = i32::from(left[0]) * 10 + i32::from(left[1]);
             } else {
                 break;
             }
@@ -211,7 +219,7 @@ fn divide_power(accum: &Number, digits: u64) -> Number {
         // A non-zero digit always joins the result; zeros only follow a
         // previous non-zero.
         if !result.is_empty() || this_digit != 0 {
-            result.push(this_digit as u8);
+            result.push(quotient_digit(this_digit));
             this_digit = 0;
             // Done once the remainder is zero or the result has grown to
             // digits + 1, leaving one digit for the caller's rounding.
@@ -232,7 +240,8 @@ fn divide_power(accum: &Number, digits: u64) -> Number {
 
     // An exponent beyond i32 cannot be in range anyway; saturate and let the
     // caller's range check reject it.
-    let exponent = calc_exp.clamp(i32::MIN as i64, i32::MAX as i64) as i32;
+    let exponent = i32::try_from(calc_exp.clamp(i64::from(i32::MIN), i64::from(i32::MAX)))
+        .expect("clamped to the i32 range");
     Number {
         negative: accum.negative,
         digits: result,

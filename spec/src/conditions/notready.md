@@ -134,6 +134,8 @@ NOTREADY is raised in the code that made the stream call, and goes no further.
 A trap in the caller of a routine does not answer a NOTREADY that a stream
 call in the routine raised, as [the propagation
 rule](r:cond.information.propagate.only) says, and the routine's own traps do.
+Whether its `PROPAGATED` entry is `1` is not specified, as [the propagated
+rule](r:cond.information.propagated) says.
 
 ```rexx
 f = 'spec-notready-scope.tmp'

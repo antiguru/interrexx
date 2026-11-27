@@ -48,6 +48,24 @@ pub fn cut_report_lines(bytes: &[u8]) -> Vec<u8> {
     cut(bytes, false)
 }
 
+/// `bytes` with the text of every trace announcement cut to its flag, as
+/// [`cut_error_texts`] cuts it (`r[instr.trace.tags]`), and every other line
+/// whole: an error report, a traceback level, a `+++` line and any other
+/// text stay exact. For a program's stdout that holds trace announcements.
+pub fn cut_announcement_texts(bytes: &[u8]) -> Vec<u8> {
+    let had_trailing_newline = bytes.last() == Some(&b'\n');
+    let mut lines: Vec<&[u8]> = bytes.split(|&b| b == b'\n').collect();
+    if had_trailing_newline {
+        lines.pop();
+    }
+    let out: Vec<Vec<u8>> = lines.into_iter().map(announcement_without_text).collect();
+    let mut joined = out.join(&b'\n');
+    if had_trailing_newline {
+        joined.push(b'\n');
+    }
+    joined
+}
+
 /// The shared body of [`cut_error_texts`] and [`cut_report_lines`];
 /// `announcements` says whether the text of a trace announcement is cut too.
 fn cut(bytes: &[u8], announcements: bool) -> Vec<u8> {
@@ -319,5 +337,19 @@ mod tests {
         );
         let other = b"Passed: 3\n    >V> X => \"1\"\n";
         assert_eq!(cut_report_lines(other), other.to_vec());
+    }
+
+    /// The announcement cut cuts an announcement's text to its flag and
+    /// leaves an error report, a built-in traceback level, a `+++` line and a
+    /// trace value line whole.
+    #[test]
+    fn cut_announcement_texts_touches_announcements_only() {
+        use super::cut_announcement_texts;
+        assert_eq!(
+            cut_announcement_texts(b"       >I> Some words \"R\".\n       <I< More.\n"),
+            b"       >I>\n       <I<\n".to_vec()
+        );
+        let other = b"       *-* Words \"R\".\nError 93 running /t/x.rex line 2:  Text.\nError 93.902:  Text.\n+++ Words.  Error 42:  Text.\n+++ Tracing is on.\n       >V>   X => \"1\"\nError 3:  Text.";
+        assert_eq!(cut_announcement_texts(other), other.to_vec());
     }
 }

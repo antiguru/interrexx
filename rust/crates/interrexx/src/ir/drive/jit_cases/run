@@ -43,6 +43,133 @@ say a b c t
 3333 3334 3333 0
 compiled: line 2
 
+# comma-list IF and WHEN short-circuit within the clause
+run
+a = 0; b = 0; c = 0; d = 0
+do i = 1 to 10000
+  x = i * 3 + 1; y = x - i; z = y * 2; w = z - x + i
+  x = x + 1; y = y + 2; z = z + 3; w = w + 4
+  x = x - 1; y = y - 2; z = z - 3; w = w - 4
+  if i // 2 = 0, i > 5000 then a = a + 1
+  else b = b + 1
+  select
+    when i // 2 = 1, i > 5000 then c = c + 1
+    when 0, 2 then nop
+    otherwise d = d + 1
+  end
+end
+say a b c d
+----
+2500 7500 2500 7500
+compiled: line 2
+
+# a non-logical comma-list element reaches the driver after compilation
+run
+signal on syntax
+v = 1; t = 0
+do i = 1 to 10000
+  if i = 9499 then v = '1'
+  if i = 9500 then v = 2
+  if v, i > 0 then t = t + 1
+end
+exit
+syntax: say rc sigl i t
+----
+34 6 9500 9499
+compiled: line 3
+
+# SELECT CASE keeps strict equality, list order and the default branch
+run
+a = 0; b = 0; c = 0; wrong = 0
+do i = 1 to 10000
+  x = i * 3 + 1; y = x - i; z = y * 2; w = z - x + i
+  x = x + 1; y = y + 2; z = z + 3; w = w + 4
+  x = x - 1; y = y - 2; z = z - 3; w = w - 4
+  q = x + y; r = q - z; s = r + w; t = s - x
+  q = q + 1; r = r + 2; s = s + 3; t = t + 4
+  select case i // 4
+    when '00' then wrong = wrong + 1
+    when 0, 1 then a = a + 1
+    when 2 then b = b + 1
+    otherwise c = c + 1
+  end
+end
+say a b c wrong
+----
+5000 2500 2500 0
+compiled: line 2
+
+# SELECT CASE does not evaluate later values after a match
+run
+a = 0
+do i = 1 to 10000
+  x = i * 3 + 1; y = x - i; z = y * 2; w = z - x + i
+  x = x + 1; y = y + 2; z = z + 3; w = w + 4
+  x = x - 1; y = y - 2; z = z - 3; w = w - 4
+  select case i
+    when i, mustNotRun() then a = a + 1
+  end
+end
+say a
+exit
+mustNotRun: say 'unexpected case operand'; exit 1
+----
+10000
+compiled: line 2
+
+# prepared literal PARSE clauses write their fields inside the compiled pass
+run
+total = 0
+do i = 1 to 10000
+  parse value 'Foo Bar' with p +5 q .
+  parse value 'alpha beta gamma delta' with a b c d
+  total = total + i
+end
+say total p'|'q a b c d
+----
+50005000 Foo B|ar alpha beta gamma delta
+compiled: line 2
+
+# the terminating FOR boundary still steps the control variable
+run
+n = 0
+do i = 1 to 10001 for 10000
+  n = n + 1
+end
+say n i
+----
+10000 10001
+compiled: line 2
+
+# FOR is checked after the step and before WHILE, while UNTIL comes first
+run
+n = 0; m = 0
+do i = 20000 to -2 by -2 for 10000 while i >= 0
+  n = n + 1
+end
+do j = 1 for 10000 until j >= 10000
+  m = m + 1
+end
+say n i m j
+----
+10000 0 10000 10000
+compiled: lines 2, 5
+
+# a new inner loop receives its own FOR budget on each entry
+run
+n = 0; s = 0
+do i = 1 for 10000
+  a = i + 1; b = a * 2; c = b - i
+  d = c // 5; e = d + 2; f = e - c
+  do j = 10 by -2 for (i // 2 + 2)
+    n = n + 1; s = s + j
+  end
+end
+say n s i j
+----
+25000 210000 10001 6
+compiled: lines 2, 5
+
 # DO n, and DO FOREVER left by LEAVE
 run
 k = 0

@@ -70,7 +70,7 @@ fn unescape(field: &str, row: usize) -> Vec<u8> {
                 );
                 i += 2;
             }
-            other => panic!("row {row}: unknown escape \\{}", other as char),
+            other => panic!("row {row}: unknown escape \\{}", char::from(other)),
         }
         i += 2;
     }

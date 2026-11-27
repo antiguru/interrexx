@@ -515,11 +515,9 @@ impl Interp {
         // replaces the bytes**, which is the string request. The trace above
         // names the object and the parse below reads the conversion: `numeric
         // digits .K` with a class-side `makeString` returning `12` traces `>K>
-        // "DIGITS" => "The K class"` and then answers `12` to `DIGITS()`. A
-        // `STRING` answer with no string value converts to `.nil`, and the
-        // refusal names the object: 26.5 `found "a SN"`.
+        // "DIGITS" => "The K class"` and then answers `12` to `DIGITS()`.
         let converted = self.required_string_value(value)?;
-        if converted != value && converted != ObjRef::NIL {
+        if converted != value {
             text.clear();
             text.extend_from_slice(&self.to_text(converted));
         }

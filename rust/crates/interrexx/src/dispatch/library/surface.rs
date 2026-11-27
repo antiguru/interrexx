@@ -1,5 +1,6 @@
 //! The [`Surface`] an extension's callbacks reach this interpreter through.
 
+use interrexx_cast::CastFrom;
 use std::borrow::Cow;
 
 use interrexx_api::callbacks::{BufferKind, Surface};
@@ -61,7 +62,7 @@ impl Surface for Interp {
                     .unwrap_or_default()
             })
             .collect();
-        let raised = crate::run::raised_for_code(number as u64, texts);
+        let raised = crate::run::raised_for_code(u64::cast_from(number), texts);
         // An unknown code raises 98.941, whose one substitution is the code.
         let additional = if raised.number == 98 && raised.sub == 941 && number != 98_941 {
             None
@@ -880,9 +881,12 @@ impl Surface for Interp {
                     }
                 },
             };
-            if interrexx_inventory::errors::lookup(major, 0).is_none() {
-                let code = format!("{major}.{minor}").into_bytes();
-                self.hold_raised(Raised::syntax(98, 941, vec![code]), None, None, None);
+            // r[native.calls.condition-object]: a code no error has is 98.941, as RAISE
+            // SYNTAX raises it.
+            if interrexx_inventory::errors::lookup(major, minor).is_none() {
+                let code = u64::from(major) * 1000 + u64::from(minor);
+                let raised = crate::run::raised_for_code(code, Vec::new());
+                self.hold_raised(raised, None, None, None);
                 return true;
             }
             Raised {

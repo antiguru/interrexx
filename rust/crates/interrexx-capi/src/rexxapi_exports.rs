@@ -12,6 +12,7 @@ use interrexx_api::layout::{
     CONSTRXSTRING, REXXPFN, RXSTRING, RexxLegacyQueueTime, RexxQueueTime, RexxReturnCode,
 };
 use interrexx_api::load::ClassicEntry;
+use interrexx_cast::{CastFrom, CastTruncate};
 
 fn code(status: u64) -> RexxReturnCode {
     RexxReturnCode::try_from(status).unwrap_or(RexxReturnCode::MAX)
@@ -119,7 +120,7 @@ unsafe fn pull(
     wait: usize,
 ) -> (RexxReturnCode, Option<Timestamp>) {
     // SAFETY: the caller's guarantee.
-    let (status, item) = capi::pull_queue(unsafe { text(name) }, wait as u64);
+    let (status, item) = capi::pull_queue(unsafe { text(name) }, u64::cast_from(wait));
     let Some(item) = item else {
         return (code(status), None);
     };
@@ -424,7 +425,7 @@ pub unsafe extern "C" fn RexxAddMacro(
     position: usize,
 ) -> RexxReturnCode {
     // SAFETY: the caller's guarantee, for each pointer.
-    code(unsafe { capi::add_macro(self::name(name), self::name(file), position as u64) })
+    code(unsafe { capi::add_macro(self::name(name), self::name(file), u64::cast_from(position)) })
 }
 
 /// `RexxDropMacro`.
@@ -474,8 +475,12 @@ pub unsafe extern "C" fn RexxQueryMacro(name: *const c_char, position: *mut u16)
     // SAFETY: the caller's guarantee.
     let (status, found) = capi::query_macro(unsafe { self::name(name) });
     if !position.is_null() {
-        // SAFETY: the caller's guarantee. The header's `unsigned short` truncates.
-        unsafe { position.write(found as u16) };
+        // The service stores only position 1 or 2 (Deviation 185) and answers
+        // 0 for an absent macro, so the header's `unsigned short` holds the
+        // answer whole. A service started by an earlier build may hold another
+        // position, which keeps its low bits, as ooRexx answers one.
+        // SAFETY: the caller's guarantee.
+        unsafe { position.write(u16::cast_truncate(found)) };
     }
     code(status)
 }
@@ -489,7 +494,7 @@ pub unsafe extern "C" fn RexxReorderMacro(name: *const c_char, position: usize) 
     // SAFETY: the caller's guarantee.
     code(capi::reorder_macro(
         unsafe { self::name(name) },
-        position as u64,
+        u64::cast_from(position),
     ))
 }
 
@@ -610,7 +615,7 @@ pub unsafe extern "C" fn RexxAddQueue(
     code(capi::add_queue(
         unsafe { text(name) },
         item.to_vec(),
-        flag as u64,
+        u64::cast_from(flag),
     ))
 }
 
@@ -665,7 +670,7 @@ pub unsafe extern "C" fn RexxPullQueue(
             year: stamp.year,
             weekday: stamp.weekday,
             microseconds: 0,
-            yearday: stamp.yearday as usize,
+            yearday: usize::cast_from(stamp.yearday),
             valid: 1,
         };
         #[cfg(windows)]
@@ -677,7 +682,8 @@ pub unsafe extern "C" fn RexxPullQueue(
             hours: stamp.hours,
             minutes: stamp.minutes,
             seconds: stamp.seconds,
-            milliseconds: (stamp.microseconds / 1000) as u16,
+            milliseconds: u16::try_from(stamp.microseconds / 1000)
+                .expect("`queue_time` sets no microseconds"),
         };
         // SAFETY: the caller's guarantee.
         unsafe { time.write(older) };

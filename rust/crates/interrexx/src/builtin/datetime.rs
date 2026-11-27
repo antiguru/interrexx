@@ -135,7 +135,7 @@ impl Timestamp {
     /// onward.
     fn year_day(&self) -> i64 {
         let mut yearday = MONTH_STARTS
-            .get((self.month - 1) as usize)
+            .get(usize::try_from(self.month - 1).unwrap_or(usize::MAX))
             .copied()
             .unwrap_or(0)
             + self.day;
@@ -232,7 +232,7 @@ impl Timestamp {
         };
         for i in 1..table.len() {
             if table[i] >= basedays {
-                self.month = i as i64;
+                self.month = i64::try_from(i).expect("a month table has thirteen rows");
                 self.day = basedays - table[i - 1];
                 return;
             }
@@ -347,13 +347,13 @@ impl Timestamp {
     /// format_language`]).
     fn month_name(&self) -> &'static [u8] {
         MONTH_NAMES
-            .get((self.month - 1) as usize)
+            .get(usize::try_from(self.month - 1).unwrap_or(usize::MAX))
             .copied()
             .unwrap_or(b"")
     }
 
     fn week_day(&self) -> usize {
-        self.base_date().rem_euclid(7) as usize
+        usize::try_from(self.base_date().rem_euclid(7)).expect("a remainder of seven")
     }
 
     fn day_name(&self) -> &'static [u8] {
@@ -433,8 +433,8 @@ impl Timestamp {
                     fmt += 2;
                 }
                 b'u' => {
-                    let remaining = date.len() as i64 - input as i64;
-                    let take = remaining.clamp(1, 6) as usize;
+                    let remaining = date.len().saturating_sub(input);
+                    let take = remaining.clamp(1, 6);
                     let Some(mut v) = get_number(date, input, take) else {
                         return false;
                     };
@@ -477,7 +477,7 @@ impl Timestamp {
                     else {
                         return false;
                     };
-                    self.month = month as i64 + 1;
+                    self.month = i64::try_from(month).expect("one of twelve names") + 1;
                     input += 3;
                     fmt += 3;
                 }
@@ -543,7 +543,7 @@ impl Timestamp {
         if self.month == 2 && self.is_leap_year() {
             self.day <= 29
         } else {
-            self.day <= MONTH_DAYS[(self.month - 1) as usize]
+            self.day <= MONTH_DAYS[usize::try_from(self.month - 1).expect("a month at least one")]
         }
     }
 
@@ -753,7 +753,9 @@ fn real_clock_base_time(interp: &Interp) -> i64 {
         .wall_now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
-    UNIX_BASE_TIME + since_epoch.as_micros() as i64
+    // A clock past `i64::MAX` microseconds, some 292,000 years on, is held
+    // there.
+    UNIX_BASE_TIME.saturating_add(i64::try_from(since_epoch.as_micros()).unwrap_or(i64::MAX))
 }
 
 /// The clock reading in force for the clause the *currently executing
@@ -789,7 +791,8 @@ fn now_base_time(interp: &mut Interp) -> i64 {
 pub(crate) fn local_offset_micros(utc_micros: i64) -> i64 {
     let unix_micros = utc_micros - UNIX_BASE_TIME;
     let secs = unix_micros.div_euclid(MICROSECONDS);
-    let nanos = (unix_micros.rem_euclid(MICROSECONDS) * 1_000) as u32;
+    let nanos =
+        u32::try_from(unix_micros.rem_euclid(MICROSECONDS) * 1_000).expect("below a second");
     match chrono::Local.timestamp_opt(secs, nanos) {
         chrono::offset::LocalResult::Single(at) => {
             i64::from(at.offset().fix().local_minus_utc()) * MICROSECONDS

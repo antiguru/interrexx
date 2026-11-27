@@ -1,17 +1,18 @@
 use super::{
     CATALOG_MAGIC, Catalog, CatalogImage, rexx_message, search_candidates, strerror, substitute,
 };
+use interrexx_cast::CastFrom;
 
 /// A catalog as gencat lays one out: `(set, number, text)` entries hashed
 /// into `plane_size` buckets, the host-order table, the swapped table, then
 /// the messages.
 fn catalog_bytes(plane_size: u32, entries: &[(u32, u32, &str)]) -> Vec<u8> {
-    let size = plane_size as usize;
+    let size = usize::cast_from(plane_size);
     let mut buckets: Vec<Vec<(u32, u32, u32)>> = vec![Vec::new(); size];
     let mut strings = Vec::new();
     for (set, number, text) in entries {
         let offset = u32::try_from(strings.len()).expect("small");
-        buckets[((set + 1) * number) as usize % size].push((set + 1, *number, offset));
+        buckets[usize::cast_from((set + 1) * number) % size].push((set + 1, *number, offset));
         strings.extend_from_slice(text.as_bytes());
         strings.push(0);
     }
@@ -215,9 +216,9 @@ fn strerror_text_drops_exactly_the_standard_library_suffix() {
     assert_eq!(strerror(-1), unknown);
 }
 
-/// `corpus/oracle-crashes.txt` entry 41: the oracle formats the message with
-/// the raising value's null pointer and dies. This crate answers the raise,
-/// trapped as any raise from a routine is.
+/// A value the message refers to whose `STRING` raises: the raise is the
+/// routine's answer, trapped as any raise from a routine is. The oracle
+/// answers the same (`corpus/oracle-crashes.txt` entry 41, dropped).
 #[test]
 fn a_raising_value_the_message_refers_to_is_trapped() {
     let source = b"signal on syntax\n\
@@ -237,8 +238,8 @@ fn a_raising_value_the_message_refers_to_is_trapped() {
     );
 }
 
-/// `corpus/oracle-crashes.txt` entry 43: the oracle reads the string through
-/// the array layout.
+/// A `MAKEARRAY` answering a string is not an array: 98.913, as the oracle
+/// answers (`corpus/oracle-crashes.txt` entry 43, dropped).
 #[test]
 fn a_make_array_answering_a_string_is_not_an_array() {
     let source = b"signal on syntax\n\

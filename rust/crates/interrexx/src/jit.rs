@@ -56,6 +56,7 @@ use cranelift_codegen::settings::{self, Configurable};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext, Variable};
 use cranelift_jit::{JITBuilder, JITModule};
 use cranelift_module::{Linkage, Module, default_libcall_names};
+use interrexx_cast::{CastFrom, CastTruncate};
 use interrexx_core::RegFrame;
 use std::any::Any;
 use std::collections::HashMap;
@@ -172,6 +173,9 @@ pub(crate) enum Step {
     /// shows intermediates (`Native::intermediates`), skipped otherwise, as
     /// the op's own gate would.
     Trace { pc: u32 },
+    /// The opening of a prepared literal template, which the host runs
+    /// whole if trace has changed since the clause was compiled.
+    ParseGuard { pc: u32 },
     /// `Op::CallArgs` at `pc`, compiled where its site resolved to a quiet
     /// builtin: [`Host::quiet_builtin`] over the argument registers `args`
     /// carries ([`carry_arg`]), whose pushes the pass dropped, else those
@@ -196,10 +200,14 @@ pub(crate) enum Step {
     Dropped,
     /// `Op::PushArg` of register `src`.
     PushArg { src: u16 },
-    /// An `IF`'s `Op::ConditionJump` at `pc` on register `reg`, the last op
-    /// of its clause: falls through to the clause's close when the value
-    /// holds, and otherwise closes the clause and goes on at `target`.
-    Branch { pc: u32, reg: u16, target: u32 },
+    /// A conditional jump at `pc` on register `reg`: falls through when the
+    /// value holds, and otherwise closes the clause and goes to `target`.
+    Branch {
+        pc: u32,
+        reg: u16,
+        target: u32,
+        keep_open: bool,
+    },
     /// `Op::Jump` to `target`.
     Jump { target: u32 },
     /// `Op::EndBranch` at `pc`.
@@ -321,6 +329,8 @@ pub(crate) struct Pass {
     pub(crate) loops: Vec<u32>,
     /// What each of those loops' boundary tests, in the same order.
     pub(crate) tests: Vec<LoopTest>,
+    /// Bit `k` names a controlled loop with a `FOR` budget in record `k`.
+    pub(crate) limited: u8,
 }
 
 /// What a helper is handed: the block, the host it belongs to, and a panic
@@ -383,7 +393,12 @@ extern "C" fn close_helper(ctx: *mut Ctx<'_>, next: u32) -> u32 {
 /// the host hands back is generated code's again, and the call answers
 /// [`CONTINUE`] for it.
 extern "C" fn op_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
-    guarded(ctx, |ctx| run_op(ctx, clause, pc))
+    guarded(ctx, |ctx| run_op::<true>(ctx, clause, pc))
+}
+
+/// Keep a slow comma-list element's temporaries rooted while later elements run.
+extern "C" fn list_item_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+    guarded(ctx, |ctx| run_op::<false>(ctx, clause, pc))
 }
 
 /// How many arguments a [`Step::Builtin`] carries at most: one register
@@ -396,13 +411,14 @@ pub(crate) const NO_ARGS: u64 = u64::MAX;
 /// `args` with argument `k`, below [`CARRIED_ARGS`], in register `src`, or
 /// omitted where `src` is [`OMITTED`].
 pub(crate) const fn carry_arg(args: u64, k: usize, src: u16) -> u64 {
-    let shift = 16 * k as u32;
-    (args & !(0xffff << shift)) | ((src as u64) << shift)
+    let shift = 16 * interrexx_cast::u64_from_usize(k);
+    (args & !(0xffff << shift)) | (interrexx_cast::u64_from_u16(src) << shift)
 }
 
 /// The register [`carry_arg`] put at `k` in `args`.
 pub(crate) const fn carried_arg(args: u64, k: usize) -> u16 {
-    (args >> (16 * k as u32)) as u16
+    let [low, high, ..] = (args >> (16 * interrexx_cast::u64_from_usize(k))).to_le_bytes();
+    u16::from_le_bytes([low, high])
 }
 
 /// [`Step::Builtin`]: the quiet path with no bracket (property 3 of the module
@@ -417,7 +433,7 @@ extern "C" fn builtin_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32, args: u64)
             return CONTINUE;
         }
         ctx.host.stage_args(pc, args);
-        run_op(ctx, clause, pc)
+        run_op::<true>(ctx, clause, pc)
     })
 }
 
@@ -432,7 +448,7 @@ extern "C" fn compound_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
             );
             return CONTINUE;
         }
-        run_op(ctx, clause, pc)
+        run_op::<true>(ctx, clause, pc)
     })
 }
 
@@ -462,14 +478,14 @@ extern "C" fn region_helper(ctx: *mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
 }
 
 /// [`op_helper`]'s body.
-fn run_op(ctx: &mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
+fn run_op<const HAND_BACK: bool>(ctx: &mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
     let adopt = clause != NO_ADOPT && ctx.native.opened != 0;
     ctx.native.opened = 0;
     ctx.host.enter(&mut ctx.native);
     let host = &mut *ctx.host;
     let answer = match if adopt { host.adopt(clause) } else { CONTINUE } {
         CONTINUE => match host.op(pc) {
-            CONTINUE if adopt => host.release(),
+            CONTINUE if adopt && HAND_BACK => host.release(),
             answer => answer,
         },
         answer => answer,
@@ -486,7 +502,7 @@ fn run_op(ctx: &mut Ctx<'_>, clause: u32, pc: u32) -> u32 {
 /// A helper that is not bracketed (property 3 of the module doc).
 extern "C" fn push_arg_helper(ctx: *mut Ctx<'_>, src: u32) -> u32 {
     guarded(ctx, |ctx| {
-        ctx.host.push_arg(src as u16);
+        ctx.host.push_arg(u16::cast_truncate(src));
         debug_assert!(
             ctx.host.window_holds(&ctx.native),
             "a push onto the argument stack moved the slot window"
@@ -496,6 +512,32 @@ extern "C" fn push_arg_helper(ctx: *mut Ctx<'_>, src: u32) -> u32 {
 }
 
 type Entry = extern "C" fn(*mut Ctx<'_>) -> u32;
+
+/// The entry addresses of the helpers generated code calls, one function per
+/// signature.
+#[expect(
+    clippy::as_conversions,
+    reason = "a function pointer becomes an address only through `as`"
+)]
+mod entry {
+    use super::Ctx;
+
+    pub(super) fn bare(helper: extern "C" fn(*mut Ctx<'_>) -> u32) -> usize {
+        helper as usize
+    }
+
+    pub(super) fn with_pc(helper: extern "C" fn(*mut Ctx<'_>, u32) -> u32) -> usize {
+        helper as usize
+    }
+
+    pub(super) fn op(helper: extern "C" fn(*mut Ctx<'_>, u32, u32) -> u32) -> usize {
+        helper as usize
+    }
+
+    pub(super) fn with_args(helper: extern "C" fn(*mut Ctx<'_>, u32, u32, u64) -> u32) -> usize {
+        helper as usize
+    }
+}
 
 /// A compiled pass.
 pub(crate) struct Compiled {
@@ -579,8 +621,11 @@ impl Emit<'_, '_> {
     }
 
     /// Calls `helper`, and leaves for `exit` unless it answers CONTINUE.
-    fn call(&mut self, helper: *const (), pc: Option<u32>) {
-        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
+    fn call(&mut self, helper: usize, pc: Option<u32>) {
+        let address = self
+            .b
+            .ins()
+            .iconst(self.pointer, i64::cast_from(helper.cast_signed()));
         let answer = match pc {
             Some(pc) => {
                 let pc = self.b.ins().iconst(types::I32, i64::from(pc));
@@ -606,7 +651,7 @@ impl Emit<'_, '_> {
     /// `clause_pc` first where generated code opened it, and leaves for `exit`
     /// unless the answer is CONTINUE or, with `also`, that answer and block.
     fn call_op(&mut self, clause_pc: Option<u32>, pc: u32, also: Option<(u32, Block)>) {
-        let helper = op_helper as *const ();
+        let helper = entry::op(op_helper);
         self.call_op_with(helper, None, clause_pc, pc, also);
     }
 
@@ -614,7 +659,7 @@ impl Emit<'_, '_> {
     /// and, with `args`, that `u64` after them.
     fn call_op_with(
         &mut self,
-        helper: *const (),
+        helper: usize,
         args: Option<u64>,
         clause_pc: Option<u32>,
         pc: u32,
@@ -625,12 +670,15 @@ impl Emit<'_, '_> {
             self.store_native(fast, layout::OPENED);
         }
         let clause = clause_pc.unwrap_or(NO_ADOPT);
-        let address = self.b.ins().iconst(self.pointer, helper as usize as i64);
+        let address = self
+            .b
+            .ins()
+            .iconst(self.pointer, i64::cast_from(helper.cast_signed()));
         let clause = self.b.ins().iconst(types::I32, i64::from(clause));
         let pc = self.b.ins().iconst(types::I32, i64::from(pc));
         let call = match args {
             Some(args) => {
-                let args = self.b.ins().iconst(types::I64, args as i64);
+                let args = self.b.ins().iconst(types::I64, args.cast_signed());
                 self.b
                     .ins()
                     .call_indirect(self.with_args, address, &[self.ctx, clause, pc, args])
@@ -757,6 +805,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             | Step::Close { .. }
             | Step::Op { .. }
             | Step::Trace { .. }
+            | Step::ParseGuard { .. }
             | Step::Jump { .. }
             | Step::Compound { .. }
             | Step::BlockStart { .. }
@@ -914,6 +963,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             0,
             None,
             pass.tests.first().unwrap_or(&LoopTest::None),
+            pass.limited & 1 != 0,
         );
         let mut clause_pc = 0;
         // Whether the block being emitted into can still fall through.
@@ -955,13 +1005,25 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     e.clear_opened();
                     e.b.ins().jump(done, &[]);
                     e.b.switch_to_block(slow);
-                    e.call(close_helper as *const (), Some(next));
+                    e.call(entry::with_pc(close_helper), Some(next));
                     e.clear_opened();
                     e.b.ins().jump(done, &[]);
                     e.b.switch_to_block(done);
                 }
-                Step::Branch { pc, reg, target } => {
-                    branch(&mut e, clause_pc, pc, reg, labels[&target], target);
+                Step::Branch {
+                    pc,
+                    reg,
+                    target,
+                    keep_open,
+                } => {
+                    branch(
+                        &mut e,
+                        clause_pc,
+                        pc,
+                        reg,
+                        (labels[&target], target),
+                        keep_open,
+                    );
                 }
                 Step::Jump { target } => {
                     e.b.ins().jump(labels[&target], &[]);
@@ -970,9 +1032,10 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 Step::EndBranch { pc } => end_branch(&mut e, None, pc),
                 Step::BlockStart { pc } => end_branch(&mut e, Some(clause_pc), pc),
                 Step::PushArg { src } => {
-                    let address =
-                        e.b.ins()
-                            .iconst(e.pointer, push_arg_helper as *const () as usize as i64);
+                    let address = e.b.ins().iconst(
+                        e.pointer,
+                        i64::cast_from(entry::with_pc(push_arg_helper).cast_signed()),
+                    );
                     let src = e.b.ins().iconst(types::I32, i64::from(src));
                     e.b.ins().call_indirect(e.with_pc, address, &[e.ctx, src]);
                 }
@@ -994,6 +1057,20 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     dst,
                 } => compare(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
+                Step::ParseGuard { pc } => {
+                    let quick = e.load_native(types::I64, layout::QUICK_VALUES);
+                    let quick = e.b.ins().icmp_imm_u(IntCC::NotEqual, quick, 0);
+                    let intermediates = e.load_native(types::I64, layout::INTERMEDIATES);
+                    let quiet = e.b.ins().icmp_imm_u(IntCC::Equal, intermediates, 0);
+                    let ready = e.b.ins().band(quick, quiet);
+                    let slow = e.b.create_block();
+                    let join = e.b.create_block();
+                    e.b.ins().brif(ready, join, &[], slow, &[]);
+                    e.b.switch_to_block(slow);
+                    e.slow_op(clause_pc, pc);
+                    e.b.ins().jump(join, &[]);
+                    e.b.switch_to_block(join);
+                }
                 Step::Trace { pc } => {
                     let tracing = e.load_native(types::I64, layout::INTERMEDIATES);
                     let echo = e.b.create_block();
@@ -1005,21 +1082,17 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     e.b.switch_to_block(join);
                 }
                 Step::Builtin { pc, args } => e.call_op_with(
-                    builtin_helper as *const (),
+                    entry::with_args(builtin_helper),
                     Some(args),
                     Some(clause_pc),
                     pc,
                     None,
                 ),
-                Step::Compound { pc } => e.call_op_with(
-                    compound_helper as *const (),
-                    None,
-                    Some(clause_pc),
-                    pc,
-                    None,
-                ),
+                Step::Compound { pc } => {
+                    e.call_op_with(entry::op(compound_helper), None, Some(clause_pc), pc, None)
+                }
                 Step::Region { pc } => {
-                    e.call_op_with(region_helper as *const (), None, Some(clause_pc), pc, None)
+                    e.call_op_with(entry::op(region_helper), None, Some(clause_pc), pc, None)
                 }
                 Step::InnerNext { pc, record, body } => {
                     let first = labels[&body];
@@ -1032,11 +1105,12 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                         usize::from(record),
                         Some((pc, first, dispatch)),
                         test,
+                        pass.limited & (1 << record) != 0,
                     );
                 }
                 Step::Dropped => {}
                 Step::Const { dst, bits } => {
-                    let value = e.b.ins().iconst(types::I64, bits as i64);
+                    let value = e.b.ins().iconst(types::I64, bits.cast_signed());
                     e.b.ins()
                         .store(Emit::flags(), value, e.registers, Emit::register_at(dst));
                 }
@@ -1167,7 +1241,7 @@ fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, register
         e.b.ins().jump(slow, &[]);
     }
     e.b.switch_to_block(slow);
-    e.call(open_helper as *const (), Some(pc));
+    e.call(entry::with_pc(open_helper), Some(pc));
     e.clear_opened();
     e.b.ins().jump(opened, &[]);
     e.b.switch_to_block(opened);
@@ -1176,7 +1250,13 @@ fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, register
 /// The pass boundary: the loop's quick pass by generated code when the block
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
-fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>, test: &LoopTest) {
+fn pass_step(
+    e: &mut Emit<'_, '_>,
+    k: usize,
+    inner: Option<(u32, Block, Block)>,
+    test: &LoopTest,
+    limited: bool,
+) {
     // Every loop's passes count: the host counts its ops on each pass of an
     // inner loop as on each of the compiled loop's, and weighs them per pass.
     let passes = e.load_native(types::I64, layout::PASSES);
@@ -1240,12 +1320,12 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
     let kind = e.load_native(types::I64, layout::loop_field(k, layout::LOOP_KIND));
     let is_count =
         e.b.ins()
-            .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_COUNT as i64);
+            .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_COUNT.cast_signed());
     e.b.ins().brif(is_count, counted, &[], not_counted, &[]);
     e.b.switch_to_block(not_counted);
     let is_forever =
         e.b.ins()
-            .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_FOREVER as i64);
+            .icmp_imm_u(IntCC::Equal, kind, layout::LOOP_FOREVER.cast_signed());
     let controlled = e.b.create_block();
     e.b.ins().brif(is_forever, forever, &[], controlled, &[]);
 
@@ -1313,6 +1393,17 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
     let at_or_below = e.b.ins().icmp(IntCC::SignedLessThanOrEqual, sum, to);
     let carries_on = e.b.ins().select(descending, at_or_above, at_or_below);
     ok = e.b.ins().band(ok, carries_on);
+    let for_remaining = limited.then(|| {
+        let count = e.load_native(
+            types::I64,
+            layout::loop_field(k, layout::LOOP_FOR_REMAINING),
+        );
+        // The host steps and rebinds the control variable even when FOR has
+        // counted out (r[instr.do.control.step]). Leave the last step to it.
+        let more = e.b.ins().icmp_imm_u(IntCC::NotEqual, count, 0);
+        ok = e.b.ins().band(ok, more);
+        count
+    });
     e.b.ins().brif(ok, take, &[], slow, &[]);
 
     e.b.switch_to_block(take);
@@ -1336,6 +1427,10 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
         e.b.ins().jump(slow, &[]);
         e.b.switch_to_block(carry);
     }
+    if let Some(count) = for_remaining {
+        let count = e.b.ins().iadd_imm_s(count, -1);
+        e.store_native(count, layout::loop_field(k, layout::LOOP_FOR_REMAINING));
+    }
     e.store_native(sum, layout::loop_field(k, layout::LOOP_VALUE));
     e.store_native(one, layout::loop_field(k, layout::LOOP_DIRTY));
     e.b.ins().jump(tail, &[]);
@@ -1348,7 +1443,7 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
     e.store_native(countdown, layout::COUNTDOWN);
     let header =
         e.b.ins()
-            .iconst(types::I64, layout::clause_header(k) as i64);
+            .iconst(types::I64, layout::clause_header(k).cast_signed());
     e.store_native(header, layout::CLAUSE_AT);
     // Another pass: the compiled loop's falls into its body, an inner loop's
     // goes back to the first clause of its own.
@@ -1363,7 +1458,7 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
     e.b.switch_to_block(slow);
     match inner {
         Some((pc, _, dispatch)) => e.call_op(None, pc, Some((JUMP, dispatch))),
-        None => e.call(pass_helper as *const (), None),
+        None => e.call(entry::bare(pass_helper), None),
     }
     e.b.ins().jump(body, &[]);
 
@@ -1376,7 +1471,7 @@ fn run_condition(e: &mut Emit<'_, '_>, steps: &[CondStep], dst: u16, bail: Block
     for &step in steps {
         match step {
             CondStep::Const { dst, bits } => {
-                let value = e.b.ins().iconst(types::I64, bits as i64);
+                let value = e.b.ins().iconst(types::I64, bits.cast_signed());
                 e.set_register(dst, value);
             }
             CondStep::Load { slot, dst } => {
@@ -1449,7 +1544,7 @@ fn tested_or(e: &mut Emit<'_, '_>, steps: &[CondStep], dst: u16, otherwise: Bloc
 
 /// `RegFrame::clear_from(top)`, for a frame of `registers`.
 fn clear_registers(e: &mut Emit<'_, '_>, top: u16, registers: u16) {
-    let nil = e.b.ins().iconst(types::I64, layout::NIL_BITS as i64);
+    let nil = e.b.ins().iconst(types::I64, layout::NIL_BITS.cast_signed());
     for register in top..registers {
         e.b.ins()
             .store(Emit::flags(), nil, e.registers, Emit::register_at(register));
@@ -1582,7 +1677,7 @@ fn compare(e: &mut Emit<'_, '_>, slow_path: Slow, op: Compare, lhs: u16, rhs: u1
     e.b.switch_to_block(join);
 }
 
-/// An `IF`'s condition: the driver's quick test of a value that is already
+/// A condition or comma-list item: the quick test of a value that is already
 /// logical, under no `TRACE` of results; the op through the host otherwise.
 /// A condition that does not hold closes the clause as the driver's hot exit
 /// does and goes on at `target`.
@@ -1591,8 +1686,8 @@ fn branch(
     clause_pc: u32,
     pc: u32,
     reg: u16,
-    target_block: Block,
-    target: u32,
+    (target_block, target): (Block, u32),
+    keep_open: bool,
 ) {
     let value = e.register(reg);
     let quick = e.load_native(types::I64, layout::QUICK_VALUES);
@@ -1627,13 +1722,24 @@ fn branch(
     e.clear_opened();
     e.b.ins().jump(target_block, &[]);
     e.b.switch_to_block(closing);
-    e.call(close_helper as *const (), Some(target));
+    e.call(entry::with_pc(close_helper), Some(target));
     e.clear_opened();
     e.b.ins().jump(target_block, &[]);
 
     e.b.switch_to_block(slow);
     let branched = e.b.create_block();
-    e.call_op(Some(clause_pc), pc, Some((BRANCH, branched)));
+    let helper = if keep_open {
+        list_item_helper
+    } else {
+        op_helper
+    };
+    e.call_op_with(
+        entry::op(helper),
+        None,
+        Some(clause_pc),
+        pc,
+        Some((BRANCH, branched)),
+    );
     e.b.ins().jump(fall, &[]);
     e.b.switch_to_block(branched);
     e.b.ins().jump(target_block, &[]);
