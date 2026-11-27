@@ -385,12 +385,7 @@ pub(crate) fn max_min_over(
         let candidate = interp.required_string_value(*candidate)?;
         interp.roots.activity_mut().push_temp(candidate);
         let found = interp.to_text(candidate).into_owned();
-        let number = if candidate == ObjRef::NIL {
-            None
-        } else {
-            interp.to_number(candidate).ok()
-        };
-        let Some(number) = number else {
+        let Some(number) = interp.to_number(candidate).ok() else {
             // The object rather than the conversion, which is every
             // argument message's rule -- `whole_number`'s own doc has the
             // measurement behind it.

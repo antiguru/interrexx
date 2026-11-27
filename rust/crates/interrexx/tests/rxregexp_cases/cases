@@ -208,7 +208,7 @@ min	)	a
 1@0 1@0 1@0
 1@0 1@0 1@0
 
-# Sets: classes, negation, ranges by signed byte.
+# Sets: classes, negation, ranges by byte value, either way round.
 probe
 max	[:Alpha:]	Q
 max	[:alpha:-z]	;
@@ -237,6 +237,19 @@ max	[:punct:]	_
 max	[:alpha:]	%e9
 max	[:upper::lower:]+	aBc
 max	[([|*?^]+	(*|?^[
+max	[c-a]	c
+max	[c-a]	d
+max	[a-%e9]	%e9
+max	[a-%e9]	%ff
+max	[%ff-%80]	%80
+max	[%ff-%80]	%7f
+max	[%7f-%81]	%80
+max	[a-%7f]	%7f
+max	[a-%7f]	%80
+max	[:digit:-#]	#
+max	[:digit:-#]	:
+max	[:digit:-:]	:
+max	[^c-a]	a
 ----
 0@9 1@1 1@1
 0@11 1@1 1@1
@@ -265,9 +278,21 @@ max	[([|*?^]+	(*|?^[
 0@9 0@0 0@0
 0@17 1@3 1@3
 0@9 1@6 1@6
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@11 1@1 1@1
+0@11 1@1 1@1
+0@11 0@0 0@0
+0@6 0@0 0@0
 
-# Alternation, repeated terms, and empty cycles repaired in ooRexx r13620.
-# The range ending at 7F was repaired in r13618.
+# A repeated element that begins an alternative belongs to that alternative alone.
 probe
 max	a*b|c	ac
 max	a*|b	ab
@@ -279,6 +304,7 @@ max	d(a*b|c)	dac
 0@7 0@1 1@1
 0@8 0@2 0@0
 
+# X+ followed by a repeated element.
 probe
 max	a+c*	aa
 max	(a|b)+c*	aa
@@ -290,6 +316,7 @@ max	b+c*	bbcc
 0@7 1@4 1@4
 0@4 1@4 1@4
 
+# Repeated groups that can match the empty string, and ranges ending at '7F'x.
 probe
 max	(a*)*	aaab
 max	(a*)*b	aaab
@@ -324,6 +351,12 @@ max	c+b*	cc
 0@9 0@1 0@0
 0@4 0@1 2@2
 0@4 1@2 1@2
+
+# Deviation 87: a count too large for the automaton is compile error 5. The expectation is this crate's. Oracle: uses memory until it is killed.
+deviation
+max	a{99999999999}	a
+----
+5@1 1@0 1@0
 
 # Deviation 88: a method with no pattern compiled, or after uninit, raises 93.900 where the oracle crashes. Oracle: SIGSEGV.
 ours

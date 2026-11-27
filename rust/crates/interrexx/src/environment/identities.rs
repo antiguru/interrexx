@@ -1387,10 +1387,10 @@ impl Interp {
     /// did not build.
     ///
     /// A `loadExternal*` answer no directive has bound hands on the `REXX`
-    /// package. Its own package is `.nil`, which is handed on as the parent;
-    /// the reference run answers until a name is resolved through that parent,
-    /// and segfaults there (oracle defect, `corpus/oracle-crashes.txt` entry
-    /// 15).
+    /// package. Its own package is `.nil`, which is handed on as the parent,
+    /// and a name resolved through that parent is not found there
+    /// (`corpus/oracle-crashes.txt` entry 15, dropped: the reference run
+    /// answers the same).
     pub(crate) fn executable_context_package(
         &mut self,
         object: ObjRef,

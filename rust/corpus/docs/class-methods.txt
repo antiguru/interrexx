@@ -83,7 +83,7 @@
 #     CommandOutput  --  clsCommandOutput names no methods, utilityclasses.xml:1227
 #     ArgUtil  --  the books document it nowhere; its only citation is provide.xml:838
 #
-# derived-at: oodocs/rexxref/en-US r13532
+# derived-at: oodocs/rexxref/en-US r13624
 
 Class	=	instance	covered	mthClassComparisonMethods	fundclasses.xml:134	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle
 Class	==	instance	covered	mthClassComparisonMethods	fundclasses.xml:134	a committed construction program answers an instance; a bare ~new raises 93.901 on the oracle

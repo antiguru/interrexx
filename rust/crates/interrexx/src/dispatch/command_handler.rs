@@ -381,8 +381,8 @@ pub(super) fn forward(
     Ok(Some(rc))
 }
 
-/// The count's string value, including the STRING fallback. A STRING answer
-/// with no string value yields .nil so the input method can raise its own error.
+/// The count's string value, including the STRING fallback
+/// (`r[conv.string.answer]`).
 pub(super) fn count_value(
     interp: &mut Interp,
     _cleared: Cleared,

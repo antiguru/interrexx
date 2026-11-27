@@ -1,1 +1,1 @@
-say 'agent' filespec('N', '/tmp/zz.txt')
+say 'agent' SysFileExists('/')

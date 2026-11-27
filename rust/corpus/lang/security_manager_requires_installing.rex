@@ -13,7 +13,8 @@ exit
 ::class sm
 ::method requires
   use arg info
-  say 'sm requires' filespec('name', info~name)
+  name = info~name
+  say 'sm requires' substr(name, lastpos('/', name) + 1)
   info~securityManager = self
   return 1
 ::method unknown

@@ -166,11 +166,9 @@ impl Substitutions<'_> {
 /// substitution values from position `first` on, a reference past them
 /// replaced by nothing. 40.1 where there are more than nine values.
 ///
-/// Every value is converted before the message is read, an omitted one as the
-/// null string. A conversion that raises does not stop the others, and the last
-/// raise is the routine's answer. The reference run reads a raising value that
-/// the message refers to as a null pointer and dies (oracle defect,
-/// `corpus/oracle-crashes.txt` entry 41).
+/// Every value is converted, in order, before the message is read, an omitted
+/// one as the null string. A conversion that raises ends the call, and no later
+/// value is converted (r[util.sysformatmessage.substitutions]).
 fn format_message(
     interp: &mut Interp,
     message: &[u8],
@@ -183,19 +181,11 @@ fn format_message(
         return Err(Raised::routine_failed(b"SysFormatMessage").into());
     }
     let mut values = Vec::with_capacity(count);
-    let mut raised = None;
     for index in first..=size {
-        let text = match substitutions.at(interp, index) {
-            None => Ok(Vec::new()),
-            Some(value) => substitution_text(interp, value),
-        };
-        values.push(text.unwrap_or_else(|failure| {
-            raised = Some(failure);
-            Vec::new()
-        }));
-    }
-    if let Some(failure) = raised {
-        return Err(failure);
+        values.push(match substitutions.at(interp, index) {
+            None => Vec::new(),
+            Some(value) => substitution_text(interp, value)?,
+        });
     }
     Ok(interp.text_built(substitute(message, &values)))
 }
@@ -222,14 +212,10 @@ fn substitute(message: &[u8], values: &[Vec<u8>]) -> Vec<u8> {
     out
 }
 
-/// `ObjectToStringValue`: the value's requested string, as the C string
-/// measured with `strlen`. A string request answering `.nil` is read as the
-/// null string.
+/// `ObjectToStringValue`: the value's string value (`r[conv.string.answer]`),
+/// as the C string measured with `strlen`.
 fn substitution_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let string = interp.required_string_value(value)?;
-    if string == ObjRef::NIL {
-        return Ok(Vec::new());
-    }
     Ok(c_string(&interp.to_text(string)).to_vec())
 }
 

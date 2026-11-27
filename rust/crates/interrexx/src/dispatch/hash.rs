@@ -192,6 +192,19 @@ pub(crate) fn owns(interp: &mut Interp, receiver: ObjRef) -> bool {
     kind_of(interp, receiver).has(HashKind::OWNED)
 }
 
+/// [`owns`], with the receiver's [`HashKind`] where it does.
+#[inline]
+fn owned_kind(interp: &mut Interp, receiver: ObjRef) -> Option<HashKind> {
+    if matches!(
+        interp.heap.get(receiver).map(|object| &object.body),
+        Some(Body::Native(_))
+    ) {
+        return None;
+    }
+    let kind = kind_of(interp, receiver);
+    kind.has(HashKind::OWNED).then_some(kind)
+}
+
 /// Whether `receiver`'s class is or inherits from one of `names`.
 fn class_is_one_of(interp: &mut Interp, receiver: ObjRef, names: &[&str]) -> bool {
     let Some(class) = interp.class_of_value(receiver) else {
@@ -339,11 +352,12 @@ fn hash_of(interp: &mut Interp, keys: Keys, index: ObjRef) -> Result<u64, Failur
         let text = interp.to_text(index).into_owned();
         return Ok(super::string_hash(interp.hash_seed, &text));
     }
-    // Hashing branches on whether the behaviour is a primitive one. **"Has a
-    // string value" and "is a base-class object" are different questions**: a
-    // `String` subclass has a string value and is not a base class, so its
-    // `HASHCODE` override is reached where a plain string's -- which cannot
-    // exist, since `.String~define` is 98.985 -- would not be.
+    // `r[class.table.indexes.sends]` sends `HASHCODE`; for an index of a base
+    // class that runs `Object`'s primitive, which answers this hash value.
+    // **"Has a string value" and "is of a base class" are different
+    // questions**: an instance of a `String` subclass and an enhanced string
+    // have a string value and are not of a base class, so their own `HASHCODE`
+    // is sent.
     if keys == Keys::Identity || interp.is_base_class(index) {
         return Ok(get_hash_value(interp, index));
     }
@@ -1146,12 +1160,25 @@ impl<'a> Key<'a> {
 /// `view` is a reading of `directory`'s pool from an earlier call, used when
 /// still valid. Returns the answer, and the reading this call made when it
 /// could not use `view`.
+#[cfg(test)]
 pub(crate) fn directory_get(
     interp: &mut Interp,
     directory: ObjRef,
     key: Key<'_>,
     view: Option<&StoreView>,
 ) -> Result<(DirectoryEntry, Option<StoreView>), Failure> {
+    directory_read(interp, directory, key, view).map(|(entry, _, fresh)| (entry, fresh))
+}
+
+/// Reads `key` from `directory` as `directory_get` does, also answering
+/// whether the entry is the contents' own item, which no method ran to
+/// produce: an answer that holds while no hash store is written.
+pub(crate) fn directory_read(
+    interp: &mut Interp,
+    directory: ObjRef,
+    key: Key<'_>,
+    view: Option<&StoreView>,
+) -> Result<(DirectoryEntry, bool, Option<StoreView>), Failure> {
     if let Some(view) = view
         && view.generation == interp.store_generation
     {
@@ -1161,13 +1188,15 @@ pub(crate) fn directory_get(
             "a StoreView was reused after its directory's pool changed without a \
              bump_store_generation"
         );
-        return Ok((view_get(interp, directory, key, view)?, None));
+        let (entry, stored) = view_read(interp, directory, key, view)?;
+        return Ok((entry, stored, None));
     }
     let view = read_view(interp, directory)?;
-    Ok((view_get(interp, directory, key, &view)?, Some(view)))
+    let (entry, stored) = view_read(interp, directory, key, &view)?;
+    Ok((entry, stored, Some(view)))
 }
 
-/// [`directory_get`] for a package local, kept apart from it so that the
+/// [`directory_read`] for a package local, kept apart from it so that the
 /// `.local` and `.environment` lookup is its one caller.
 pub(crate) fn package_local_get(
     interp: &mut Interp,
@@ -1196,29 +1225,41 @@ fn view_get(
     key: Key<'_>,
     view: &StoreView,
 ) -> Result<DirectoryEntry, Failure> {
+    view_read(interp, directory, key, view).map(|(entry, _)| entry)
+}
+
+/// [`view_get`], and whether the answer is the contents' item rather than
+/// what a stored method answered.
+fn view_read(
+    interp: &mut Interp,
+    directory: ObjRef,
+    key: Key<'_>,
+    view: &StoreView,
+) -> Result<(DirectoryEntry, bool), Failure> {
     let name = key.name;
     let store = view.contents;
     if let Some(slot) = text_slot(interp, &store, key)? {
         let item = slot_at(interp, store.items, slot)?.unwrap_or(ObjRef::NIL);
         return Ok(if interp.is_owed_entry(item) {
-            DirectoryEntry::Owed
+            (DirectoryEntry::Owed, false)
         } else {
-            DirectoryEntry::Found(item)
+            (DirectoryEntry::Found(item), true)
         });
     }
     if let Some(methods) = view.methods
         && let Some(slot) = text_slot(interp, &methods, key)?
         && let Some(stored) = slot_at(interp, methods.items, slot)?
     {
-        return run_stored_method(interp, directory, name, stored, &[]).map(DirectoryEntry::Found);
+        return run_stored_method(interp, directory, name, stored, &[])
+            .map(|found| (DirectoryEntry::Found(found), false));
     }
     let Some(stored) = view.unknown else {
-        return Ok(DirectoryEntry::Absent);
+        return Ok((DirectoryEntry::Absent, false));
     };
     let index = interp.text(name);
     interp.roots.activity_mut().push_temp(index);
     run_stored_method(interp, directory, b"UNKNOWN", stored, &[Some(index)])
-        .map(DirectoryEntry::Found)
+        .map(|found| (DirectoryEntry::Found(found), false))
 }
 
 /// The position holding `name` in a string-keyed store, found without
@@ -1305,20 +1346,18 @@ fn hash_at(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
-    name: &[u8],
+    name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // **One body, two stores.** `IdentityTable`'s `At`, `Put` and `[]` rows are
     // donated to `StringTable` and that whole set on to `Directory`, so
     // `Table`, `IdentityTable`, `StringTable` and `Directory` share one method
     // identity. A table this crate built on `NativeObject`'s map reads that
     // map; everything else reads the store.
-    if !matches!(
-        interp.heap.get(receiver).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && owns(interp, receiver)
-    {
+    if let Some(kind) = owned_kind(interp, receiver) {
         // An index not of a base class may hash and compare through Rexx
-        // methods of its own.
+        // methods of its own. Any other index may still be compared with a
+        // held index whose methods are Rexx code, which a string's `==` sends
+        // `REQUEST` to.
         if args
             .first()
             .copied()
@@ -1327,7 +1366,13 @@ fn hash_at(
         {
             return leveled_store_at(interp, receiver, args, name);
         }
-        return store_at(interp, receiver, args);
+        // A string-keyed store compares string values, which sends nothing.
+        if kind.has(HashKind::STRING_KEYED) {
+            return store_at(interp, receiver, args);
+        }
+        return interp.deferred_level(receiver, name, args, |interp| {
+            store_at(interp, receiver, args)
+        });
     }
     let index = hash_index(interp, args, 1)?;
     Ok(Some(interp.hash_entry_read(receiver, &index)))
@@ -1374,16 +1419,13 @@ fn hash_put(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
-    name: &[u8],
+    name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // [`native_hash_at`]'s split, for the same reason.
-    if !matches!(
-        interp.heap.get(receiver).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && owns(interp, receiver)
-    {
+    if let Some(kind) = owned_kind(interp, receiver) {
         // An index not of a base class may hash and compare through Rexx
-        // methods of its own, and so may a `Set`'s or `Bag`'s item.
+        // methods of its own, and so may a `Set`'s or `Bag`'s item. Any other
+        // is still compared with the held indexes, as in `hash_at`.
         let item = args.first().copied().flatten();
         let plain = match args.get(1).copied().flatten() {
             None => item.is_none_or(|item| interp.is_base_class(item)),
@@ -1394,7 +1436,13 @@ fn hash_put(
             }
         };
         if plain {
-            return store_put(interp, receiver, args);
+            // As in `hash_at`.
+            if kind.has(HashKind::STRING_KEYED) {
+                return store_put(interp, receiver, args);
+            }
+            return interp.deferred_level(receiver, name, args, |interp| {
+                store_put(interp, receiver, args)
+            });
         }
         return interp.primitive_level(receiver, name, args, |interp| {
             store_put(interp, receiver, args)

@@ -9,6 +9,8 @@
 #[path = "support/ruled_corpus.rs"]
 mod ruled_corpus;
 mod support;
+#[path = "support/unfiled.rs"]
+mod unfiled;
 
 use interrexx_inventory::errors::expand;
 use std::collections::BTreeSet;
@@ -903,5 +905,24 @@ fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
     assert!(!programs.is_empty(), "tests/input_oracle ran no case");
     for &(program, _) in ruled_corpus::CONCURRENCY {
         assert!(programs.contains(program), "{program} has no ruled outcome");
+    }
+    // Every program corpus/unfiled.txt says this test pins has a case here.
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let pinned: Vec<String> = unfiled::read_unfiled(&corpus_dir)
+        .into_iter()
+        .filter(|(_, reason)| reason.contains(unfiled::RULED_RUNNER))
+        .map(|(entry, _)| entry)
+        .collect();
+    assert!(
+        !pinned.is_empty(),
+        "{} names no ruled program",
+        unfiled::UNFILED_FILE
+    );
+    for program in pinned {
+        assert!(
+            programs.contains(&program),
+            "{} says this test pins {program}, which has no case",
+            unfiled::UNFILED_FILE
+        );
     }
 }

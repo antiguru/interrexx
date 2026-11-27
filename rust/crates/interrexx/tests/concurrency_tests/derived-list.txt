@@ -186,8 +186,10 @@ base/keyword/REPLY.testGroup TEST_REPLY_SAME_REPLYASSERT REPLY,SysSleep
 base/keyword/REPLY.testGroup TEST_REPLY_CONCURRENT REPLY,SysSleep
 base/keyword/TRACE.testGroup TEST_TRACE_GUARD GUARD
 base/keyword/TRACE.testGroup TEST_TRACE_REPLY Message~reply,REPLY,SysSleep
+base/keyword/TRACE.testGroup TEST_TRACE_LABEL_WITH_FORWARD SysSleep
 base/keyword/TRACE_TraceObject.testGroup TEST_TRACEOBJECT_COLLECTOR REPLY,SysSleep,TraceObject field
 base/keyword/TRACE_TraceObject.testGroup TEST_CALLER_STACK_FRAME_REPLY_START GUARD,REPLY,SysSleep,~start
+base/rexxutil/SysEventSem.testGroup TEST_POST_WAIT_RESET_CLOSE Sys*Sem
 base/rexxutil/SysMutexSem.testGroup TEST_CREATE_EMPTY_NAME Sys*Sem
 base/rexxutil/SysSleep.testGroup TEST_SLEEP_NO_ARG SysSleep
 base/rexxutil/SysSleep.testGroup TEST_SLEEP_TWO_ARGS SysSleep

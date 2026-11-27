@@ -216,9 +216,9 @@ fn strerror_text_drops_exactly_the_standard_library_suffix() {
     assert_eq!(strerror(-1), unknown);
 }
 
-/// `corpus/oracle-crashes.txt` entry 41: the oracle formats the message with
-/// the raising value's null pointer and dies. This crate answers the raise,
-/// trapped as any raise from a routine is.
+/// A value the message refers to whose `STRING` raises: the raise is the
+/// routine's answer, trapped as any raise from a routine is. The oracle
+/// answers the same (`corpus/oracle-crashes.txt` entry 41, dropped).
 #[test]
 fn a_raising_value_the_message_refers_to_is_trapped() {
     let source = b"signal on syntax\n\
@@ -238,8 +238,8 @@ fn a_raising_value_the_message_refers_to_is_trapped() {
     );
 }
 
-/// `corpus/oracle-crashes.txt` entry 43: the oracle reads the string through
-/// the array layout.
+/// A `MAKEARRAY` answering a string is not an array: 98.913, as the oracle
+/// answers (`corpus/oracle-crashes.txt` entry 43, dropped).
 #[test]
 fn a_make_array_answering_a_string_is_not_an_array() {
     let source = b"signal on syntax\n\

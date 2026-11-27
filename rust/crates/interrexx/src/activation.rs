@@ -1570,6 +1570,11 @@ impl Interp {
 
     /// [`Interp::push_activation`] of an activation already in its box.
     pub(crate) fn push_boxed_activation(&mut self, boxed: Box<Activation>) {
+        // Rexx code starts here, so a primitive level held aside goes on the
+        // stack below it ([`Interp::deferred_level`]).
+        if self.activity.deferred_level.is_some() {
+            self.raise_deferred_level();
+        }
         // Code is about to run that could assign a tail variable, so a key a
         // compound read is holding for its clause's write is no longer known
         // to be the key that write would build.

@@ -95,6 +95,14 @@ pub enum Decoded {
 impl ObjRef {
     pub const NIL: ObjRef = ObjRef(TAG_NIL, PhantomData);
 
+    /// A handle equal to no handle a program can hold, for a list of handles
+    /// that needs a marker: nil's tag with a payload. The field is private to
+    /// this module, and each constructor here sets its own tag, nil's alone
+    /// with no payload; the code generated for a frame builds handles only as
+    /// small integers, nil and the two logicals, and otherwise copies handles
+    /// it was given. Never handed to a program, so it is never decoded.
+    pub(crate) const MARKER: ObjRef = ObjRef(TAG_NIL | (1 << TAG_BITS), PhantomData);
+
     /// The handle's own bits, for a caller that has to *index* by identity
     /// rather than compare two handles.
     pub const fn bits(self) -> u64 {
@@ -262,5 +270,18 @@ mod inline_byte_tests {
             };
             assert_eq!(&*text, &source[..len]);
         }
+    }
+}
+
+#[cfg(test)]
+mod marker_tests {
+    use super::*;
+
+    /// The marker is nil's tag with a payload, which makes it unequal to nil,
+    /// the one handle with that tag a program can hold.
+    #[test]
+    fn the_marker_is_not_nil() {
+        assert_ne!(ObjRef::MARKER, ObjRef::NIL);
+        assert_eq!(ObjRef::MARKER.bits() & TAG_MASK, TAG_NIL);
     }
 }

@@ -399,6 +399,7 @@ typedef struct {
     RexxObjectPtr (RexxEntry *SendMessageScoped)(RexxThreadContext *, RexxObjectPtr, CSTRING, RexxClassObject, RexxArrayObject);
     RexxInstance * (RexxEntry *GetInterpreterInstance)(RexxThreadContext *);
     void (RexxEntry *RaiseConditionObject)(RexxThreadContext *, RexxDirectoryObject);
+    void (RexxEntry *ThrowObject)(RexxThreadContext *, RexxDirectoryObject);
 } RexxThreadInterface;
 
 typedef struct {
@@ -429,6 +430,7 @@ typedef struct {
     void (RexxEntry *ThrowException2)(RexxMethodContext *, size_t, RexxObjectPtr, RexxObjectPtr);
     void (RexxEntry *ThrowException)(RexxMethodContext *, size_t, RexxArrayObject);
     void (RexxEntry *ThrowCondition)(RexxMethodContext *, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr);
+    void (RexxEntry *Throw)(RexxMethodContext *, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr);
 } MethodContextInterface;
 
 typedef struct {
@@ -454,6 +456,7 @@ typedef struct {
     void (RexxEntry *ThrowException2)(RexxCallContext *, size_t, RexxObjectPtr, RexxObjectPtr);
     void (RexxEntry *ThrowException)(RexxCallContext *, size_t, RexxArrayObject);
     void (RexxEntry *ThrowCondition)(RexxCallContext *, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr);
+    void (RexxEntry *Throw)(RexxCallContext *, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr);
 } CallContextInterface;
 
 typedef struct {
@@ -469,6 +472,7 @@ typedef struct {
     void (RexxEntry *ThrowException2)(RexxExitContext *, size_t, RexxObjectPtr, RexxObjectPtr);
     void (RexxEntry *ThrowException)(RexxExitContext *, size_t, RexxArrayObject);
     void (RexxEntry *ThrowCondition)(RexxExitContext *, CSTRING, RexxStringObject, RexxObjectPtr, RexxObjectPtr);
+    void (RexxEntry *Throw)(RexxExitContext *, CSTRING, RexxObjectPtr, RexxStringObject, RexxObjectPtr);
 } ExitContextInterface;
 
 typedef struct {
@@ -649,6 +653,7 @@ struct RexxThreadContext_ {
     RexxObjectPtr SendMessageScoped(RexxObjectPtr a1, CSTRING a2, RexxClassObject a3, RexxArrayObject a4) { return functions->SendMessageScoped(this, a1, a2, a3, a4); }
     RexxInstance *GetInterpreterInstance() { return functions->GetInterpreterInstance(this); }
     void RaiseConditionObject(RexxDirectoryObject a1) { functions->RaiseConditionObject(this, a1); }
+    void ThrowObject(RexxDirectoryObject a1) { functions->ThrowObject(this, a1); }
     POINTER ObjectToCSelf(RexxObjectPtr a1, RexxObjectPtr a2) { return functions->ObjectToCSelfScoped(this, a1, a2); }
     RexxObjectPtr WholeNumber(wholenumber_t a1) { return functions->WholeNumberToObject(this, a1); }
     RexxObjectPtr Uintptr(uintptr_t a1) { return functions->UintptrToObject(this, a1); }
@@ -721,6 +726,7 @@ struct RexxMethodContext_ {
     void ThrowException2(size_t a1, RexxObjectPtr a2, RexxObjectPtr a3) { functions->ThrowException2(this, a1, a2, a3); }
     void ThrowException(size_t a1, RexxArrayObject a2) { functions->ThrowException(this, a1, a2); }
     void ThrowCondition(CSTRING a1, RexxStringObject a2, RexxObjectPtr a3, RexxObjectPtr a4) { functions->ThrowCondition(this, a1, a2, a3, a4); }
+    void Throw(CSTRING a1, RexxObjectPtr a2, RexxStringObject a3, RexxObjectPtr a4) { functions->Throw(this, a1, a2, a3, a4); }
     RexxObjectPtr RequestGlobalReference(RexxObjectPtr a1) { return threadContext->RequestGlobalReference(a1); }
     void ReleaseGlobalReference(RexxObjectPtr a1) { threadContext->ReleaseGlobalReference(a1); }
     void ReleaseLocalReference(RexxObjectPtr a1) { threadContext->ReleaseLocalReference(a1); }
@@ -860,6 +866,7 @@ struct RexxMethodContext_ {
     RexxObjectPtr SendMessageScoped(RexxObjectPtr a1, CSTRING a2, RexxClassObject a3, RexxArrayObject a4) { return threadContext->SendMessageScoped(a1, a2, a3, a4); }
     RexxInstance *GetInterpreterInstance() { return threadContext->GetInterpreterInstance(); }
     void RaiseConditionObject(RexxDirectoryObject a1) { threadContext->RaiseConditionObject(a1); }
+    void ThrowObject(RexxDirectoryObject a1) { threadContext->ThrowObject(a1); }
     POINTER ObjectToCSelf(RexxObjectPtr a1, RexxObjectPtr a2) { return threadContext->ObjectToCSelf(a1, a2); }
     RexxObjectPtr WholeNumber(wholenumber_t a1) { return threadContext->WholeNumber(a1); }
     RexxObjectPtr Uintptr(uintptr_t a1) { return threadContext->Uintptr(a1); }
@@ -927,6 +934,7 @@ struct RexxCallContext_ {
     void ThrowException2(size_t a1, RexxObjectPtr a2, RexxObjectPtr a3) { functions->ThrowException2(this, a1, a2, a3); }
     void ThrowException(size_t a1, RexxArrayObject a2) { functions->ThrowException(this, a1, a2); }
     void ThrowCondition(CSTRING a1, RexxStringObject a2, RexxObjectPtr a3, RexxObjectPtr a4) { functions->ThrowCondition(this, a1, a2, a3, a4); }
+    void Throw(CSTRING a1, RexxObjectPtr a2, RexxStringObject a3, RexxObjectPtr a4) { functions->Throw(this, a1, a2, a3, a4); }
     RexxObjectPtr RequestGlobalReference(RexxObjectPtr a1) { return threadContext->RequestGlobalReference(a1); }
     void ReleaseGlobalReference(RexxObjectPtr a1) { threadContext->ReleaseGlobalReference(a1); }
     void ReleaseLocalReference(RexxObjectPtr a1) { threadContext->ReleaseLocalReference(a1); }
@@ -1066,6 +1074,7 @@ struct RexxCallContext_ {
     RexxObjectPtr SendMessageScoped(RexxObjectPtr a1, CSTRING a2, RexxClassObject a3, RexxArrayObject a4) { return threadContext->SendMessageScoped(a1, a2, a3, a4); }
     RexxInstance *GetInterpreterInstance() { return threadContext->GetInterpreterInstance(); }
     void RaiseConditionObject(RexxDirectoryObject a1) { threadContext->RaiseConditionObject(a1); }
+    void ThrowObject(RexxDirectoryObject a1) { threadContext->ThrowObject(a1); }
     POINTER ObjectToCSelf(RexxObjectPtr a1, RexxObjectPtr a2) { return threadContext->ObjectToCSelf(a1, a2); }
     RexxObjectPtr WholeNumber(wholenumber_t a1) { return threadContext->WholeNumber(a1); }
     RexxObjectPtr Uintptr(uintptr_t a1) { return threadContext->Uintptr(a1); }
@@ -1123,6 +1132,7 @@ struct RexxExitContext_ {
     void ThrowException2(size_t a1, RexxObjectPtr a2, RexxObjectPtr a3) { functions->ThrowException2(this, a1, a2, a3); }
     void ThrowException(size_t a1, RexxArrayObject a2) { functions->ThrowException(this, a1, a2); }
     void ThrowCondition(CSTRING a1, RexxStringObject a2, RexxObjectPtr a3, RexxObjectPtr a4) { functions->ThrowCondition(this, a1, a2, a3, a4); }
+    void Throw(CSTRING a1, RexxObjectPtr a2, RexxStringObject a3, RexxObjectPtr a4) { functions->Throw(this, a1, a2, a3, a4); }
     RexxObjectPtr RequestGlobalReference(RexxObjectPtr a1) { return threadContext->RequestGlobalReference(a1); }
     void ReleaseGlobalReference(RexxObjectPtr a1) { threadContext->ReleaseGlobalReference(a1); }
     void ReleaseLocalReference(RexxObjectPtr a1) { threadContext->ReleaseLocalReference(a1); }
@@ -1262,6 +1272,7 @@ struct RexxExitContext_ {
     RexxObjectPtr SendMessageScoped(RexxObjectPtr a1, CSTRING a2, RexxClassObject a3, RexxArrayObject a4) { return threadContext->SendMessageScoped(a1, a2, a3, a4); }
     RexxInstance *GetInterpreterInstance() { return threadContext->GetInterpreterInstance(); }
     void RaiseConditionObject(RexxDirectoryObject a1) { threadContext->RaiseConditionObject(a1); }
+    void ThrowObject(RexxDirectoryObject a1) { threadContext->ThrowObject(a1); }
     POINTER ObjectToCSelf(RexxObjectPtr a1, RexxObjectPtr a2) { return threadContext->ObjectToCSelf(a1, a2); }
     RexxObjectPtr WholeNumber(wholenumber_t a1) { return threadContext->WholeNumber(a1); }
     RexxObjectPtr Uintptr(uintptr_t a1) { return threadContext->Uintptr(a1); }

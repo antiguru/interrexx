@@ -524,8 +524,15 @@ impl Interp {
             _ => (false, false),
         };
         if object && self.overrides_object_method(value, crate::dispatch::STRING) {
-            let answered = self.send_for_conversion(value, crate::dispatch::STRING)?;
-            return self.string_method_answer_text(value, answered);
+            // An answer with no string value counts as no answer
+            // (`r[conv.string.answer]`).
+            return match self.send_for_conversion(value, crate::dispatch::STRING)? {
+                Some(answered) => match self.string_answer_conversion(answered)? {
+                    Some(text) => Ok(text),
+                    None => self.string_value_text(value),
+                },
+                None => self.string_value_text(value),
+            };
         }
         let store = match (object, stem) {
             (_, true) => Some(value),
@@ -640,39 +647,49 @@ impl Interp {
             }
             return Ok(sent?.map(|answer| self.default_string_value_text(answer)));
         }
-        let answered = self.send_for_conversion(value, crate::dispatch::OBJECTNAME)?;
-        self.object_name_answer_text(value, answered).map(Some)
+        Ok(
+            match self.send_for_conversion(value, crate::dispatch::OBJECTNAME)? {
+                Some(answered) => Some(self.object_name_answer_text(value, answered)?),
+                None => None,
+            },
+        )
     }
 
-    /// Uses an OBJECTNAME answer's intrinsic string value. If it supplied
-    /// none, derives the receiver's default name without another message.
+    /// What an `OBJECTNAME` method of `value`'s own answered, as text: the
+    /// answer's text under the primitive string conversion, or the default
+    /// name of `value`'s class where the answer has none (`r[conv.string.answer]`).
     pub(crate) fn object_name_answer_text(
         &mut self,
-        receiver: ObjRef,
-        answered: Option<ObjRef>,
+        value: ObjRef,
+        answered: ObjRef,
     ) -> Result<Vec<u8>, Failure> {
-        if let Some(answered) = answered
-            && let Some(text) = self.primitive_string_answer_text(answered)?
-        {
-            return Ok(text);
+        Ok(match self.primitive_answer_text(answered)? {
+            Some(text) => text,
+            None => self.class_default_name_text(value),
+        })
+    }
+
+    /// The default name of `value` that its class alone decides: for an
+    /// instance its class's id with an article in front, ignoring a name set
+    /// on it, for a class object the class's own default name, and for
+    /// anything else [`Interp::default_string_value_text`].
+    fn class_default_name_text(&mut self, value: ObjRef) -> Vec<u8> {
+        if self.heap.is_class(value) {
+            return self.class_default_name(value).to_vec();
         }
-        if self.heap.is_class(receiver) {
-            return Ok(self.class_default_name(receiver).to_vec());
+        let Some(Body::Instance { class, own, .. }) = self.heap.get(value).map(|o| &o.body) else {
+            return self.default_string_value_text(value);
+        };
+        let (class, enhanced) = (
+            *class,
+            own.as_ref().is_some_and(|own| own.is_enhanced_instance()),
+        );
+        let id = self.classes().id_string(class);
+        match enhanced {
+            true => enhanced_object_name(id),
+            false => crate::environment::default_object_name(id),
         }
-        if let Some(Body::Instance { class, own, .. }) =
-            self.heap.get(receiver).map(|object| &object.body)
-        {
-            let class = *class;
-            let enhanced = own.as_ref().is_some_and(|own| own.is_enhanced_instance());
-            let id = self.classes().id_string(class);
-            let name = if enhanced {
-                enhanced_object_name(id)
-            } else {
-                crate::environment::default_object_name(id)
-            };
-            return Ok(name.into_bytes());
-        }
-        Ok(self.default_string_value_text(receiver))
+        .into_bytes()
     }
 
     /// [`Interp::string_value_text`] with nothing sent: the rendering the
@@ -1082,8 +1099,8 @@ impl Interp {
     }
 
     /// [`Interp::requested_number`] for a method argument that has a check of
-    /// its own: a `STRING` answer with no string value is no number, so the
-    /// caller raises that check's error (`r[conv.string.argument-kind]`).
+    /// its own, with `.nil` read through the required-string protocol too:
+    /// with a `NOSTRING` trap, `'abc'~left(.nil)` raises `NOSTRING`.
     #[cold]
     #[inline(never)]
     pub(crate) fn requested_argument_number(
@@ -1094,9 +1111,6 @@ impl Interp {
             return Ok(Some(number));
         }
         let text = self.required_string_value(value)?;
-        if text == ObjRef::NIL {
-            return Ok(None);
-        }
         Ok(self.to_number(text).ok())
     }
 

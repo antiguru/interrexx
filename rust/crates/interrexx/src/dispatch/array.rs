@@ -353,7 +353,8 @@ fn small_index(value: ObjRef) -> Option<usize> {
 }
 
 /// An index's number: the value itself where it is one, else its requested
-/// string's. No string value fails the index's check (r[conv.string.argument-kind]).
+/// string's. A `STRING` answer with no string value reads as the default
+/// string, which fails the index's check (r[class.index.string]).
 fn index_number(
     interp: &mut Interp,
     value: ObjRef,
