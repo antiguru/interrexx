@@ -65,15 +65,9 @@ pub(crate) fn query_process(
                 )
                 .into_bytes()
             }),
-        _ => {
-            return Err(Raised::invalid_routine_option(
-                "SysQueryProcess",
-                "selector",
-                "PID, TID, PPRIO, TPRIO, PTIME or TTIME",
-                selector,
-            )
-            .into());
-        }
+        // An unknown selector fails the call as it does on Unix
+        // (`r[util.sysqueryprocess.info]`).
+        _ => return Err(Raised::routine_failed(b"SYSQUERYPROCESS").into()),
     };
     Ok(interp.text_built(text))
 }
@@ -139,8 +133,8 @@ pub(crate) fn win_exec(
             ).into());
         }
     };
-    let outcome = std::str::from_utf8(&command)
-        .map_err(|_| ERROR_INVALID_PARAMETER)
+    let outcome = host::legacy_windows_text(&command)
+        .ok_or(ERROR_INVALID_PARAMETER)
         .and_then(|command| {
             let command = command.trim_start();
             let image = executable_name(command).ok_or(ERROR_FILE_NOT_FOUND)?;
@@ -251,9 +245,8 @@ pub(crate) fn shutdown_system(
     let reboot = logical(optional_text(interp, args, 5)?)?;
     let wide = |text: Option<&[u8]>| {
         let bytes = text.map(c_string).unwrap_or_default();
-        std::str::from_utf8(bytes)
+        host::legacy_windows_text(bytes)
             .map(|text| text.encode_utf16().chain([0]).collect::<Vec<_>>())
-            .ok()
     };
     let status = match (
         wide(computer.as_deref()),

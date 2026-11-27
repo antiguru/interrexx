@@ -23,6 +23,9 @@ function Invoke-Probe($label, $executable) {
     try {
         $probe = Start-Process $executable -NoNewWindow -PassThru -WorkingDirectory $fixture `
             -ArgumentList ('"' + $script + '"') -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        # Reading Handle while the process runs keeps ExitCode readable after
+        # WaitForExit(timeout) returns.
+        $null = $probe.Handle
         if (-not $probe.WaitForExit(30000)) {
             $probe.Kill()
             throw "$label RexxUtil probe timed out"

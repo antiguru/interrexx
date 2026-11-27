@@ -263,6 +263,16 @@ if SysQueryProcess() <> SysQueryProcess('PID') then exit 157
 if SysSetPriority('NORMAL', 'NORMAL') <> 0 then exit 158
 if SysQueryProcess('PPRIO') \== 'NORMAL' | SysQueryProcess('TPRIO') \== 'NORMAL' then exit 168
 if SysSetPriority('not-a-class', 'NORMAL') <> 307 then exit 159
+signal on syntax name unknownSelector
+call SysQueryProcess 'X'
+exit 175
+unknownSelector:
+if condition('O')~code <> 40.1 then exit 176
+signal off syntax
+times = SysQueryProcess('PTIME')
+parse var times day clock kernel user
+if words(times) <> 4 | length(day) <> 10 | substr(day, 5, 1) \== '-' | length(clock) <> 8,
+  | \datatype(kernel, 'N') | \datatype(user, 'N') then exit 177
 if RxWinExec('"' || systemDir || '\interrexx-does-not-exist-961.exe"', 'HIDE') <> 2 then exit 160
 command = '"' || systemDir || '\cmd.exe" /D /C exit 0'
 if RxWinExec(command, 'HIDE') <= 32 then exit 161
