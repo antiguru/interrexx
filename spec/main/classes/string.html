@@ -615,6 +615,8 @@ trailing blank matters, and numbers are not compared as numbers, so <code>1</cod
 <code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
 raises <code>93.902</code>. The argument is converted by the <a href="../conventions.html#r-conv.string.object">required-string
 protocol</a>. <code>.nil</code> compares unequal to every string.
+An instance of <code>Stem</code> itself is read as <a href="../expressions/comparison.html#r-expr.comparison.stem">the comparison
+rule</a> says.
 An object whose <code>string</code> method answers something with no string value, such
 as <code>.nil</code>, a <code>Directory</code>, an <code>Object</code> or the object itself, is compared by its
 default string value, as <a href="../conventions.html#r-conv.string.answer">the answer rule</a> gives it.</p>

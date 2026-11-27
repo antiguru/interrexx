@@ -341,6 +341,36 @@ a &gt;&gt; b =&gt; 97.1
 "an O" = .o~new =&gt; 1
 "an O" &lt; .o~new =&gt; 0
 </code></pre>
+<div class="rule" id="r-expr.comparison.stem"><a href="#r-expr.comparison.stem">[expr.comparison.stem]</a></div>
+<p>When a string compares with an instance of <code>Stem</code> itself on the right, the
+comparison offers <a href="../conditions/nostring.html#r-cond.nostring.raise">NOSTRING</a> with the stem as
+<code>ADDITIONAL</code>.
+The replacement text and the condition's description are the stem's name
+or, when it has a default, the default's rendering as an object. The
+comparison sends no <code>REQUEST</code>, <code>MAKESTRING</code> or <code>STRING</code> to the default.</p>
+<pre><code class="language-rexx">s. = .named~new
+say ('x' == s.) ('object-name' == s.) ('OBJECT-NAME'~caselessEquals(s.))
+say .array~of(s.)~hasItem('x') .array~of(s.)~hasItem('object-name')
+signal on nostring name caught
+say ('x' == s.)
+exit
+caught:
+  o = condition('o')
+  say o~condition o~description o~additional~class~id
+::class named
+::method request
+  say 'REQUEST ran'
+  return 'x'
+::method string
+  say 'STRING ran'
+  return 'x'
+::method objectName
+  return 'object-name'
+</code></pre>
+<pre><code class="language-output">0 1 1
+0 1
+NOSTRING object-name Stem
+</code></pre>
 <div class="rule" id="r-expr.comparison.deviation.122"><a href="#r-expr.comparison.deviation.122">[expr.comparison.deviation.122]</a></div>
 <p>A right operand that is not a string is converted once by every comparison
 operator, <a href="../conventions.html#r-conv.string.object">the conversion rule</a> applying to that one

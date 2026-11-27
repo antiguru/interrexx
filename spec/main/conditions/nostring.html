@@ -208,7 +208,9 @@ for it. Sending the message <code>STRING</code> to the object raises nothing, be
 object is then not converted. Which other positions convert, such as the
 arguments of method calls, is not specified. What a builtin does with such an
 argument when no trap answers is <a href="../conventions.html#r-conv.string.object">the object rule of the
-conventions</a>. The table below has one row for each
+conventions</a>. The <a href="../expressions/comparison.html#r-expr.comparison.stem">comparison rule</a>
+also describes the NOSTRING condition for a right operand that is an instance
+of <code>Stem</code> itself. The table below has one row for each
 object and one column for each of six uses, <code>N</code> where NOSTRING is raised and
 <code>-</code> where it is not.</p>
 <pre><code class="language-rexx">objs = .array~of(.object~new, .made~new, .string.sub~new('xy'), 42)

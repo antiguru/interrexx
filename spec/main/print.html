@@ -4975,6 +4975,36 @@ a &gt;&gt; b =&gt; 97.1
 "an O" = .o~new =&gt; 1
 "an O" &lt; .o~new =&gt; 0
 </code></pre>
+<div class="rule" id="r-expr.comparison.stem"><a href="expressions/comparison.html#r-expr.comparison.stem">[expr.comparison.stem]</a></div>
+<p>When a string compares with an instance of <code>Stem</code> itself on the right, the
+comparison offers <a href="expressions/../conditions/nostring.html#r-cond.nostring.raise">NOSTRING</a> with the stem as
+<code>ADDITIONAL</code>.
+The replacement text and the condition's description are the stem's name
+or, when it has a default, the default's rendering as an object. The
+comparison sends no <code>REQUEST</code>, <code>MAKESTRING</code> or <code>STRING</code> to the default.</p>
+<pre><code class="language-rexx">s. = .named~new
+say ('x' == s.) ('object-name' == s.) ('OBJECT-NAME'~caselessEquals(s.))
+say .array~of(s.)~hasItem('x') .array~of(s.)~hasItem('object-name')
+signal on nostring name caught
+say ('x' == s.)
+exit
+caught:
+  o = condition('o')
+  say o~condition o~description o~additional~class~id
+::class named
+::method request
+  say 'REQUEST ran'
+  return 'x'
+::method string
+  say 'STRING ran'
+  return 'x'
+::method objectName
+  return 'object-name'
+</code></pre>
+<pre><code class="language-output">0 1 1
+0 1
+NOSTRING object-name Stem
+</code></pre>
 <div class="rule" id="r-expr.comparison.deviation.122"><a href="expressions/comparison.html#r-expr.comparison.deviation.122">[expr.comparison.deviation.122]</a></div>
 <p>A right operand that is not a string is converted once by every comparison
 operator, <a href="expressions/../conventions.html#r-conv.string.object">the conversion rule</a> applying to that one
@@ -26063,7 +26093,9 @@ for it. Sending the message <code>STRING</code> to the object raises nothing, be
 object is then not converted. Which other positions convert, such as the
 arguments of method calls, is not specified. What a builtin does with such an
 argument when no trap answers is <a href="conditions/../conventions.html#r-conv.string.object">the object rule of the
-conventions</a>. The table below has one row for each
+conventions</a>. The <a href="conditions/../expressions/comparison.html#r-expr.comparison.stem">comparison rule</a>
+also describes the NOSTRING condition for a right operand that is an instance
+of <code>Stem</code> itself. The table below has one row for each
 object and one column for each of six uses, <code>N</code> where NOSTRING is raised and
 <code>-</code> where it is not.</p>
 <pre><code class="language-rexx">objs = .array~of(.object~new, .made~new, .string.sub~new('xy'), 42)
@@ -34924,6 +34956,8 @@ trailing blank matters, and numbers are not compared as numbers, so <code>1</cod
 <code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
 raises <code>93.902</code>. The argument is converted by the <a href="classes/../conventions.html#r-conv.string.object">required-string
 protocol</a>. <code>.nil</code> compares unequal to every string.
+An instance of <code>Stem</code> itself is read as <a href="classes/../expressions/comparison.html#r-expr.comparison.stem">the comparison
+rule</a> says.
 An object whose <code>string</code> method answers something with no string value, such
 as <code>.nil</code>, a <code>Directory</code>, an <code>Object</code> or the object itself, is compared by its
 default string value, as <a href="classes/../conventions.html#r-conv.string.answer">the answer rule</a> gives it.</p>
