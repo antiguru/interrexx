@@ -1040,6 +1040,38 @@ fn an_embedders_registered_library_serves_its_programs() {
     );
 }
 
+// spec: env.invocation.heap-limit, env.invocation.heap-limit.raise
+/// The C API reads the host's limit. In a later program, the halt exit sees
+/// the array assigned by the clause whose collection leaves a 5.0 pending.
+#[test]
+fn an_embedded_heap_limit_runs_the_halt_exit_before_raising() {
+    let output = run_binary_with(
+        &driver("heap_limit"),
+        "heap_limit",
+        &[
+            (
+                "request.rex",
+                "return copies('x', 17 * 1024 * 1024)~length\n",
+            ),
+            (
+                "collect.rex",
+                "step = 6 * 1024 * 1024\n\
+                 held = .array~of(copies('x', step), copies('y', step), \
+                 copies('z', step), gc('force'))\nreturn 0\n",
+            ),
+        ],
+        &[],
+        &[(interrexx::HEAP_LIMIT_ENV, "16M")],
+        |_| {},
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "request condition 5.0\ncollect condition 5.0\nexit saw assignment 1\n"
+    );
+}
+
 /// A native `+` that assigns its receiver's object variable `K` with `SetObjectVariable`, sent
 /// from `t.k = t.k + 1` in a method of the same class that exposes `k`: the write takes its tail
 /// from `k` as the native left it, so it lands on `t.B` and `t.A` keeps the stem's default.
