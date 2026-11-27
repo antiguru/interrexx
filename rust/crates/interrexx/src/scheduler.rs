@@ -10,7 +10,7 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, VecDeque};
 use std::time::Instant;
 
-use interrexx_core::{ActivityRoots, ObjRef};
+use interrexx_core::{ActivityRoots, FrameArena, FrameBlock, ObjRef};
 use rustc_hash::FxHashMap;
 
 use crate::activity::Activity;
@@ -368,6 +368,11 @@ pub(crate) struct Activities {
     /// The numbers of ended activities a new one takes first, oldest first: a
     /// pool of idle threads, whose threads keep their numbers, including none.
     pooled: VecDeque<Option<u32>>,
+    /// Register frame arenas of ended activities, each with a block and no
+    /// frame reserved, which a new activity adopts before it makes its own.
+    /// An arena moves here only on the baton and only from an activity that
+    /// has ended, so no two activities ever use one block at once.
+    frame_arenas: Vec<FrameArena>,
     /// The last number assigned.
     last_number: u32,
     /// The next [`crate::NativeFrame`] number, wrapping: one counter for
@@ -476,7 +481,24 @@ const STACK_MARGIN: usize = 32 * 1024 * 1024;
 /// An ended activity is pooled while the pool holds no more than this.
 const MAX_POOLED: usize = 5;
 
+/// The most frame arenas the pool holds. Each keeps one block of at most
+/// [`FrameBlock::DEFAULT`]'s size, so the pool's memory is bounded whatever
+/// block size an embedding picks.
+const MAX_POOLED_ARENAS: usize = 4;
+
 impl Activities {
+    /// Pools the frame arena of the ended activity whose roots are `roots`,
+    /// where it can serve another ([`ActivityRoots::take_idle_frames`]) and
+    /// its block is no larger than [`FrameBlock::DEFAULT`].
+    fn pool_frames(&mut self, roots: &mut ActivityRoots) {
+        if self.frame_arenas.len() < MAX_POOLED_ARENAS
+            && roots.frames().size().cells() <= FrameBlock::DEFAULT.cells()
+            && let Some(arena) = roots.take_idle_frames()
+        {
+            self.frame_arenas.push(arena);
+        }
+    }
+
     /// Drops the sender and waiter-identity records of messages `live` no
     /// longer answers for.
     pub(crate) fn prune_messages(&mut self, live: impl Fn(ObjRef) -> bool) {
@@ -513,6 +535,7 @@ impl Activities {
             retired: Vec::new(),
             thread_table,
             pooled: VecDeque::new(),
+            frame_arenas: Vec::new(),
             last_number: 0,
             next_native: 0,
             late_failures: Vec::new(),
@@ -1069,8 +1092,9 @@ impl Interp {
         token
     }
 
-    /// A record for a new activity, with an empty arena of the running one's
-    /// block size and the oldest pooled number.
+    /// A record for a new activity, with an arena of the running one's block
+    /// size and no frame reserved, a pooled one where there is one, and the
+    /// oldest pooled number.
     pub(crate) fn new_activity(&mut self) -> Box<Idle> {
         let mut activity = Activity::new();
         activity.number = self.activities.pooled.pop_front().flatten();
@@ -1079,7 +1103,17 @@ impl Interp {
             activity.sharing_tag = self.heap.sharing_tag();
         }
         let mut roots = ActivityRoots::new();
-        roots.set_frame_block(self.roots.activity().frames().size());
+        let size = self.roots.activity().frames().size();
+        // A pooled arena of another size is dropped, so none keeps a slot it
+        // cannot serve from.
+        match self.activities.frame_arenas.pop() {
+            Some(arena) if arena.size() == size => roots.adopt_frames(arena),
+            _ => roots.set_frame_block(size),
+        }
+        #[cfg(test)]
+        if roots.frames().blocks() != 0 {
+            ADOPTED_ARENAS.with(|adopted| adopted.set(adopted.get() + 1));
+        }
         Box::new(Idle { activity, roots })
     }
 
@@ -1515,6 +1549,7 @@ impl Interp {
         let outgoing = std::mem::replace(&mut table.running, next);
         table.switches += 1;
         if ended {
+            table.pool_frames(&mut idle.roots);
             table.retired.extend(idle.activity.thread.take());
             table.free.push(outgoing.0);
             if table.pooled.len() <= MAX_POOLED {
@@ -4223,6 +4258,9 @@ fn request_halt(
 
 #[cfg(test)]
 thread_local! {
+    /// How many new activities on this thread started with an arena that
+    /// has a block, which only a pooled one has.
+    static ADOPTED_ARENAS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
     /// How many driver exits for a native call this thread has made.
     static NATIVE_EXITS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
     /// How many abandoned calls' frames the last run on this thread still
@@ -4276,6 +4314,12 @@ thread_local! {
 #[cfg(test)]
 pub(crate) fn vacates() -> u64 {
     VACATES.with(std::cell::Cell::get)
+}
+
+/// [`ADOPTED_ARENAS`]'s count.
+#[cfg(test)]
+pub(crate) fn adopted_arenas() -> u64 {
+    ADOPTED_ARENAS.with(std::cell::Cell::get)
 }
 
 /// [`NATIVE_EXITS`]'s count.
