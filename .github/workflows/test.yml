@@ -569,7 +569,45 @@ jobs:
       - name: Cargo doc tests
         run: cargo test --locked --workspace --doc
 
-  # 32-bit x86: build every target with Rust's i686 Linux toolchain as the host, on a
+  # Check all i686 targets independently of the test run and third-party trees.
+  i686-check:
+    name: 32-bit x86 cargo check (i686)
+    runs-on: ubuntu-26.04
+    env:
+      RUSTUP_TOOLCHAIN: stable-i686-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: false
+      - name: Assert the upstream tier is absent
+        working-directory: .
+        run: |
+          rmdir third_party/ooRexx
+          rmdir third_party
+          test ! -e third_party
+          test ! -e build && test ! -L build
+      - name: Install the 32-bit libraries
+        # zlib is the one library the i686 compiler itself needs beyond the C library.
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib zlib1g:i386
+      - name: Install the i686 toolchain
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --force-non-host
+          rustc -vV | grep -qx 'host: i686-unknown-linux-gnu'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          # See the build job.
+          key: no-submodule-i686-check
+      - name: Put the 32-bit compiler wrappers first
+        working-directory: .
+        run: echo "$PWD/ci/m32" >> "$GITHUB_PATH"
+      - name: Cargo check
+        run: cargo check --locked --workspace --all-targets
+
+  # 32-bit x86: run tests with Rust's i686 Linux toolchain as the host, on a
   # checkout without the submodule. Run selected tests on PRs and the full standalone
   # suite on main and manual runs. The 32-bit compiler, build
   # scripts and test binaries run on the runner's kernel; the wrappers in `ci/m32` make the C and
@@ -629,8 +667,6 @@ jobs:
       - name: Put the 32-bit compiler wrappers first
         working-directory: .
         run: echo "$PWD/ci/m32" >> "$GITHUB_PATH"
-      - name: Cargo build
-        run: cargo build --locked --workspace --all-targets
       # Keep unit tests and native ABI/integration coverage on PRs. Main and manual runs
       # retain the full standalone suite, including expensive architecture-independent stress tests.
       - name: Cargo nextest (pull request)
@@ -679,13 +715,13 @@ jobs:
   test:
     name: cargo test # the name branch protection requires; keep it
     if: always()
-    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit, macos-build, i686]
+    needs: [shard, upstream-tier, msrv-standalone, spec-oracle, attached-stress, bsf4oorexx, doctest, pinning, upstream-interface, clippy, fmt, jit, macos-build, i686-check, i686]
     runs-on: ubuntu-26.04
     steps:
       - name: Every test job succeeded
         working-directory: .
         run: |
-          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}, macOS build: ${{ needs.macos-build.result }}, i686: ${{ needs.i686.result }}"
+          echo "shards: ${{ needs.shard.result }}, upstream tier: ${{ needs.upstream-tier.result }}, msrv standalone: ${{ needs.msrv-standalone.result }}, spec oracle: ${{ needs.spec-oracle.result }}, attached stress: ${{ needs.attached-stress.result }}, bsf4oorexx: ${{ needs.bsf4oorexx.result }}, doc tests: ${{ needs.doctest.result }}, pinning: ${{ needs.pinning.result }}, upstream interface: ${{ needs.upstream-interface.result }}, clippy: ${{ needs.clippy.result }}, fmt: ${{ needs.fmt.result }}, jit: ${{ needs.jit.result }}, macOS build: ${{ needs.macos-build.result }}, i686 check: ${{ needs.i686-check.result }}, i686: ${{ needs.i686.result }}"
           test "${{ needs.shard.result }}" = success
           test "${{ needs.upstream-tier.result }}" = success
           test "${{ needs.msrv-standalone.result }}" = success
@@ -699,6 +735,7 @@ jobs:
           test "${{ needs.fmt.result }}" = success
           test "${{ needs.jit.result }}" = success
           test "${{ needs.macos-build.result }}" = success
+          test "${{ needs.i686-check.result }}" = success
           test "${{ needs.i686.result }}" = success
 
   # The `jit` feature (Cranelift), which no other job builds: clippy with it, and the JIT's
