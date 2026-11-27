@@ -94,7 +94,7 @@ fn header_prefix(level: RequiredLanguageLevel) -> [u8; LENGTH_AT] {
 /// The image of `source`, whose routine is called `name`: a translated
 /// program's routine is named for the file it was read from and keeps that name
 /// in the image. Binary, or with `encode` the encoded tag and the base64 of the
-/// image in lines of [`CHUNK`] digits. # Panics If `name` is longer than a
+/// image in lines of `CHUNK` digits. # Panics If `name` is longer than a
 /// `u32` counts.
 pub fn write_image(source: &[u8], name: &[u8], encode: bool) -> Vec<u8> {
     let required_level = interrexx_parse::with_parser_stack(|| {

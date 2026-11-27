@@ -1190,7 +1190,7 @@ impl Activation<'_> {
         self.item_at(SLOT, array, Some("Array"), Argument::Number(index))
     }
 
-    /// `ArrayPut`: the array's own `PUT`, as [`Activation::send_own`] runs
+    /// `ArrayPut`: the array's own `PUT`, as `Activation::send_own` runs
     /// it.
     pub fn array_put(&self, array: RexxObjectPtr, item: RexxObjectPtr, index: usize) {
         const SLOT: &str = "RexxThreadInterface.ArrayPut";
@@ -1947,7 +1947,7 @@ impl Activation<'_> {
     /// `GetPackageRoutines` and its neighbours: what the package answers
     /// `name`, or `GetRoutinePackage` and `GetMethodPackage`: what the routine
     /// or method answers `PACKAGE`. `id` names the built-in class of the
-    /// object, whose own method answers, as [`Activation::send_own`] runs it.
+    /// object, whose own method answers, as `Activation::send_own` runs it.
     pub fn package_answer(
         &self,
         slot: &'static str,

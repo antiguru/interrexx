@@ -253,7 +253,7 @@ impl ClassGraph {
         self.epoch = Epoch::fresh();
     }
 
-    /// See [`ClassGraph::ancestry`]: the stamp an answer derived from the
+    /// See `ClassGraph::ancestry`: the stamp an answer derived from the
     /// superclass lists is valid against.
     pub fn ancestry_stamp(&self) -> u64 {
         self.ancestry
@@ -712,7 +712,7 @@ impl ClassGraph {
     }
 
     /// The abstract marking past its metaclass refusal, which the caller raises
-    /// -- see [`ClassDef::is_abstract`].
+    /// -- see `ClassDef::is_abstract`.
     pub fn make_abstract(&mut self, class: ObjRef) {
         self.classes.get_mut(&class).unwrap().is_abstract = true;
     }
@@ -1508,7 +1508,7 @@ impl ClassGraph {
     }
 
     /// Merge `metaclass`'s *current* instance behaviour into `root`'s
-    /// class-behaviour, bypassing [`ClassGraph::cascade_build`]'s
+    /// class-behaviour, bypassing `ClassGraph::cascade_build`'s
     /// `Side::Class` "is this the root" guard entirely.
     pub fn bootstrap_root_class_behaviour(&mut self, root: ObjRef, metaclass: ObjRef) {
         self.bump_epoch();
@@ -1594,12 +1594,12 @@ impl ClassGraph {
         }
     }
 
-    /// Whether the class is Rexx-defined; see [`ClassDef::rexx_defined`].
+    /// Whether the class is Rexx-defined; see `ClassDef::rexx_defined`.
     pub fn is_rexx_defined(&self, class: ObjRef) -> bool {
         self.classes[&class].rexx_defined
     }
 
-    /// Marks `class`'s instance behaviour as primitive (see [`Behaviour::primitive`]). There is no
+    /// Marks `class`'s instance behaviour as primitive (see `Behaviour::primitive`). There is no
     /// clearing counterpart, and a class keeps its instance behaviour's handle for its lifetime.
     pub fn set_primitive_instances(&mut self, class: ObjRef) {
         let handle = self.classes[&class].instance_behaviour;

@@ -1035,7 +1035,7 @@ fn thread_methods() -> Vec<Method> {
 ///
 /// The instance and the redirector context have one method per function member
 /// of their table. The thread context adds to those the methods of
-/// [`thread_methods`]. The method, call and exit contexts have one per function
+/// `thread_methods`. The method, call and exit contexts have one per function
 /// member of their own table and forward every thread context method but
 /// [`THREAD_ONLY`] to their `threadContext`.
 ///

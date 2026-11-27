@@ -177,7 +177,7 @@ impl Scaled {
 
     /// `bytes` as a `Scaled` where they are a plain nonzero decimal -- an
     /// optional `-`, digits and at most one point, nothing else, no more
-    /// than [`WIDEST`] digits -- which is [`Number::parse_bytes`]'s answer
+    /// than `WIDEST` digits -- which is [`Number::parse_bytes`]'s answer
     /// read without a [`Number`] built; `None` for every other spelling,
     /// numeric or not.
     pub fn parse_plain(bytes: &[u8]) -> Option<Scaled> {
@@ -258,7 +258,7 @@ impl Scaled {
     }
 
     /// [`Number::add`] at `digits`, where no operand is shortened before
-    /// the addition and the aligned operands fit [`WIDEST`] digits; `None`
+    /// the addition and the aligned operands fit `WIDEST` digits; `None`
     /// otherwise. Within those bounds this is the addition's general path
     /// on machine integers: its fast path for an operand too far below the
     /// other to reach the result, its alignment adjustment, and its
@@ -423,7 +423,7 @@ impl Scaled {
     }
 
     /// [`Number::mul`] at `digits`, where no operand is shortened and the
-    /// rounded product fits [`WIDEST`] digits; `None` otherwise. The product
+    /// rounded product fits `WIDEST` digits; `None` otherwise. The product
     /// keeps every digit DIGITS allows, trailing zeros included, and the
     /// rest round half up on the first one dropped, as the long
     /// multiplication's rounding does.

@@ -271,7 +271,7 @@ impl Number {
         Ok(out)
     }
 
-    /// The exponent a [`format_with`] call with these same arguments would
+    /// The exponent a [`format_with`](Self::format_with) call with these same arguments would
     /// display, or `None` when the result is plain and no exponent field is
     /// written at all.
     pub fn format_exponent(

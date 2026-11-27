@@ -34,11 +34,12 @@ use std::sync::{Arc, Mutex};
 /// array; an array is the call, and answers null.
 pub(crate) type NativeMethod = Stub<RexxMethodContext_>;
 
-/// The C signature of the stub the `RexxRoutineN` macros generate, answering as [`NativeMethod`] does.
+/// The C signature of the stub the `RexxRoutineN` macros generate, answering as `NativeMethod`
+/// does.
 pub type NativeRoutine = Stub<RexxCallContext_>;
 
 /// A generated stub over the context struct `C`. It may unwind: a `Throw`
-/// member leaves the extension that way, and [`call_stub`] catches it.
+/// member leaves the extension that way, and `call_stub` catches it.
 pub type Stub<C> = unsafe extern "C-unwind" fn(*mut C, *mut ValueDescriptor) -> *mut u16;
 
 /// `ROUTINE_TYPED_STYLE`.
@@ -2427,7 +2428,7 @@ impl CommandHandler {
         })
     }
 
-    /// [`CommandHandler::new`] for an embedding's `DIRECT_ENVIRONMENTS` and
+    /// `CommandHandler::new` for an embedding's `DIRECT_ENVIRONMENTS` and
     /// `REDIRECTING_ENVIRONMENTS` options, sendable to the interpreter's
     /// thread.
     ///
@@ -3130,7 +3131,7 @@ fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>
 /// [`Refused`] where the entry asks for a newer interpreter than this one.
 ///
 /// # Safety
-/// A non-null `entry` is a `RexxPackageEntry` as [`library_of`] asks, in
+/// A non-null `entry` is a `RexxPackageEntry` as `library_of` asks, in
 /// memory that stays mapped for as long as the process runs.
 pub unsafe fn registered(
     entry: *const RexxPackageEntry,

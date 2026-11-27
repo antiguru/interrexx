@@ -4,7 +4,7 @@ use siphasher::sip::SipHasher13;
 
 /// The key of the keyed hash an interpreter hashes strings with, a string's
 /// hash code (`r[class.string.hashcode]`), and of a stem's map from tails to
-/// ordinals, which hashes with a function of its own ([`HashSeed::four_keys`]).
+/// ordinals, which hashes with a function of its own (`HashSeed::four_keys`).
 /// Keys that collide for one seed do not in general collide for
 /// another, so a program cannot choose a set of strings that all land on one
 /// probe path without knowing the seed.

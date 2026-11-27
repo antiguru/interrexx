@@ -91,7 +91,7 @@ impl Bytes {
         })
     }
 
-    /// [`from_slice`], for a caller that already owns the bytes.
+    /// [`from_slice`](Self::from_slice), for a caller that already owns the bytes.
     pub fn from_vec(source: Vec<u8>) -> Bytes {
         if source.len() <= INLINE_BYTES {
             Bytes::from_slice(&source)

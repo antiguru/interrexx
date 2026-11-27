@@ -56,7 +56,7 @@ const REMOVED_BY_IMAGE_SAVE: &[&str] = &["DefineClassMethod", "InheritInstanceMe
 
 /// The names [`remove_setup_methods`] deletes, in the spelling a dictionary is keyed
 /// by. They are written mixed-case and every lookup upcases, so a caller registering an
-/// implementation for one needs this spelling and not [`REMOVED_BY_IMAGE_SAVE`]'s.
+/// implementation for one needs this spelling and not `REMOVED_BY_IMAGE_SAVE`'s.
 pub fn setup_method_names() -> Vec<String> {
     REMOVED_BY_IMAGE_SAVE
         .iter()
@@ -229,7 +229,7 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
     registry
 }
 
-/// The setup-method removal: delete [`REMOVED_BY_IMAGE_SAVE`]'s names from `.Class`'s own instance
+/// The setup-method removal: delete `REMOVED_BY_IMAGE_SAVE`'s names from `.Class`'s own instance
 /// dictionary, and from every behaviour that merged them.
 ///
 /// Every class behaviour from `.Object` down merged `.Class`'s instance behaviour, and so
