@@ -107,7 +107,8 @@ the first attempt to load it raises `SYNTAX 98.982`, whichever of the ways of
 directive of the main program that is before the first clause. After that
 refusal the library counts as loaded and provides nothing: a later
 `::REQUIRES` directive raises nothing, `loadLibrary` answers `1`, RXFUNCADD
-answers `1`, and none of its routines can be called.
+answers `1`, and none of its routines can be called. A later `EXTERNAL`
+declaration that tries to bind one of its routines raises `SYNTAX 90.999`.
 Whether the refused library's unloader runs when the instance ends is
 unspecified, and the loader never runs.
 
@@ -124,6 +125,7 @@ call try '::routine r external "LIBRARY specnewer FxNewer"'
 call try '::requires "specnewer" LIBRARY'
 say rxfuncadd('FxNewer', 'specnewer') rxfuncquery('FxNewer')
 say .context~package~loadLibrary('specnewer')
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
 exit
 try:
   signal on syntax name e
@@ -139,18 +141,51 @@ e: say arg(1) '=>' condition('o')~code
 ::requires "specnewer" LIBRARY => ok
 1 1
 1
+loader ran 0
 ```
 
 ```rexx
-signal on syntax name b
+signal on syntax name refused
+p = .package~new('n1zqrequires', .array~of('::requires "specnewer" LIBRARY'))
+say 'loaded'
+exit
+refused:
+  say condition('o')~code
+  say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+```
+
+```output
+98.982
+loader ran 0
+```
+
+```rexx
+call load
 say .context~package~loadLibrary('specnewer')
-b: say condition('o')~code
 say rxfuncadd('FxNewer', 'specnewer')
+call bind
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+exit
+load:
+  signal on syntax name refused
+  say .context~package~loadLibrary('specnewer')
+  return
+bind:
+  signal on syntax name refused
+  p = .package~new('n1zqrefused', .array~of('::routine r external "LIBRARY specnewer FxNewer"'))
+  say 'bound'
+  return
+refused:
+  say condition('o')~code
+  return
 ```
 
 ```output
 98.982
 1
+1
+90.999
+loader ran 0
 ```
 
 ```rexx

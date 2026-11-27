@@ -105,7 +105,8 @@ capitals; `FxClassicFail` refuses every call; and `FxClassicNone` answers no
 result.
 
 `specnewer` has a package entry that asks for an interpreter newer than any
-there is, with the one routine `FxNewer`.
+there is, with the one routine `FxNewer`. Its loader would set
+`SPECNEWER.LOADED` in `.local`.
 
 `specraising` has a package entry whose loader raises `SYNTAX 93.900` with the
 message `raising loader`, and whose one routine is the classic function

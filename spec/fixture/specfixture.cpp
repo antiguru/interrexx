@@ -6,7 +6,7 @@
 //
 //   SPEC_FIXTURE_PACKAGE  libspecfixture.so: a package entry with routines, methods and a loader.
 //   SPEC_FIXTURE_CLASSIC  libspecclassic.so: classic function handlers only, no package entry.
-//   SPEC_FIXTURE_NEWER    libspecnewer.so:   a package entry that asks for a newer interpreter.
+//   SPEC_FIXTURE_NEWER    libspecnewer.so:   asks for a newer interpreter. Its loader marks .local.
 //   SPEC_FIXTURE_RAISING  libspecraising.so: a package entry whose loader raises.
 //
 // The entries are described, by their Rexx-side behaviour, in `spec/src/native/index.md`. No
@@ -590,6 +590,13 @@ OOREXX_GET_PACKAGE(fixture);
 
 #elif defined(SPEC_FIXTURE_NEWER)
 
+// Records whether the loader of a version-refused package was called.
+// Serves r[native.loading.version].
+static void RexxEntry newerLoader(RexxThreadContext *context)
+{
+    context->DirectoryPut(context->GetLocalEnvironment(), context->True(), "SPECNEWER.LOADED");
+}
+
 // Serves r[native.loading.version].
 RexxRoutine0(CSTRING, FxNewer)
 {
@@ -602,14 +609,15 @@ static RexxRoutineEntry newerRoutines[] =
     REXX_LAST_ROUTINE()
 };
 
-// Asks for an interpreter version above any there is: r[native.loading.version].
+// Requires a newer interpreter. If its loader runs, it sets SPECNEWER.LOADED in .local.
+// Serves r[native.loading.version].
 static RexxPackageEntry newer_package_entry =
 {
     STANDARD_PACKAGE_HEADER
     0x7f000000,
     "specnewer",
     "1.0.0",
-    NULL,
+    newerLoader,
     NULL,
     newerRoutines,
     NULL
