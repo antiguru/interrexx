@@ -751,3 +751,127 @@ pub(crate) fn read_console_screen(row: i16, column: i16, requested: u32) -> Vec<
     }
     String::from_utf16_lossy(&wide).into_bytes()
 }
+
+pub(crate) fn printers() -> std::io::Result<Vec<[String; 3]>> {
+    use std::{mem::MaybeUninit, ptr::null_mut};
+    use windows_sys::Win32::{
+        Foundation::ERROR_INSUFFICIENT_BUFFER,
+        Graphics::Printing::{
+            EnumPrintersW, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_2W,
+        },
+    };
+
+    let flags = PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS;
+    let stride = std::mem::size_of::<PRINTER_INFO_2W>();
+    let mut buffer: Vec<MaybeUninit<PRINTER_INFO_2W>> = Vec::new();
+    loop {
+        let length = (buffer.len() * stride) as u32;
+        let mut needed = 0;
+        let mut count = 0;
+        let data = if length == 0 {
+            null_mut()
+        } else {
+            buffer.as_mut_ptr().cast()
+        };
+        // SAFETY: the buffer is suitably aligned and has length bytes. Both
+        // output sizes refer to separate live u32s.
+        let ok =
+            unsafe { EnumPrintersW(flags, null_mut(), 2, data, length, &mut needed, &mut count) };
+        if ok == 0 {
+            let error = std::io::Error::last_os_error();
+            if error.raw_os_error() != Some(ERROR_INSUFFICIENT_BUFFER as i32) || needed <= length {
+                return Err(error);
+            }
+            let units = (needed as usize).div_ceil(stride);
+            if units > u32::MAX as usize / stride {
+                return Err(std::io::ErrorKind::OutOfMemory.into());
+            }
+            buffer.resize_with(units, MaybeUninit::uninit);
+            continue;
+        }
+        let buffer_limit = data.addr() + length as usize;
+        let entries = buffer
+            .iter()
+            .take(count as usize)
+            .map(|entry| {
+                // SAFETY: a successful level-2 result initialized its count
+                // of entries at the beginning of the buffer.
+                let entry = unsafe { entry.assume_init_ref() };
+                [entry.pPrinterName, entry.pDriverName, entry.pPortName].map(|text| {
+                    if text.addr() < data.addr()
+                        || text.addr() >= buffer_limit
+                        || !text.is_aligned()
+                    {
+                        return String::new();
+                    }
+                    let units = (buffer_limit - text.addr()) / 2;
+                    for offset in 0..units {
+                        // SAFETY: the spooler initializes the returned NUL-terminated
+                        // string, and each read stays inside the result buffer.
+                        if unsafe { *text.add(offset) } == 0 {
+                            // SAFETY: all offset preceding code units were read above.
+                            let name = unsafe { std::slice::from_raw_parts(text, offset) };
+                            return String::from_utf16_lossy(name);
+                        }
+                    }
+                    String::new()
+                })
+            })
+            .collect();
+        return Ok(entries);
+    }
+}
+
+/// Windows-facing RexxUtil arguments use UTF-8, with the active ANSI code
+/// page for legacy bytes that are not UTF-8.
+pub(crate) fn legacy_windows_text(bytes: &[u8]) -> Option<String> {
+    use windows_sys::Win32::Globalization::CP_ACP;
+    match std::str::from_utf8(bytes) {
+        Ok(text) => Some(text.to_owned()),
+        Err(_) => String::from_utf16(&decode_code_page(CP_ACP, 0, bytes).ok()?).ok(),
+    }
+}
+
+pub(crate) fn printer_name_eq(left: &str, right: &str) -> bool {
+    use windows_sys::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
+    let left: Vec<_> = left.encode_utf16().chain([0]).collect();
+    let right: Vec<_> = right.encode_utf16().chain([0]).collect();
+    // SAFETY: both pointers address live NUL-terminated UTF-16 strings.
+    unsafe { CompareStringOrdinal(left.as_ptr(), -1, right.as_ptr(), -1, 1) == CSTR_EQUAL }
+}
+
+pub(crate) fn default_printer() -> Option<String> {
+    use windows_sys::Win32::Graphics::Printing::GetDefaultPrinterW;
+
+    let mut name = Vec::<u16>::new();
+    loop {
+        let mut needed = name.len() as u32;
+        let output = if name.is_empty() {
+            std::ptr::null_mut()
+        } else {
+            name.as_mut_ptr()
+        };
+        // SAFETY: a null buffer queries the size; otherwise output covers
+        // needed writable UTF-16 units.
+        if unsafe { GetDefaultPrinterW(output, &mut needed) } != 0 {
+            let end = name.iter().position(|&unit| unit == 0)?;
+            return Some(String::from_utf16_lossy(&name[..end]));
+        }
+        if needed as usize <= name.len() {
+            return None;
+        }
+        name.resize(needed as usize, 0);
+    }
+}
+
+pub(crate) fn set_default_printer(name: &str) -> u32 {
+    use windows_sys::Win32::{Foundation::GetLastError, Graphics::Printing::SetDefaultPrinterW};
+    let name: Vec<_> = name.encode_utf16().chain([0]).collect();
+    // SAFETY: name is a live NUL-terminated string.
+    unsafe {
+        if SetDefaultPrinterW(name.as_ptr()) == 0 {
+            return GetLastError();
+        }
+    }
+    0
+}

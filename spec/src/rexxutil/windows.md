@@ -188,3 +188,17 @@ the screen buffer. A read outside the buffer or with a nonpositive length
 answers the null string. The length counts cells: a full-width
 character fills two cells and is read once. The result is UTF-8, so its
 byte length can differ from the number of cells read.
+
+## Windows printers
+
+r[util.windows.printers]
+`SysWinGetPrinters(stemarray)` fills a stem or array with the installed
+printer descriptions. Each description includes the printer, driver and
+port names, separated by commas. The call answers zero on success and
+one on failure. `SysWinGetDefaultPrinter()` answers the description of
+the default printer, or the null string when none is available. A known
+default without driver or port information is returned as its name
+followed by two commas.
+`SysWinSetDefaultPrinter(name)` accepts a printer name or a description. Text is UTF-8, with input
+bytes that are not UTF-8 read using the active Windows ANSI code page.
+It answers zero on success or a Windows system error code on failure.

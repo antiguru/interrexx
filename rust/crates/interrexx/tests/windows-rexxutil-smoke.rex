@@ -227,3 +227,12 @@ if SysFileDelete(iniFile) <> 0 then exit 129
 if words(SysCurPos()) <> 2 then exit 130
 if SysTextScreenRead(0, 0, 0) \== '' then exit 131
 if SysTextScreenRead(-1, 0, 1) \== '' then exit 132
+
+/* spec: util.windows.printers */
+printerRc = SysWinGetPrinters('printers.')
+if printerRc <> 0 & printerRc <> 1 then exit 140
+if printerRc = 1 & printers.0 <> 0 then exit 141
+do i = 1 to printers.0
+  if countstr(',', printers.i) < 2 then exit 142
+end
+if SysWinSetDefaultPrinter('') = 0 then exit 144

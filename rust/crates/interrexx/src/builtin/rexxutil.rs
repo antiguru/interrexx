@@ -19,6 +19,8 @@ pub(crate) mod windows_encoding;
 pub(crate) mod windows_files;
 #[cfg(windows)]
 pub(crate) mod windows_ini;
+#[cfg(windows)]
+pub(crate) mod windows_printers;
 
 use interrexx_cast::TryCastFrom;
 use interrexx_core::{Body, Decoded, ObjRef};
