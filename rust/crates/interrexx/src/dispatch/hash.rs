@@ -192,6 +192,19 @@ pub(crate) fn owns(interp: &mut Interp, receiver: ObjRef) -> bool {
     kind_of(interp, receiver).has(HashKind::OWNED)
 }
 
+/// [`owns`], with the receiver's [`HashKind`] where it does.
+#[inline]
+fn owned_kind(interp: &mut Interp, receiver: ObjRef) -> Option<HashKind> {
+    if matches!(
+        interp.heap.get(receiver).map(|object| &object.body),
+        Some(Body::Native(_))
+    ) {
+        return None;
+    }
+    let kind = kind_of(interp, receiver);
+    kind.has(HashKind::OWNED).then_some(kind)
+}
+
 /// Whether `receiver`'s class is or inherits from one of `names`.
 fn class_is_one_of(interp: &mut Interp, receiver: ObjRef, names: &[&str]) -> bool {
     let Some(class) = interp.class_of_value(receiver) else {
@@ -339,11 +352,12 @@ fn hash_of(interp: &mut Interp, keys: Keys, index: ObjRef) -> Result<u64, Failur
         let text = interp.to_text(index).into_owned();
         return Ok(super::string_hash(interp.hash_seed, &text));
     }
-    // Hashing branches on whether the behaviour is a primitive one. **"Has a
-    // string value" and "is a base-class object" are different questions**: a
-    // `String` subclass has a string value and is not a base class, so its
-    // `HASHCODE` override is reached where a plain string's -- which cannot
-    // exist, since `.String~define` is 98.985 -- would not be.
+    // `r[class.table.indexes.sends]` sends `HASHCODE`; for an index of a base
+    // class that runs `Object`'s primitive, which answers this hash value.
+    // **"Has a string value" and "is of a base class" are different
+    // questions**: an instance of a `String` subclass and an enhanced string
+    // have a string value and are not of a base class, so their own `HASHCODE`
+    // is sent.
     if keys == Keys::Identity || interp.is_base_class(index) {
         return Ok(get_hash_value(interp, index));
     }
@@ -1305,20 +1319,18 @@ fn hash_at(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
-    name: &[u8],
+    name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // **One body, two stores.** `IdentityTable`'s `At`, `Put` and `[]` rows are
     // donated to `StringTable` and that whole set on to `Directory`, so
     // `Table`, `IdentityTable`, `StringTable` and `Directory` share one method
     // identity. A table this crate built on `NativeObject`'s map reads that
     // map; everything else reads the store.
-    if !matches!(
-        interp.heap.get(receiver).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && owns(interp, receiver)
-    {
+    if let Some(kind) = owned_kind(interp, receiver) {
         // An index not of a base class may hash and compare through Rexx
-        // methods of its own.
+        // methods of its own. Any other index may still be compared with a
+        // held index whose methods are Rexx code, which a string's `==` sends
+        // `REQUEST` to.
         if args
             .first()
             .copied()
@@ -1327,7 +1339,13 @@ fn hash_at(
         {
             return leveled_store_at(interp, receiver, args, name);
         }
-        return store_at(interp, receiver, args);
+        // A string-keyed store compares string values, which sends nothing.
+        if kind.has(HashKind::STRING_KEYED) {
+            return store_at(interp, receiver, args);
+        }
+        return interp.deferred_level(receiver, name, args, |interp| {
+            store_at(interp, receiver, args)
+        });
     }
     let index = hash_index(interp, args, 1)?;
     Ok(Some(interp.hash_entry_read(receiver, &index)))
@@ -1374,16 +1392,13 @@ fn hash_put(
     interp: &mut Interp,
     receiver: ObjRef,
     args: &[Option<ObjRef>],
-    name: &[u8],
+    name: &'static [u8],
 ) -> Result<Option<ObjRef>, Failure> {
     // [`native_hash_at`]'s split, for the same reason.
-    if !matches!(
-        interp.heap.get(receiver).map(|object| &object.body),
-        Some(Body::Native(_))
-    ) && owns(interp, receiver)
-    {
+    if let Some(kind) = owned_kind(interp, receiver) {
         // An index not of a base class may hash and compare through Rexx
-        // methods of its own, and so may a `Set`'s or `Bag`'s item.
+        // methods of its own, and so may a `Set`'s or `Bag`'s item. Any other
+        // is still compared with the held indexes, as in `hash_at`.
         let item = args.first().copied().flatten();
         let plain = match args.get(1).copied().flatten() {
             None => item.is_none_or(|item| interp.is_base_class(item)),
@@ -1394,7 +1409,13 @@ fn hash_put(
             }
         };
         if plain {
-            return store_put(interp, receiver, args);
+            // As in `hash_at`.
+            if kind.has(HashKind::STRING_KEYED) {
+                return store_put(interp, receiver, args);
+            }
+            return interp.deferred_level(receiver, name, args, |interp| {
+                store_put(interp, receiver, args)
+            });
         }
         return interp.primitive_level(receiver, name, args, |interp| {
             store_put(interp, receiver, args)
