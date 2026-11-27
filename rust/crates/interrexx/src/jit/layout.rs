@@ -107,6 +107,8 @@ pub(crate) struct LoopRecord {
     /// loop's own state has not been given.
     pub(crate) value: i64,
     pub(crate) dirty: u64,
+    /// Remaining passes of a controlled loop with `FOR`.
+    pub(crate) for_remaining: u64,
 }
 
 /// How many loops a compiled pass holds at most: its own and the inner ones.
@@ -152,6 +154,7 @@ pub(crate) const LOOP_STEP: usize = offset_of!(LoopRecord, step);
 pub(crate) const LOOP_TO: usize = offset_of!(LoopRecord, to);
 pub(crate) const LOOP_VALUE: usize = offset_of!(LoopRecord, value);
 pub(crate) const LOOP_DIRTY: usize = offset_of!(LoopRecord, dirty);
+pub(crate) const LOOP_FOR_REMAINING: usize = offset_of!(LoopRecord, for_remaining);
 pub(crate) const QUICK_VALUES: i32 = at(offset_of!(Native, quick_values));
 pub(crate) const INTERMEDIATES: i32 = at(offset_of!(Native, intermediates));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));

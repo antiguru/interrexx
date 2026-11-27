@@ -329,6 +329,8 @@ pub(crate) struct Pass {
     pub(crate) loops: Vec<u32>,
     /// What each of those loops' boundary tests, in the same order.
     pub(crate) tests: Vec<LoopTest>,
+    /// Bit `k` names a controlled loop with a `FOR` budget in record `k`.
+    pub(crate) limited: u8,
 }
 
 /// What a helper is handed: the block, the host it belongs to, and a panic
@@ -961,6 +963,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             0,
             None,
             pass.tests.first().unwrap_or(&LoopTest::None),
+            pass.limited & 1 != 0,
         );
         let mut clause_pc = 0;
         // Whether the block being emitted into can still fall through.
@@ -1102,6 +1105,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                         usize::from(record),
                         Some((pc, first, dispatch)),
                         test,
+                        pass.limited & (1 << record) != 0,
                     );
                 }
                 Step::Dropped => {}
@@ -1246,7 +1250,13 @@ fn open(e: &mut Emit<'_, '_>, pc: u32, tabled: bool, register_top: u16, register
 /// The pass boundary: the loop's quick pass by generated code when the block
 /// offers one, the countdown has more than this clause left in it, and the
 /// pass carries on; otherwise the host's, which also ends the loop.
-fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>, test: &LoopTest) {
+fn pass_step(
+    e: &mut Emit<'_, '_>,
+    k: usize,
+    inner: Option<(u32, Block, Block)>,
+    test: &LoopTest,
+    limited: bool,
+) {
     // Every loop's passes count: the host counts its ops on each pass of an
     // inner loop as on each of the compiled loop's, and weighs them per pass.
     let passes = e.load_native(types::I64, layout::PASSES);
@@ -1383,6 +1393,17 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
     let at_or_below = e.b.ins().icmp(IntCC::SignedLessThanOrEqual, sum, to);
     let carries_on = e.b.ins().select(descending, at_or_above, at_or_below);
     ok = e.b.ins().band(ok, carries_on);
+    let for_remaining = limited.then(|| {
+        let count = e.load_native(
+            types::I64,
+            layout::loop_field(k, layout::LOOP_FOR_REMAINING),
+        );
+        // The host steps and rebinds the control variable even when FOR has
+        // counted out (r[instr.do.control.step]). Leave the last step to it.
+        let more = e.b.ins().icmp_imm_u(IntCC::NotEqual, count, 0);
+        ok = e.b.ins().band(ok, more);
+        count
+    });
     e.b.ins().brif(ok, take, &[], slow, &[]);
 
     e.b.switch_to_block(take);
@@ -1405,6 +1426,10 @@ fn pass_step(e: &mut Emit<'_, '_>, k: usize, inner: Option<(u32, Block, Block)>,
             .store(Emit::flags(), value, address, layout::SLOT_VALUE_AT);
         e.b.ins().jump(slow, &[]);
         e.b.switch_to_block(carry);
+    }
+    if let Some(count) = for_remaining {
+        let count = e.b.ins().iadd_imm_s(count, -1);
+        e.store_native(count, layout::loop_field(k, layout::LOOP_FOR_REMAINING));
     }
     e.store_native(sum, layout::loop_field(k, layout::LOOP_VALUE));
     e.store_native(one, layout::loop_field(k, layout::LOOP_DIRTY));
