@@ -2,7 +2,7 @@
 element: "RexxInfo"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > RexxInfo Class; Builtin Classes > Utility Classes > RexxInfo Class > architecture; Builtin Classes > Utility Classes > RexxInfo Class > caseSensitiveFiles; Builtin Classes > Utility Classes > RexxInfo Class > date; Builtin Classes > Utility Classes > RexxInfo Class > debug; Builtin Classes > Utility Classes > RexxInfo Class > digits; Builtin Classes > Utility Classes > RexxInfo Class > directorySeparator; Builtin Classes > Utility Classes > RexxInfo Class > endofline; Builtin Classes > Utility Classes > RexxInfo Class > executable; Builtin Classes > Utility Classes > RexxInfo Class > form; Builtin Classes > Utility Classes > RexxInfo Class > fuzz; Builtin Classes > Utility Classes > RexxInfo Class > internalDigits; Builtin Classes > Utility Classes > RexxInfo Class > internalMaxNumber; Builtin Classes > Utility Classes > RexxInfo Class > internalMinNumber; Builtin Classes > Utility Classes > RexxInfo Class > languageLevel; Builtin Classes > Utility Classes > RexxInfo Class > libraryPath; Builtin Classes > Utility Classes > RexxInfo Class > majorVersion; Builtin Classes > Utility Classes > RexxInfo Class > maxArraySize; Builtin Classes > Utility Classes > RexxInfo Class > maxExponent; Builtin Classes > Utility Classes > RexxInfo Class > maxPathLength; Builtin Classes > Utility Classes > RexxInfo Class > minExponent; Builtin Classes > Utility Classes > RexxInfo Class > modification; Builtin Classes > Utility Classes > RexxInfo Class > name; Builtin Classes > Utility Classes > RexxInfo Class > package; Builtin Classes > Utility Classes > RexxInfo Class > pathSeparator; Builtin Classes > Utility Classes > RexxInfo Class > platform; Builtin Classes > Utility Classes > RexxInfo Class > release; Builtin Classes > Utility Classes > RexxInfo Class > revision; Builtin Classes > Utility Classes > RexxInfo Class > version"
-deviations: [63]
+deviations: [63, 179]
 ---
 
 # RexxInfo
@@ -165,8 +165,10 @@ String 1
 r[class.rexxinfo.version]
 `name`, `version`, `majorVersion`, `release`, `modification`,
 `languageLevel`, `date`, `platform` and `revision` describe the interpreter.
-Their values are not specified; the book gives their forms and what each
-says of the others. `version` is `majorVersion`, `release` and
+`languageLevel` is the level [Deviation
+179](r:class.rexxinfo.version.deviation.179) gives. The values of the others
+are not specified; the book gives their forms and what each says of the
+others. `version` is `majorVersion`, `release` and
 `modification` as three whole numbers joined by points. `name` is the string
 that [PARSE VERSION](r:instr.parse.version) reads, so that `languageLevel` is
 its second word (the [language level](../introduction.md#language-level)) and
@@ -277,6 +279,19 @@ bad: say arg(1) '=>' condition('o')~code
 .rexxinfo~copy:.object => 93.970
 .rexxinfo~copy => 93.970
 .rexxinfo~send(.array~of("copy", .object)) => 93.970
+```
+
+r[class.rexxinfo.version.deviation.179]
+`languageLevel` is `6.06`, the level interrexx implements, and so is the
+second word of `name` ([Deviation 179](../deviations.md)). ooRexx, at level
+6.07, answers `6.07` for both.
+
+```rexx
+say .rexxinfo~languageLevel .rexxinfo~name~word(2)
+```
+
+```output
+6.06 6.06
 ```
 
 > **Note.** [Deviation 96](../deviations.md) changes the banners of interrexx,
