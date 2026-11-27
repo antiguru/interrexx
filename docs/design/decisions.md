@@ -16,6 +16,10 @@ page records why they are the way they are.
 * **A new Deviation needs the owner's ruling before it is written** (2026-10-19). That ooRexx is
   wrong decides what interrexx does; it does not license the difference. Implement the derived
   behaviour, then ask, citing the ruling in the entry.
+* **Deep expressions are fixed by their representation, not by limits or worklists** (2026-11-23,
+  #609, #69). An expression has no size limit, a fixed width of the compiled form running out
+  raises Error 5, there is one evaluator, and a recursive walker is not rewritten with an explicit
+  stack. `docs/design/expressions.md` gives the rulings and the reasons.
 * **A rule pins an `ADDITIONAL` item only where the program needs it** (2026-11-14, #675). Like a
   number parse error that carries the string that failed to parse, an item is stated only where it
   is needed to understand the error and the program cannot get it otherwise; the rest is
@@ -202,6 +206,10 @@ page records why they are the way they are.
 * **Pull requests are drafts, described as merged.** The body describes what the change contains,
   not how it came about, and carries no session link. Pull requests that touch the same files
   form one linear stack, so each can merge without conflicting with the next.
+* **Work not done in a pull request becomes an issue** (2026-11-24). A finding, follow-up or
+  deferred case that the pull request does not fix is filed as an issue, or added to an existing
+  one, and the pull request names it. Odd behaviour is checked against the specification first:
+  documented behaviour is not an issue.
 * **A toolchain migration also builds on Rust 1.98** (2026-11-12). CI follows stable, and people
   build with older toolchains.
 * `unsafe` and macros beyond small mechanical code need the owner's approval
