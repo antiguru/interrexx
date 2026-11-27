@@ -3,7 +3,7 @@
 //! scope and eighteen are reachable. The two that are not have their own test
 //! recording what the oracle answers instead.
 
-use crate::ast::{DirectiveKind, EndStyle, InstructionKind};
+use crate::ast::{DirectiveKind, EndStyle, EndTarget, InstructionKind};
 use crate::token::ParseError;
 use crate::{Program, ProgramSource, SourceKind, parse_program};
 
@@ -961,5 +961,109 @@ fn catch_can_still_name_a_variable_or_label() {
     assert_eq!(
         names(&ok("catch = 3; catch: say catch")),
         ["<other>", "<other>", "SAY"]
+    );
+}
+
+#[test]
+fn a_block_records_its_catch_and_finally_clauses_and_each_names_its_block() {
+    use crate::ast::Handlers;
+
+    let program = ok("do
+  nop
+catch syntax
+  nop
+catch error
+finally
+  say 'f'
+end
+select
+  when 1 then nop
+  otherwise nop
+finally
+end
+loop 2
+finally nop
+end
+do
+end
+");
+    let instructions = &program.main.instructions;
+    let handlers = |block: usize| match &instructions[block].kind {
+        InstructionKind::Do(body) | InstructionKind::Loop(body) => body.handlers.as_deref(),
+        InstructionKind::Select { handlers, .. } => handlers.as_deref(),
+        other => panic!("{other:?} is not a block"),
+    };
+    let finally_block = |index: usize| match &instructions[index].kind {
+        InstructionKind::Finally { block } => *block,
+        other => panic!("{other:?} is not a FINALLY"),
+    };
+    assert_eq!(
+        handlers(0),
+        Some(&Handlers {
+            catches: vec![2, 4],
+            finally: Some(5),
+        })
+    );
+    assert_eq!(finally_block(5), Some(0));
+    assert!(matches!(
+        instructions[7].kind,
+        InstructionKind::End {
+            closes: Some(EndTarget { block: 0, .. }),
+            ..
+        }
+    ));
+    let select = 8;
+    assert_eq!(
+        handlers(select),
+        Some(&Handlers {
+            catches: vec![],
+            finally: Some(14),
+        })
+    );
+    assert_eq!(finally_block(14), Some(select));
+    assert!(matches!(
+        instructions[15].kind,
+        InstructionKind::End {
+            closes: Some(EndTarget { block: 8, .. }),
+            ..
+        }
+    ));
+    assert_eq!(names(&program)[16..], ["LOOP", "FINALLY", "NOP", "END", "DO", "END"]);
+    assert_eq!(finally_block(17), Some(16));
+    assert_eq!(handlers(16).and_then(|h| h.finally), Some(17));
+    assert_eq!(handlers(20), None);
+
+    let image = crate::program_image(&program);
+    let restored = crate::program_from_image(&image, program.source.parts().0)
+        .expect("parsed image round-trips");
+    assert_eq!(restored.main, program.main);
+}
+
+/// The line each FINALLY error names, which `parse-errors.tsv` does not
+/// record: 10.15 the first FINALLY, 99.951 the innermost FINALLY the
+/// instruction would leave, 99.952 the last FORWARD before the FINALLY.
+#[test]
+fn finally_errors_name_the_clause_they_are_about() {
+    let inserts = |text: &str| -> Vec<String> {
+        let e = parse(text).expect_err(text);
+        e.inserts()
+            .iter()
+            .map(|insert| String::from_utf8_lossy(insert).into_owned())
+            .collect()
+    };
+    assert_eq!(
+        inserts("do\nnop\nfinally\nnop\nfinally\nend"),
+        ["3"],
+        "10.15"
+    );
+    assert_eq!(
+        inserts("do\nfinally\nloop 2\nnop\nfinally\nif 1 then nop\nelse leave\nend\nend"),
+        ["LEAVE", "5"],
+        "99.951"
+    );
+    assert_eq!(
+        inserts("do\nforward to (.nil)\ndo\nforward\nend\nforward continue\nfinally\nend"),
+        ["4"],
+        "99.952"
     );
 }

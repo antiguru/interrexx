@@ -1727,6 +1727,7 @@ fn compile_settled(
             InstructionKind::Command { .. }
             | InstructionKind::End { .. }
             | InstructionKind::Catch(_)
+            | InstructionKind::Finally { .. }
             | InstructionKind::Drop { .. }
             | InstructionKind::Call(..)
             | InstructionKind::Procedure { .. }

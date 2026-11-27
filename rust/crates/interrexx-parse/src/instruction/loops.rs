@@ -86,6 +86,7 @@ impl<'a> Inst<'a> {
                 kind: LoopKind::Simple,
                 conditional: None,
                 end: None,
+                handlers: None,
             });
         }
 
@@ -154,6 +155,7 @@ impl<'a> Inst<'a> {
             kind,
             conditional,
             end: None,
+            handlers: None,
         })
     }
 
@@ -171,6 +173,7 @@ impl<'a> Inst<'a> {
             kind: LoopKind::Count(count),
             conditional,
             end: None,
+            handlers: None,
         })
     }
 
@@ -234,6 +237,7 @@ impl<'a> Inst<'a> {
             kind: LoopKind::Controlled(Box::new(control)),
             conditional,
             end: None,
+            handlers: None,
         })
     }
 
@@ -263,6 +267,7 @@ impl<'a> Inst<'a> {
             },
             conditional,
             end: None,
+            handlers: None,
         })
     }
 
@@ -327,6 +332,7 @@ impl<'a> Inst<'a> {
             },
             conditional,
             end: None,
+            handlers: None,
         })
     }
 

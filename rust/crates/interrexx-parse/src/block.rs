@@ -4,11 +4,14 @@ use std::collections::BTreeMap;
 
 use interrexx_inventory::errors::{
     E7_1, E7_2, E8_2, E9_1, E9_2, E10_1, E10_2, E10_3, E10_4, E10_5, E10_6, E10_7, E10_8, E10_9,
-    E10_11, E14_1, E14_2, E14_3, E14_4, E14_5, E14_901, E47_2, E47_3, E47_4, Msg,
+    E10_11, E10_12, E10_13, E10_14, E10_15, E14_1, E14_2, E14_3, E14_4, E14_5, E14_901, E47_2,
+    E47_3, E47_4, E99_951, E99_952, Msg,
 };
 
 use crate::ProgramSource;
-use crate::ast::{CodeBody, EndStyle, EndTarget, Instruction, InstructionKind, LoopKind};
+use crate::ast::{
+    CodeBody, EndStyle, EndTarget, Handlers, Instruction, InstructionKind, LoopKind, Signal,
+};
 use crate::clause::{ClauseCursor, PendingThen};
 use crate::expr::display_value;
 use crate::exprs::{Bounds, Exprs};
@@ -30,6 +33,7 @@ enum Control {
     SelectCase,
     Otherwise,
     Catch,
+    Finally,
     /// The `THEN` of an `IF`.
     IfThen,
     /// The `THEN` of a `WHEN`.
@@ -52,6 +56,7 @@ impl Control {
                 | Control::SelectCase
                 | Control::Otherwise
                 | Control::Catch
+                | Control::Finally
         )
     }
 
@@ -71,7 +76,7 @@ struct Frame {
     index: Option<usize>,
     /// For `IfThen` and `WhenThen`, the `IF` or `WHEN` the `THEN` belongs to,
     /// whose `false_target` is written when the frame is popped. For
-    /// Otherwise and Catch, this is the block the clause belongs to.
+    /// Otherwise, Catch and Finally, this is the block the clause belongs to.
     parent: Option<usize>,
 }
 
@@ -378,8 +383,8 @@ impl<'a> Block<'a> {
             // Whose sub-number is 901 and not
             // 6. Measured, not derived from the position in the table.
             Control::Otherwise => (E14_901, frame.index()),
-            Control::Catch => {
-                let block = frame.parent.expect("a CATCH belongs to a block");
+            Control::Catch | Control::Finally => {
+                let block = frame.parent.expect("a CATCH or FINALLY belongs to a block");
                 let msg = match &self.instructions[block].kind {
                     InstructionKind::Select { .. } => E14_2,
                     InstructionKind::Do(loop_) if loop_.kind == LoopKind::Simple => E14_1,
@@ -412,18 +417,9 @@ impl<'a> Block<'a> {
             | Control::WhenThen
             | Control::EndWhen
             | Control::Otherwise => E47_4,
-            Control::Do | Control::Loop => E47_2,
-            Control::Catch => {
-                let block = self.top().parent.expect("a CATCH belongs to a block");
-                if matches!(
-                    self.instructions[block].kind,
-                    InstructionKind::Select { .. }
-                ) {
-                    E47_4
-                } else {
-                    E47_2
-                }
-            }
+            // Measured: a label among a SELECT's CATCH or FINALLY instructions
+            // is 47.2 too, not the SELECT's 47.4.
+            Control::Do | Control::Loop | Control::Catch | Control::Finally => E47_2,
             Control::First | Control::EndThen => return None,
         })
     }
@@ -568,28 +564,136 @@ impl<'a> Block<'a> {
         })
     }
 
-    fn add_catch(&mut self, index: usize, byte: usize) -> Result<(), ParseError> {
-        if self.top().kind == Control::Catch {
-            self.pop();
+    /// The CATCH or FINALLY at `index` joins the block it ends
+    /// (`r[instr.finally.form]`, `r[instr.finally.errors]`).
+    fn add_handler(&mut self, index: usize, byte: usize) -> Result<(), ParseError> {
+        let finally = matches!(self.instructions[index].kind, InstructionKind::Finally { .. });
+        match self.top().kind {
+            Control::Catch => {
+                self.pop();
+            }
+            Control::Finally => {
+                return Err(self.error_line(E10_15, byte, self.top().index()));
+            }
+            _ => {}
         }
         let frame = self.top();
         let owner = match frame.kind {
             Control::Do | Control::Loop | Control::Select | Control::SelectCase => frame.index(),
             Control::Otherwise => frame.parent.expect("an OTHERWISE belongs to a SELECT"),
-            _ => return Err(ParseError::raise(E10_8, byte, [])),
+            _ => {
+                let msg = if finally { E10_12 } else { E10_8 };
+                return Err(ParseError::raise(msg, byte, []));
+            }
         };
-        let InstructionKind::Catch(handler) = &mut self.instructions[index].kind else {
-            unreachable!("only a CATCH opens a handler");
+        if finally {
+            self.forward_in_block(owner, index, byte)?;
+        }
+        let (control, slot) = match &mut self.instructions[index].kind {
+            InstructionKind::Catch(handler) => (Control::Catch, &mut handler.block),
+            InstructionKind::Finally { block } => (Control::Finally, block),
+            other => unreachable!("only a CATCH or a FINALLY opens a handler, not {other:?}"),
         };
-        handler.block = Some(owner);
-        self.push(Control::Catch, Some(index), Some(owner));
+        *slot = Some(owner);
+        let handlers = match &mut self.instructions[owner].kind {
+            InstructionKind::Do(body) | InstructionKind::Loop(body) => &mut body.handlers,
+            InstructionKind::Select { handlers, .. } => handlers,
+            other => panic!("a handler's owner is a DO, LOOP or SELECT, not {other:?}"),
+        };
+        let handlers = handlers.get_or_insert_with(Box::<Handlers>::default);
+        if finally {
+            handlers.finally = Some(index);
+        } else {
+            handlers.catches.push(index);
+        }
+        self.push(control, Some(index), Some(owner));
         Ok(())
+    }
+
+    /// 99.952 for the FINALLY at `finally`, of the block opened at `owner`,
+    /// where a FORWARD without CONTINUE stands in that block before it,
+    /// naming the line of the last such FORWARD (`r[instr.finally.forward]`).
+    fn forward_in_block(&self, owner: usize, finally: usize, byte: usize) -> Result<(), ParseError> {
+        let forward = self.instructions[owner + 1..finally]
+            .iter()
+            .rev()
+            .find(|i| matches!(&i.kind, InstructionKind::Forward(f) if !f.continue_));
+        match forward {
+            Some(forward) => {
+                let line = self.line_insert(forward.clause_span.start);
+                Err(ParseError::raise(E99_952, byte, [line]))
+            }
+            None => Ok(()),
+        }
+    }
+
+    /// 99.951 for `instruction` where it stands inside a FINALLY clause and
+    /// would transfer control out of it (`r[instr.finally.static]`), naming
+    /// the innermost FINALLY clause's line.
+    fn leaves_finally(&self, instruction: &Instruction) -> Result<(), ParseError> {
+        let Some(at) = self
+            .control
+            .iter()
+            .rposition(|frame| frame.kind == Control::Finally)
+        else {
+            return Ok(());
+        };
+        let leaves = match &instruction.kind {
+            InstructionKind::Return { .. }
+            | InstructionKind::Exit { .. }
+            | InstructionKind::Reply { .. } => true,
+            InstructionKind::Signal(signal) => !matches!(**signal, Signal::Trap(_)),
+            InstructionKind::Raise(raise) => raise.result.is_some(),
+            InstructionKind::Forward(forward) => !forward.continue_,
+            InstructionKind::Leave { name } | InstructionKind::Iterate { name } => {
+                !self.control[at + 1..]
+                    .iter()
+                    .any(|frame| self.selects(*frame, *name))
+            }
+            _ => false,
+        };
+        if !leaves {
+            return Ok(());
+        }
+        let keyword = instruction
+            .kind
+            .keyword()
+            .expect("each of these instructions has a keyword");
+        let finally = self.control[at].index();
+        let line = self.line_insert(self.instructions[finally].clause_span.start);
+        Err(ParseError::raise(
+            E99_951,
+            instruction.clause_span.start,
+            [keyword.as_bytes().to_vec(), line],
+        ))
+    }
+
+    /// Whether a LEAVE or ITERATE with `name` would select the block `frame`
+    /// stands for: a named one selects a block of that name, an unnamed one
+    /// a repetitive loop (`r[instr.leave.target]`).
+    fn selects(&self, frame: Frame, name: Option<SymbolId>) -> bool {
+        let label = match frame.kind {
+            Control::Do | Control::Loop => match &self.instructions[frame.index()].kind {
+                InstructionKind::Do(body) | InstructionKind::Loop(body) => body.label,
+                other => panic!("a DO or LOOP frame stands for a loop, not {other:?}"),
+            },
+            Control::Select | Control::SelectCase => match &self.instructions[frame.index()].kind
+            {
+                InstructionKind::Select { label, .. } => *label,
+                other => panic!("a SELECT frame stands for a SELECT, not {other:?}"),
+            },
+            _ => return false,
+        };
+        match name {
+            Some(name) => label == Some(name),
+            None => frame.kind == Control::Loop,
+        }
     }
 
     /// The `END` arm of the block translation's switch.
     fn match_end(&mut self, end: usize, end_byte: usize) -> Result<(), ParseError> {
         let mut frame = self.pop();
-        if frame.kind == Control::Catch {
+        if matches!(frame.kind, Control::Catch | Control::Finally) {
             frame = self.pop();
         }
         if !frame.kind.is_block() {
@@ -653,6 +757,7 @@ impl<'a> Block<'a> {
                 InstructionKind::Select { end, .. } => end.is_some(),
                 InstructionKind::End { closes, .. } => closes.is_some(),
                 InstructionKind::Catch(handler) => handler.block.is_some(),
+                InstructionKind::Finally { block } => block.is_some(),
                 _ => true,
             }),
             "every block and every END is matched in a body that assembled"
@@ -794,6 +899,7 @@ pub(crate) fn translate_block(
         );
         let is_end = matches!(instruction.kind, InstructionKind::End { .. });
         let is_catch = matches!(instruction.kind, InstructionKind::Catch(_));
+        let is_finally = matches!(instruction.kind, InstructionKind::Finally { .. });
         let is_otherwise = matches!(instruction.kind, InstructionKind::Otherwise);
         let is_if = matches!(instruction.kind, InstructionKind::If { .. });
         let control = is_control(&instruction.kind);
@@ -814,19 +920,27 @@ pub(crate) fn translate_block(
         // An END cannot be the instruction of a pending THEN or ELSE
         // (`r[instr.if.syntax]`). The flush below would take it as that
         // instruction, so this is checked first.
-        if is_end || is_catch {
+        if is_end || is_catch || is_finally {
+            let (then, else_) = if is_catch {
+                (E10_9, E10_11)
+            } else if is_finally {
+                (E10_13, E10_14)
+            } else {
+                (E10_5, E10_6)
+            };
             match block.top().kind {
                 Control::IfThen | Control::WhenThen => {
-                    let msg = if is_catch { E10_9 } else { E10_5 };
-                    return Err(ParseError::raise(msg, byte, []));
+                    return Err(ParseError::raise(then, byte, []));
                 }
-                Control::Else => {
-                    let msg = if is_catch { E10_11 } else { E10_6 };
-                    return Err(ParseError::raise(msg, byte, []));
-                }
+                Control::Else => return Err(ParseError::raise(else_, byte, [])),
                 _ => {}
             }
         }
+
+        // Found as the instruction arrives, ahead of the SELECT membership
+        // check below: measured, a RETURN directly inside a SELECT inside a
+        // FINALLY is 99.951, not 7.2.
+        block.leaves_finally(held.as_ref().expect("held until consumed"))?;
 
         // A control instruction joins the chain at once. Anything else but an
         // ELSE goes through the control flush, which may close a branch first,
@@ -839,8 +953,8 @@ pub(crate) fn translate_block(
             block.flush_control(held.take())
         };
 
-        if is_catch {
-            block.add_catch(index.expect("the CATCH was just added"), byte)?;
+        if is_catch || is_finally {
+            block.add_handler(index.expect("the CATCH or FINALLY was just added"), byte)?;
             continue;
         }
 

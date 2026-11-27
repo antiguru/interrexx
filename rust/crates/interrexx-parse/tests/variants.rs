@@ -45,6 +45,7 @@ tags!(instruction_tag, INSTRUCTION_TAGS, InstructionKind, {
     InstructionKind::WhenCase { .. } => "WhenCase",
     InstructionKind::Otherwise => "Otherwise",
     InstructionKind::Catch(_) => "Catch",
+    InstructionKind::Finally { .. } => "Finally",
     InstructionKind::Leave { .. } => "Leave",
     InstructionKind::Iterate { .. } => "Iterate",
     InstructionKind::End { .. } => "End",
@@ -232,8 +233,10 @@ fn every_variant_is_constructed_by_the_corpus_and_samples() {
         });
     }
 
-    // The parser accepts CATCH before the execution corpus can run it.
-    let catch = parse_program(b"do; catch syntax; end".to_vec()).expect("CATCH parses");
+    // The parser accepts CATCH and FINALLY before the execution corpus can
+    // run them.
+    let catch = parse_program(b"do; catch syntax; finally; end".to_vec())
+        .expect("CATCH and FINALLY parse");
     each_instruction(&catch, &mut |i| {
         instructions.seen.insert(instruction_tag(&i.kind));
     });

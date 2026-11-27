@@ -293,6 +293,8 @@ pub enum InstructionKind {
         otherwise: Option<usize>,
         /// The `END` that closes this `SELECT`.
         end: Option<usize>,
+        /// The CATCH and FINALLY clauses at the end of the block, if any.
+        handlers: Option<Box<Handlers>>,
     },
     When {
         condition: ExprId,
@@ -314,6 +316,10 @@ pub enum InstructionKind {
     },
     Otherwise,
     Catch(Box<Catch>),
+    Finally {
+        /// The opening instruction. Set when the parser assembles the block.
+        block: Option<usize>,
+    },
     Leave {
         name: Option<SymbolId>,
     },
@@ -405,6 +411,7 @@ impl InstructionKind {
             InstructionKind::When { .. } | InstructionKind::WhenCase { .. } => "WHEN",
             InstructionKind::Otherwise => "OTHERWISE",
             InstructionKind::Catch(_) => "CATCH",
+            InstructionKind::Finally { .. } => "FINALLY",
             InstructionKind::Leave { .. } => "LEAVE",
             InstructionKind::Iterate { .. } => "ITERATE",
             InstructionKind::End { .. } => "END",
@@ -474,6 +481,7 @@ impl InstructionKind {
             | InstructionKind::Then
             | InstructionKind::Else { .. }
             | InstructionKind::Otherwise
+            | InstructionKind::Finally { .. }
             | InstructionKind::Leave { .. }
             | InstructionKind::Iterate { .. }
             | InstructionKind::End { .. }
@@ -561,6 +569,16 @@ impl InstructionKind {
     }
 }
 
+/// Where the CATCH and FINALLY clauses of a DO, LOOP or SELECT block stand
+/// (`r[instr.finally.form]`).
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
+pub struct Handlers {
+    /// The CATCH instructions, in source order.
+    pub catches: Vec<usize>,
+    /// The FINALLY instruction.
+    pub finally: Option<usize>,
+}
+
 /// A condition handler at the end of a DO, LOOP or SELECT block.
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Catch {
@@ -611,6 +629,8 @@ pub struct Loop {
     pub conditional: Option<LoopConditional>,
     /// The `END` that closes this block.
     pub end: Option<usize>,
+    /// The CATCH and FINALLY clauses at the end of the block, if any.
+    pub handlers: Option<Box<Handlers>>,
 }
 
 impl Loop {

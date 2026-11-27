@@ -494,6 +494,7 @@ impl Loud {
             | InstructionKind::Arg { .. }
             | InstructionKind::Call { .. }
             | InstructionKind::Catch(_)
+            | InstructionKind::Finally { .. }
             | InstructionKind::Do { .. }
             | InstructionKind::Drop { .. }
             | InstructionKind::Else { .. }

@@ -1245,3 +1245,76 @@ translation	21.904	1	do; catch any notready; end
 translation	21.904	1	do; catch error 5 notready; end
 -	ok	-	do; catch syntax notready; end
 -	ok	-	do; catch error notready; end
+translation	10.12	1	finally\n say 1
+translation	10.13	1	do; if 1 then finally; end
+translation	10.13	2	select\n when 1 then finally\nend
+translation	10.14	1	do; if 1 then nop; else finally; end
+translation	10.15	5	do\n nop\nfinally\n nop\ncatch syntax\n nop\nend
+translation	10.15	5	do\n nop\nfinally\n nop\nfinally\n nop\nend
+translation	10.12	1	do; nop; finally; nop; end; finally; nop
+translation	99.951	4	do\n nop\nfinally\n return\nend
+translation	99.951	4	do\n nop\nfinally\n exit 1\nend
+translation	99.951	4	do\n nop\nfinally\n signal x\nend\nx: nop
+translation	99.951	4	do\n nop\nfinally\n signal value "X"\nend\nx: nop
+translation	99.951	4	do\n nop\nfinally\n signal (x)\nend
+translation	99.951	4	do\n nop\nfinally\n raise user x return\nend
+translation	99.951	4	do\n nop\nfinally\n raise syntax 4 exit\nend
+translation	99.951	4	do\n nop\nfinally\n reply 1\nend
+translation	99.951	6	::class t\n::method m\n do\n  nop\n finally\n  reply\n end
+translation	99.951	6	::class t\n::method m\n do\n  nop\n finally\n  forward to (self)\n end
+translation	99.951	5	loop i = 1 to 2\n do\n  nop\n finally\n  leave\n end\nend
+translation	99.951	4	loop i = 1 to 2\n nop\nfinally\n leave\nend
+translation	99.951	4	loop label l i = 1 to 2\n nop\nfinally\n iterate l\nend
+translation	99.951	3	do i = 1 to 2\nfinally\n leave i\nend
+translation	99.951	3	do\nfinally\n leave\nend
+translation	99.951	3	do\nfinally\n leave zz\nend
+translation	99.951	4	do\nfinally\n do\n  leave\n end\nend
+translation	99.951	6	loop i = 1 to 2\n do\n  nop\n finally\n  do j = 1 to 2\n   iterate i\n  end\n end\nend
+translation	99.951	6	do\nfinally\n loop 2\n  nop\n finally\n  leave\n end\nend
+translation	99.951	7	do\nfinally\n loop label a 2\n  do label a\n   nop\n  finally\n   leave a\n  end\n end\nend
+translation	99.951	5	do\n nop\nfinally\n do i = 1 to 2\n  if i = 2 then return\n end\nend
+translation	99.951	7	do\n nop\nfinally\n do\n  nop\n catch syntax\n  exit\n end\nend
+translation	99.951	4	do\nfinally\n if 1 then nop\n else return\nend
+translation	99.951	4	do\nfinally\n select\n  return\n end\nend
+translation	99.951	4	do\n nop\nfinally\n return\nx: nop\nend
+translation	99.951	4	do\n nop\nfinally\n return\n
+translation	99.951	3	do\nfinally\n x = 1; leave\nend
+-	ok	-	interpret "do; nop; finally; return; end"
+translation	99.952	5	::class t\n::method m\n do\n  forward to (self)\n finally\n  nop\n end
+translation	99.952	9	::class t\n::method m\n do\n  nop\n catch syntax\n  do\n   forward to (self)\n  end\n finally\n  nop\n end
+translation	99.952	5	::class t\n::method m\n select\n  when 1 then forward to (self)\n finally\n  nop\n end
+translation	99.952	5	::class t\n::method m\n do\n  forward to (self)\n finally\n  return\n end
+translation	99.952	6	::class t\n::method m\n do\n  do\n   forward to (self)\n  finally\n   nop\n  end\n finally\n  nop\n end
+translation	99.952	9	::class t\n::method m\n do\n  forward to (self)\n  do\n   forward to (self) message "x"\n  end\n  nop\n finally\n  nop\n end
+translation	99.952	3	do\n forward to (.nil)\nfinally\n nop\nend
+-	ok	-	::class t\n::method m\n forward to (self)\n do\n  nop\n finally\n  nop\n end
+-	ok	-	::class t\n::method m\n do\n  forward continue to (self)\n finally\n  forward continue to (self) message "n"\n end
+-	ok	-	do\nfinally\n do label q\n  iterate q\n end\nend
+-	ok	-	do\nfinally\n select label s\n  when 1 then leave s\n end\nend
+-	ok	-	do\nfinally\n do i = 1 to 2\n  leave i\n end\nend
+-	ok	-	do\nfinally\n loop 2\n  nop\n catch syntax\n  leave\n end\nend
+-	ok	-	do\n nop\nfinally\n loop j = 1 to 3\n  if j = 2 then leave\n end\nend
+-	ok	-	do\n nop\nfinally\n do label q\n  leave q\n end\nend
+-	ok	-	do\n nop\nfinally\n signal on syntax\n signal off syntax\n call on error\n raise user x\n interpret "return"\nend
+-	ok	-	do\n nop\ncatch syntax\n return\nfinally\n nop\nend
+-	ok	-	select\n when 1 then nop\nfinally\n say "f"\nend
+-	ok	-	select\n when 0 then nop\n otherwise\n  nop\nfinally\n nop\nend
+-	ok	-	select case 1\n when 1 then nop\ncatch syntax\n nop\nfinally\n nop\nend
+-	ok	-	select\n when 1 then nop\n otherwise finally\n say "f"\nend
+-	ok	-	do; say 1; finally say "f"; end
+-	ok	-	do\nfinally\nend
+-	ok	-	finally = 6; say finally
+-	ok	-	signal finally\nfinally: say "label"
+translation	47.2	6	do\n nop\nfinally\n signal on syntax name h\n x = 1/0\n h: say "h"\nend
+translation	47.2	4	select\n when 1 then nop\nfinally\n l: nop\nend
+translation	47.2	4	select\n when 1 then nop\ncatch syntax\n l: nop\nend
+translation	47.2	6	select\n when 0 then nop\n otherwise\n  nop\ncatch syntax\n l: nop\nend
+translation	14.1	4	do\n nop\nfinally\n nop
+translation	14.2	4	select\n when 1 then nop\nfinally\n nop
+translation	14.5	3	loop 2\nfinally\n nop
+translation	10.2	5	do label a\n nop\nfinally\n nop\nend b
+translation	10.4	5	select label s\n when 1 then nop\nfinally\n nop\nend t
+translation	7.1	1	select\nfinally\n nop\nend
+translation	9.1	4	select\n when 1 then nop\nfinally\n when 2 then nop\nend
+translation	9.2	4	select\n when 1 then nop\nfinally\n otherwise\n nop\nend
+translation	8.2	4	do\n nop\nfinally\n else nop\nend

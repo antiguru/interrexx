@@ -55,6 +55,7 @@ tags!(instruction_tag, INSTRUCTION_TAGS, InstructionKind, {
     InstructionKind::WhenCase { .. } => ("WhenCase", Reach::Implemented),
     InstructionKind::Otherwise => ("Otherwise", Reach::Implemented),
     InstructionKind::Catch(_) => ("Catch", Reach::ParsedOnly),
+    InstructionKind::Finally { .. } => ("Finally", Reach::ParsedOnly),
     InstructionKind::Leave { .. } => ("Leave", Reach::Implemented),
     InstructionKind::Iterate { .. } => ("Iterate", Reach::Implemented),
     InstructionKind::End { .. } => ("End", Reach::Implemented),
