@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-sysgetkey-oracle-probe
+  group: windows-cargo-check
   cancel-in-progress: false
 
 defaults:
@@ -54,8 +54,12 @@ jobs:
           $source = (Resolve-Path ../ci/windows-sysgetkey-oracle.rex).Path
           foreach ($page in '1252', '437') {
             $report = Join-Path $env:RUNNER_TEMP "key-$page.txt"
+            $env:INTERREXX_KEY_PROBE_REPORT = $report
             & ./oracle-console.exe $oracle $source $report $page
             $result = $LASTEXITCODE
-            if (Test-Path $report) { Write-Host "CP${page}: $((Get-Content $report) -join ' ')" }
             if ($result -ne 0) { throw "Console fixture returned $result" }
+            if (-not (Test-Path $report)) { throw "Console fixture produced no report for CP$page" }
+            $keys = @(Get-Content $report)
+            if ($keys.Count -ne 4) { throw "Expected four answers for CP$page" }
+            Write-Host "CP${page}: $($keys -join ' ')"
           }

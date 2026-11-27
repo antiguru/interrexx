@@ -1,5 +1,6 @@
 /* Report byte values without involving the console output code page. */
-parse arg report
+report = value('INTERREXX_KEY_PROBE_REPORT',, 'ENVIRONMENT')
+if report = '' then exit 27
 signal on syntax
 do 4
   key = SysGetKey('NOECHO')
