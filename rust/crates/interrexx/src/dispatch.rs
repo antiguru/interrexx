@@ -1876,6 +1876,14 @@ enum MemoTarget {
 struct MemoBody {
     installed: crate::InstalledMethodBody,
     super_scope: Option<ObjRef>,
+    leaf: Option<LeafReturn>,
+}
+
+/// A method body that needs no receiver, arguments, or allocated values.
+#[derive(Copy, Clone)]
+enum LeafReturn {
+    Empty,
+    Literal(ObjRef),
 }
 
 /// Where [`Interp::begin_method`] takes the method's super scope from.
@@ -2571,6 +2579,7 @@ impl Interp {
             Ok(Invocable::Rexx(installed)) => MemoTarget::Rexx(MemoBody {
                 installed,
                 super_scope: self.super_scope_in(behaviour, resolution.scope),
+                leaf: self.leaf_return(installed),
             }),
             Ok(Invocable::Generated(generated))
                 if matches!(
@@ -3149,7 +3158,7 @@ impl Interp {
             // method "LENGTH"` line. The two differ because an attribute getter
             // and an abstract method raise directly where a primitive method
             // raises from inside an activation of its own.
-            self.begin_method(
+            return self.begin_method(
                 cleared,
                 installed,
                 resolution,
@@ -3157,8 +3166,8 @@ impl Interp {
                 receiver,
                 name,
                 args,
-            )?;
-            return Ok(Started::Entered);
+                None,
+            );
         }
         let outcome = match invocable {
             // A leveled primitive is run by `run_other`, off this path.
@@ -3262,8 +3271,8 @@ impl Interp {
             receiver,
             name,
             args,
-        )?;
-        Ok(Started::Entered)
+            body.leaf,
+        )
     }
 
     /// [`Interp::begin_invoke`] for the generated accessor a send site's memo

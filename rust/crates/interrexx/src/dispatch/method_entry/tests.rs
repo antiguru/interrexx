@@ -53,3 +53,97 @@ fn executing_copies_and_enhanced_metaclass_entries_survive_collection() {
         assert_eq!(String::from_utf8_lossy(&outcome.stdout), expected, "{name}");
     }
 }
+thread_local! {
+    static INLINED_METHODS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+pub(super) fn count_inlined_method() {
+    INLINED_METHODS.with(|count| count.set(count.get() + 1));
+}
+
+#[test]
+fn quiet_leaf_methods_inline_and_keep_their_send_results() {
+    let before = INLINED_METHODS.with(std::cell::Cell::get);
+    let outcome = crate::execute(
+        "/leaf.rex",
+        br#"
+o = .probe~new
+do i = 1 to 1500
+  saved = answer(o)
+  result = 'stale'
+  o~empty
+  if symbol('result') = 'VAR' then exit 1
+end
+say saved
+.probe~define('ANSWER', 'return 7')
+say answer(o)
+exit
+answer: use arg receiver
+  return receiver~answer
+::class probe
+::method answer
+  return 'okay'
+::method empty
+"#
+        .to_vec(),
+        false,
+        crate::Invocation::none(),
+    );
+    assert_eq!(outcome.exit_code, 0, "{outcome:?}");
+    assert_eq!(outcome.stdout, b"okay\n7\n");
+    let inlined = INLINED_METHODS.with(std::cell::Cell::get) - before;
+    assert!(inlined > 2900, "inlined {inlined} of 3000 leaf sends");
+}
+
+#[test]
+fn leaf_methods_honor_the_callee_packages_trace() {
+    let outcome = crate::execute(
+        "/leaf-trace.rex",
+        br#"
+trace off
+o = .probe~new
+say o~answer
+say o~answer
+::options trace r
+::class probe
+::method answer
+  return 'okay'
+"#
+        .to_vec(),
+        false,
+        crate::Invocation::none(),
+    );
+    assert_eq!(outcome.exit_code, 0, "{outcome:?}");
+    assert_eq!(outcome.stdout, b"okay\nokay\n");
+    let trace = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(trace.matches(">I> Method \"ANSWER\"").count(), 2, "{trace}");
+    assert_eq!(trace.matches("<I< Method \"ANSWER\"").count(), 2, "{trace}");
+}
+
+#[test]
+fn an_inlined_literal_return_counts_as_one_clause() {
+    let visits = |options| {
+        let before = crate::clause::countdown_visits();
+        let outcome = crate::execute(
+            "/leaf-countdown.rex",
+            format!(
+                "o = .probe~new\n\
+                 do 5000\n\
+                   result = o~answer\n\
+                 end\n\
+                 say result\n\
+                 ::class probe\n\
+                 ::method answer\n\
+                   return 'okay'\n\
+                 {options}"
+            )
+            .into_bytes(),
+            false,
+            crate::Invocation::none(),
+        );
+        assert_eq!(outcome.exit_code, 0, "{outcome:?}");
+        assert_eq!(outcome.stdout, b"okay\n");
+        crate::clause::countdown_visits() - before
+    };
+    assert_eq!(visits(""), visits("::options digits 9"));
+}

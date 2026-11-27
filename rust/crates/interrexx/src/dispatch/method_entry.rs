@@ -1,6 +1,57 @@
 use super::*;
 
 impl Interp {
+    /// Classifies only fall-through and a literal that the IR would intern
+    /// without allocating. The send memo's epoch and method rows guard the
+    /// body this answer was read from.
+    pub(super) fn leaf_return(&self, installed: crate::InstalledMethodBody) -> Option<LeafReturn> {
+        let program = self.programs.get(installed.program)?;
+        let body = body_of(program, Some(installed.directive))?;
+        match body.instructions.as_slice() {
+            [] => Some(LeafReturn::Empty),
+            [instruction] => {
+                let interrexx_parse::InstructionKind::Return {
+                    expression: Some(expression),
+                } = instruction.kind
+                else {
+                    return None;
+                };
+                let interrexx_parse::ExprView::Literal(bytes) = body.expr(expression).kind() else {
+                    return None;
+                };
+                crate::value::canonical_small_int(bytes)
+                    .and_then(ObjRef::small_int)
+                    .or_else(|| ObjRef::inline_text(bytes))
+                    .map(LeafReturn::Literal)
+            }
+            _ => None,
+        }
+    }
+
+    /// Whether this leaf's activation could be observed. The guard table
+    /// stays dormant until a second activity can observe a method's lock.
+    /// A return clause can be skipped only if counting it serves no request.
+    #[inline]
+    fn leaf_is_quiet(&self, program: ProgramId, leaf: LeafReturn) -> bool {
+        !self.activities.guards.is_live()
+            && self.switch.is_none()
+            && !self.trace_switchable
+            && !self.clause_exits
+            && self.activity.pending_traps.is_empty()
+            && self.activity.guard_waits.is_empty()
+            && self.activity.splits_owed == 0
+            && self.activity.deferred_level.is_none()
+            && !self.activity.routing_trace
+            && !self.activity.rerun_pending()
+            && self.uninit_ready.is_empty()
+            && matches!(
+                self.trace_mode(),
+                crate::trace::TraceMode::NORMAL | crate::trace::TraceMode::OFF
+            )
+            && self.options_of(program).is_none()
+            && (matches!(leaf, LeafReturn::Empty) || self.clause_countdown > 1)
+    }
+
     /// Pushes one `::METHOD` body's activation and the [`CallTail`] its
     /// sender's level state goes into, up to the point the body would run.
     ///
@@ -18,7 +69,8 @@ impl Interp {
         receiver: ObjRef,
         name: &[u8],
         args: &[Option<ObjRef>],
-    ) -> Result<(), Failure> {
+        leaf: Option<LeafReturn>,
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
         let Some(program) = self.programs.get(installed.program).map(Rc::clone) else {
             return Err(Loud::missing_body().into());
         };
@@ -43,6 +95,27 @@ impl Interp {
         let probe = 0u8;
         if self.nesting_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe) {
             return Err(Raised::insufficient_stack().into());
+        }
+        // A memoized send got here after ordinary receiver and security dispatch.
+        // If the manager ran, keep the normal method entry even if it allowed
+        // the send. Otherwise a quiet leaf can answer through the same
+        // delivery path as other synchronous sends.
+        if let Some(leaf) = leaf
+            && matches!(super_scope, SuperScope::Known(_))
+            && self.leaf_is_quiet(installed.program, leaf)
+        {
+            self.next_activation_id();
+            self.shared_key_for = None;
+            let value = match leaf {
+                LeafReturn::Empty => None,
+                LeafReturn::Literal(value) => {
+                    self.count_clause_against_deadline(false)?;
+                    Some(value)
+                }
+            };
+            #[cfg(test)]
+            tests::count_inlined_method();
+            return Ok(Started::Ran(value));
         }
         let plan = self.plan_for(
             BodyKey {
@@ -175,7 +248,7 @@ impl Interp {
             saved_base,
             saved_line,
         ));
-        Ok(())
+        Ok(Started::Entered)
     }
 }
 
