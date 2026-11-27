@@ -285,6 +285,8 @@ held at its bound, as follows:
 * An `ObjRef` is 64 bits, wider than a native handle: the handle encoding, a per-interpreter
   numbering of the references an address cannot carry, is in `native-api.md`, Handles and
   lifetimes.
+* A `REXX_HEAP_LIMIT` past `usize::MAX` is refused as a value the host cannot address
+  (`r[env.invocation.heap-limit]`), so the largest limit is just under 4 GiB.
 * The interpreter thread's stack is 256 MiB, half the 64-bit one, so that more than a few
   interpreter and pool threads fit in the address space.
 * A map of names hashes as on a 64-bit target (`interrexx-core/src/name_hash.rs`), so

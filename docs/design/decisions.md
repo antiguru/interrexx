@@ -122,6 +122,11 @@ page records why they are the way they are.
 * **Behaviour when memory runs out is best effort** (2026-08-14). ooRexx's limits depend on the
   platform and the allocator, so they are not a target, and the ordinary path pays nothing to
   match them. A failure is still reported rather than aborting where that costs nothing.
+* **The heap limit counts what the collector counts** (2026-11-25, #840). `REXX_HEAP_LIMIT`
+  and `Invocation::with_heap_limit` bound the body bytes the heap holds, as the JVM's `-Xmx`
+  bounds its object heap: the figure each collection recomputes from the survivors, so it does not
+  drift, at the price of precision between collections. A counting global allocator would be exact
+  but is one per process, where the limit is per interpreter.
 
 ## Licence and sources
 

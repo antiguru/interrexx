@@ -424,10 +424,12 @@ pub(super) fn array_grow(
     length: usize,
 ) -> Result<(), Failure> {
     let receiver = store_of(interp, receiver)?;
+    interp.admit_bytes(length.saturating_mul(interrexx_core::SLOT_BYTES))?;
     let grown = match interp.heap.get_mut(receiver).map(|object| &mut object.body) {
         Some(Body::Array { slots, .. }) => {
             let before = slots.capacity();
-            // A length the allocator refuses is 5.0, and not an abort.
+            // A length the heap limit or the allocator refuses is 5.0, and
+            // not an abort.
             if let Some(extra) = length.checked_sub(slots.len()) {
                 slots
                     .try_reserve(extra)

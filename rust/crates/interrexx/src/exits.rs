@@ -82,15 +82,16 @@ impl Interp {
         if exits.handlers.iter().all(Option::is_none) {
             return;
         }
-        self.clause_exits =
-            exits.get(exit_code::HLT).is_some() || exits.get(exit_code::TRC).is_some();
         self.exits = Some(Box::new(exits));
+        self.restore_clause_exits();
     }
 
-    /// `clause_exits` as the installed exits and a pending boundary post
-    /// leave it, once a clause that raised it for another reason is done.
+    /// `clause_exits` as the installed exits, a pending boundary post and a
+    /// pending heap-limit raise leave it, once a clause that raised it for
+    /// another reason is done.
     pub(crate) fn restore_clause_exits(&mut self) {
         self.clause_exits = self.boundary_posts.is_some()
+            || self.heap_over_limit
             || self.exit_installed(exit_code::HLT)
             || self.exit_installed(exit_code::TRC);
     }
@@ -295,17 +296,13 @@ impl Interp {
             && self.activation_depth() <= depth
         {
             self.boundary_posts = None;
-            self.clause_exits =
-                self.exit_installed(exit_code::HLT) || self.exit_installed(exit_code::TRC);
+            self.restore_clause_exits();
             self.drain_completions(crate::scheduler::DrainAt::MidRun);
         }
         if !self.exit_installed(exit_code::HLT) && !self.exit_installed(exit_code::TRC) {
             return Ok(());
         }
-        let Some(program) = self.running_activation().map(|running| running.program_id) else {
-            return Ok(());
-        };
-        if self.library_programs.contains(&program) || self.is_instance_root(program) {
+        if !self.running_user_program() {
             return Ok(());
         }
         if let Some(reply) = self.exit_call(ExitRequest::HaltTest)?
@@ -323,6 +320,16 @@ impl Interp {
             });
         }
         Ok(())
+    }
+
+    /// Whether the running activation runs a program of the user's: not one
+    /// of the library's and not the instance's root.
+    pub(crate) fn running_user_program(&self) -> bool {
+        self.running_activation()
+            .map(|running| running.program_id)
+            .is_some_and(|program| {
+                !self.library_programs.contains(&program) && !self.is_instance_root(program)
+            })
     }
 
     /// Marks `program` as this instance's root program.

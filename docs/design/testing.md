@@ -256,6 +256,7 @@ Unset, the gate switches below report and exit 0; set to `1`, a mismatch fails t
 | `REXX_HEADERS_REFRESH` | writes the generated sections of the C headers in `include/` from the Rust definitions |
 | `REXX_TEST_THREAD_SANITIZER` | adapts tests to a ThreadSanitizer build |
 | `REXX_SWITCH_MODE` | read by `rexx`: the switch mode, including `sim:...` |
+| `REXX_HEAP_LIMIT` | decimal digits, optionally followed by `K`, `M` or `G`, bounding the memory a run's objects may hold (`r[env.invocation.heap-limit]`); empty is the same as unset, which leaves it unbounded. `rexx` refuses any other value, and an embedded run warns of it on standard error and runs unbounded. The in-process corpus runs set their own bound through the invocation |
 | `REXX_HASH_SEED` | decimal digits, with no sign, naming a number below 2**64, which fix the seed of the keyed string hash; otherwise the seed is drawn for each run, or in the simulation mode from the simulation seed. Empty is the same as unset. `rexx` refuses any other value, and an embedded run warns of it on standard error and draws the seed |
 | `REXX_API_DIR`, `XDG_RUNTIME_DIR` | set by `rust/.cargo/config.toml` so tests reach private API services, interrexx's and ooRexx's, never the user's |
 | `REXX_UPSTREAM`, `REXX_ORACLE_ROOT` | set by `rust/.cargo/config.toml`: the ooRexx source tree and its build |

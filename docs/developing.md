@@ -125,7 +125,8 @@ scripts/rss-cap.sh 8388608 COMMAND
 
 It is a watchdog, not a limit: a process that allocates faster than it polls can pass the bound
 by up to half a second's allocation before it is killed. Running the `standalone` profile under it
-with `--test-threads 4` stays within 8 GiB. interrexx's own bound on memory is #840. macOS also
+with `--test-threads 4` stays within 8 GiB. interrexx's own bound, `REXX_HEAP_LIMIT`, bounds
+what a program's objects hold, not the process, so it does not replace the cap. macOS also
 limits a socket path to 104 bytes, and tests bind sockets under the target directory, so from a
 deep worktree set `CARGO_TARGET_DIR` to a shorter path.
 

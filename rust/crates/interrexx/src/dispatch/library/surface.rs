@@ -241,11 +241,16 @@ impl Surface for Interp {
 
     fn new_mutable_buffer(&mut self, capacity: usize) -> ObjRef {
         let mut bytes = Vec::new();
-        // An allocation this large fails here as `new_buffer` fails; the empty
-        // buffer is what a failed reservation leaves.
-        let capacity = match bytes.try_reserve_exact(capacity) {
-            Ok(()) => capacity,
-            Err(_) => 0,
+        // An allocation this large, or one past the heap limit
+        // (r[env.invocation.heap-limit.raise]), fails here as `new_buffer`
+        // fails; the empty buffer is what a failed reservation leaves.
+        let capacity = match self
+            .admit_bytes(capacity)
+            .ok()
+            .and_then(|()| bytes.try_reserve_exact(capacity).ok())
+        {
+            Some(()) => capacity,
+            None => 0,
         };
         let buffer = self.native_state_instance(
             "MutableBuffer",

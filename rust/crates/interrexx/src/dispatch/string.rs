@@ -394,11 +394,12 @@ fn native_string_substr(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (start, length, pad) = substr_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     {
         let bytes = interp.to_text(receiver);
-        crate::builtin::string::substr_bytes(&mut out, &bytes, start, length, pad)?;
+        crate::builtin::string::substr_bytes(heap_limit, &mut out, &bytes, start, length, pad)?;
     }
     Ok(Some(interp.text_built(out)))
 }
@@ -411,13 +412,21 @@ fn native_string_brackets(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let start = super::required_position_argument(interp, args, 0)? - 1;
     let length = super::optional_length_argument(interp, args, 1)?.unwrap_or(1);
     let mut out = interp.take_result_buffer();
     {
         let bytes = interp.to_text(receiver);
         let capped = length.min(bytes.len().saturating_sub(start));
-        crate::builtin::string::substr_bytes(&mut out, &bytes, start, Some(capped), b' ')?;
+        crate::builtin::string::substr_bytes(
+            heap_limit,
+            &mut out,
+            &bytes,
+            start,
+            Some(capped),
+            b' ',
+        )?;
     }
     Ok(Some(interp.text_built(out)))
 }
@@ -554,11 +563,14 @@ fn native_string_insert(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (new, begin, length, pad) = insert_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     {
         let bytes = interp.to_text(receiver);
-        crate::builtin::string::insert_bytes(&mut out, &bytes, &new, begin, length, pad)?;
+        crate::builtin::string::insert_bytes(
+            heap_limit, &mut out, &bytes, &new, begin, length, pad,
+        )?;
     }
     interp.give_result_buffer(new);
     Ok(Some(interp.text_built(out)))
@@ -570,11 +582,14 @@ fn native_string_overlay(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (new, begin, length, pad) = overlay_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     {
         let bytes = interp.to_text(receiver);
-        crate::builtin::string::overlay_bytes(&mut out, &bytes, &new, begin, length, pad)?;
+        crate::builtin::string::overlay_bytes(
+            heap_limit, &mut out, &bytes, &new, begin, length, pad,
+        )?;
     }
     interp.give_result_buffer(new);
     Ok(Some(interp.text_built(out)))
@@ -586,6 +601,7 @@ fn native_string_replaceat(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let new = super::string_method_argument(interp, args, 0)?;
     let begin = super::required_position_argument(interp, args, 1)? - 1;
     let length = super::optional_length_argument(interp, args, 2)?;
@@ -594,7 +610,7 @@ fn native_string_replaceat(
     {
         let bytes = interp.to_text(receiver);
         let (replaced, _) = replace_at_plan(bytes.len(), begin, length, new.len());
-        replace_at_bytes(&mut out, &bytes, &new, begin, replaced, pad)?;
+        replace_at_bytes(heap_limit, &mut out, &bytes, &new, begin, replaced, pad)?;
     }
     interp.give_result_buffer(new);
     Ok(Some(interp.text_built(out)))
@@ -771,11 +787,12 @@ fn native_string_space(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (gap, pad) = space_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     {
         let bytes = interp.to_text(receiver);
-        crate::builtin::string::space_bytes(&mut out, &bytes, gap, pad)?;
+        crate::builtin::string::space_bytes(heap_limit, &mut out, &bytes, gap, pad)?;
     }
     Ok(Some(interp.text_built(out)))
 }

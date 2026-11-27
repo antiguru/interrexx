@@ -418,8 +418,10 @@ pub(crate) fn right_bytes(
 }
 
 /// `SUBSTR`'s body: `length` bytes of `string` from 0-based `start`, padded
-/// with `pad`, appended to `out`; `None` is everything from `start` on.
+/// with `pad`, appended to `out`; `None` is everything from `start` on. A
+/// length past `heap_limit` raises 5.0 (r[env.invocation.heap-limit.raise]).
 pub(crate) fn substr_bytes(
+    heap_limit: Option<usize>,
     out: &mut Vec<u8>,
     string: &[u8],
     start: usize,
@@ -429,6 +431,7 @@ pub(crate) fn substr_bytes(
     let available = string.len().saturating_sub(start);
     let length = length.unwrap_or(available);
     let kept = length.min(available);
+    crate::admit_within(heap_limit, length)?;
     reserve(out, length)?;
     out.extend_from_slice(&string[start.min(string.len())..][..kept]);
     push_pad(out, pad, length - kept);
@@ -447,7 +450,14 @@ pub(crate) fn substr(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
         .map(|value| length_of(name, 3, value))
         .transpose()?;
     let mut out = interp.take_result_buffer();
-    substr_bytes(&mut out, string.text(interp), start, length, pad)?;
+    substr_bytes(
+        interp.heap_limit,
+        &mut out,
+        string.text(interp),
+        start,
+        length,
+        pad,
+    )?;
     Ok(interp.text_built(out))
 }
 
@@ -473,8 +483,9 @@ pub(crate) fn delstr(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
 
 /// `INSERT`'s body: `new`, padded or cut to `length` bytes, spliced into
 /// `target` after its first `start` bytes and appended to `out`; `None` is
-/// `new`'s own length.
+/// `new`'s own length. A result past `heap_limit` raises 5.0.
 pub(crate) fn insert_bytes(
+    heap_limit: Option<usize>,
     out: &mut Vec<u8>,
     target: &[u8],
     new: &[u8],
@@ -497,6 +508,7 @@ pub(crate) fn insert_bytes(
         .checked_add(insert_len)
         .and_then(|size| size.checked_add(lead_pad))
         .ok_or_else(Raised::system_resources)?;
+    crate::admit_within(heap_limit, total)?;
     reserve(out, total)?;
     out.extend_from_slice(&target[..front]);
     push_pad(out, pad, lead_pad);
@@ -523,6 +535,7 @@ pub(crate) fn insert(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
     let target = required_render(interp, args, 2);
     let mut out = interp.take_result_buffer();
     insert_bytes(
+        interp.heap_limit,
         &mut out,
         target.text(interp),
         new.text(interp),
@@ -535,8 +548,10 @@ pub(crate) fn insert(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result
 
 /// `OVERLAY`'s body: `new`, padded or cut to `length` bytes, written over
 /// `target` from 0-based `start`, padding out to `start` first when that is
-/// past the end, appended to `out`; `None` is `new`'s own length.
+/// past the end, appended to `out`; `None` is `new`'s own length. A result
+/// past `heap_limit` raises 5.0.
 pub(crate) fn overlay_bytes(
+    heap_limit: Option<usize>,
     out: &mut Vec<u8>,
     target: &[u8],
     new: &[u8],
@@ -555,7 +570,12 @@ pub(crate) fn overlay_bytes(
     let span_end = start.saturating_add(overlay_len);
     let back = target.len().saturating_sub(span_end);
 
-    reserve(out, front + back + front_pad + overlay_len)?;
+    let total = front
+        .saturating_add(back)
+        .saturating_add(front_pad)
+        .saturating_add(overlay_len);
+    crate::admit_within(heap_limit, total)?;
+    reserve(out, total)?;
     out.extend_from_slice(&target[..front]);
     push_pad(out, pad, front_pad);
     out.extend_from_slice(&new[..copied]);
@@ -581,6 +601,7 @@ pub(crate) fn overlay(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Resul
     let target = required_render(interp, args, 2);
     let mut out = interp.take_result_buffer();
     overlay_bytes(
+        interp.heap_limit,
         &mut out,
         target.text(interp),
         new.text(interp),
@@ -682,8 +703,9 @@ pub(crate) fn strip_bytes<'a>(string: &'a [u8], option: u8, set: Option<&[u8]>) 
 }
 
 /// `SPACE`'s body: the words of `string` joined by `gap` copies of `pad`,
-/// appended to `out`.
+/// appended to `out`. A result past `heap_limit` raises 5.0.
 pub(crate) fn space_bytes(
+    heap_limit: Option<usize>,
     out: &mut Vec<u8>,
     string: &[u8],
     gap: usize,
@@ -700,6 +722,7 @@ pub(crate) fn space_bytes(
         .checked_mul(words.len() - 1)
         .and_then(|padding| padding.checked_add(content))
         .ok_or_else(Raised::system_resources)?;
+    crate::admit_within(heap_limit, total)?;
     reserve(out, total)?;
     for (index, word) in words.iter().enumerate() {
         if index > 0 {
@@ -722,7 +745,7 @@ pub(crate) fn space(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<
     };
     let string = required_render(interp, args, 1);
     let mut out = interp.take_result_buffer();
-    space_bytes(&mut out, string.text(interp), gap, pad)?;
+    space_bytes(interp.heap_limit, &mut out, string.text(interp), gap, pad)?;
     Ok(interp.text_built(out))
 }
 

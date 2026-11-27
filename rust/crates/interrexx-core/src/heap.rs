@@ -200,6 +200,12 @@ impl Heap {
         }
     }
 
+    /// The most body bytes live objects can hold now: what the last
+    /// collection found live plus everything charged since.
+    pub fn body_bytes_bound(&self) -> usize {
+        self.live_bytes.saturating_add(self.bytes_since)
+    }
+
     /// The body bytes charged since the last collection.
     pub fn bytes_since(&self) -> usize {
         self.bytes_since

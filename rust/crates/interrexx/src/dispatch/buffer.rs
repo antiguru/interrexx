@@ -343,6 +343,7 @@ pub(super) fn native_mutable_buffer_new(
     }
     let default_size = optional_length_argument(interp, args, 1)?.unwrap_or(BUFFER_DEFAULT_LENGTH);
     let capacity = default_size.max(initial.len());
+    interp.admit_bytes(capacity)?;
     let mut bytes = Vec::new();
     bytes
         .try_reserve_exact(capacity)
@@ -723,10 +724,11 @@ fn native_mutable_buffer_substr(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (start, length, pad) = substr_arguments(interp, args)?;
     let state = buffer_state(interp, receiver)?;
     let mut out = interp.take_result_buffer();
-    crate::builtin::string::substr_bytes(&mut out, &state.bytes, start, length, pad)?;
+    crate::builtin::string::substr_bytes(heap_limit, &mut out, &state.bytes, start, length, pad)?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -739,12 +741,20 @@ fn native_mutable_buffer_brackets(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let start = required_position_argument(interp, args, 0)? - 1;
     let length = optional_length_argument(interp, args, 1)?.unwrap_or(1);
     let state = buffer_state(interp, receiver)?;
     let capped = length.min(state.bytes.len().saturating_sub(start));
     let mut out = interp.take_result_buffer();
-    crate::builtin::string::substr_bytes(&mut out, &state.bytes, start, Some(capped), b' ')?;
+    crate::builtin::string::substr_bytes(
+        heap_limit,
+        &mut out,
+        &state.bytes,
+        start,
+        Some(capped),
+        b' ',
+    )?;
     Ok(Some(interp.text_built(out)))
 }
 
@@ -1381,6 +1391,7 @@ fn grow_buffer(
     receiver: ObjRef,
     added: usize,
 ) -> Result<&mut BufferState, Failure> {
+    interp.admit_bytes(added)?;
     let state = buffer_state_mut(interp, receiver)?;
     let grown = state
         .ensure_capacity(added)
@@ -1401,6 +1412,7 @@ fn grow_buffer_to(
     receiver: ObjRef,
     length: usize,
 ) -> Result<&mut BufferState, Failure> {
+    interp.admit_bytes(length)?;
     let state = buffer_state_mut(interp, receiver)?;
     let grown = state
         .set_capacity(length)
@@ -1534,6 +1546,7 @@ pub(super) fn replace_at_plan(
 /// [`replace_at_plan`]'s assembly: the front padded out to `begin`, then
 /// `new`, then whatever the replacement did not cover.
 pub(super) fn replace_at_bytes(
+    heap_limit: Option<usize>,
     out: &mut Vec<u8>,
     bytes: &[u8],
     new: &[u8],
@@ -1541,7 +1554,7 @@ pub(super) fn replace_at_bytes(
     replaced: usize,
     pad: u8,
 ) -> Result<(), Failure> {
-    crate::builtin::string::substr_bytes(out, bytes, 0, Some(begin), pad)?;
+    crate::builtin::string::substr_bytes(heap_limit, out, bytes, 0, Some(begin), pad)?;
     out.extend_from_slice(new);
     out.extend_from_slice(&bytes[(begin + replaced).min(bytes.len())..]);
     Ok(())
@@ -1556,13 +1569,22 @@ fn native_mutable_buffer_insert(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (new, begin, length, pad) = insert_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     let held = buffer_state_mut(interp, receiver)?.bytes.len();
     let insert_length = length.unwrap_or(new.len());
     let added = insert_length.saturating_add(begin.saturating_sub(held));
     let state = grow_buffer(interp, receiver, added)?;
-    crate::builtin::string::insert_bytes(&mut out, &state.bytes, &new, begin, length, pad)?;
+    crate::builtin::string::insert_bytes(
+        heap_limit,
+        &mut out,
+        &state.bytes,
+        &new,
+        begin,
+        length,
+        pad,
+    )?;
     replace_buffer_contents(state, &out);
     interp.give_result_buffer(out);
     Ok(Some(receiver))
@@ -1577,12 +1599,21 @@ fn native_mutable_buffer_overlay(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (new, begin, length, pad) = overlay_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     let overlay_length = length.unwrap_or(new.len());
     let needed = begin.saturating_add(overlay_length);
     let state = grow_buffer_to(interp, receiver, needed)?;
-    crate::builtin::string::overlay_bytes(&mut out, &state.bytes, &new, begin, length, pad)?;
+    crate::builtin::string::overlay_bytes(
+        heap_limit,
+        &mut out,
+        &state.bytes,
+        &new,
+        begin,
+        length,
+        pad,
+    )?;
     replace_buffer_contents(state, &out);
     interp.give_result_buffer(out);
     Ok(Some(receiver))
@@ -1596,6 +1627,7 @@ fn buffer_replace_at(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let new = named_string_argument(interp, args, 0, "new")?;
     let begin = named_position_argument(interp, args, 1, "position")? - 1;
     let length = optional_named_length_argument(interp, args, 2, "length")?;
@@ -1606,7 +1638,15 @@ fn buffer_replace_at(
     let state = grow_buffer_to(interp, receiver, final_length)?;
     out.try_reserve(final_length)
         .map_err(|_| Failure::from(Raised::system_resources()))?;
-    replace_at_bytes(&mut out, &state.bytes, &new, begin, replaced, pad)?;
+    replace_at_bytes(
+        heap_limit,
+        &mut out,
+        &state.bytes,
+        &new,
+        begin,
+        replaced,
+        pad,
+    )?;
     replace_buffer_contents(state, &out);
     interp.give_result_buffer(out);
     Ok(Some(receiver))
@@ -1762,10 +1802,11 @@ fn native_mutable_buffer_space(
     receiver: ObjRef,
     args: &[Option<ObjRef>],
 ) -> Result<Option<ObjRef>, Failure> {
+    let heap_limit = interp.heap_limit;
     let (gap, pad) = space_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     let state = buffer_state_mut(interp, receiver)?;
-    crate::builtin::string::space_bytes(&mut out, &state.bytes, gap, pad)?;
+    crate::builtin::string::space_bytes(heap_limit, &mut out, &state.bytes, gap, pad)?;
     let gaps = crate::builtin::word::word_count(&state.bytes).saturating_sub(1);
     let growth = gaps.saturating_mul(gap.saturating_sub(1));
     state.bytes.truncate(out.len() - growth);
