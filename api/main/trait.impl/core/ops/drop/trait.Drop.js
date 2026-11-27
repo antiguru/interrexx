@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["interrexx_api",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.100.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"interrexx_api/handles/struct.Table.html\" title=\"struct interrexx_api::handles::Table\">Table</a>",0]]],["interrexx_core",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.100.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"interrexx_core/struct.FrameArena.html\" title=\"struct interrexx_core::FrameArena\">FrameArena</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.100.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"interrexx_core/struct.OpenFile.html\" title=\"struct interrexx_core::OpenFile\">OpenFile</a>",0]]],["interrexx_rxapi",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.100.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"interrexx_rxapi/transport/unix/struct.Unix.html\" title=\"struct interrexx_rxapi::transport::unix::Unix\">Unix</a>",0],["impl&lt;T: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.100.0/std/os/fd/raw/trait.AsRawFd.html\" title=\"trait std::os::fd::raw::AsRawFd\">AsRawFd</a>&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.100.0/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"interrexx_rxapi/reserved/struct.Reserved.html\" title=\"struct interrexx_rxapi::reserved::Reserved\">Reserved</a>&lt;T&gt;",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[299,575,781]}

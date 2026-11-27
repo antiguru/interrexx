@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DETACH_VARIABLE"],"fn":["detach","lock_path","peer_uid","prepare_dir","service_dir","socket_path"],"struct":["Unix"]};

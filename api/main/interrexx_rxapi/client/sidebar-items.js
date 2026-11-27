@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["SESSION_VARIABLE"],"fn":["connect","parse_session","report_refusal","session_value"],"struct":["Session"]};

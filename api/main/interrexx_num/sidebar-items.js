@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ARGUMENT_DIGITS","DEFAULT_DIGITS","DIGITS64","MAX_EXPONENT","MIN_EXPONENT"],"enum":["ArithError","CompareOp","DivOp","Form","FormatError","SettingsError"],"fn":["compare","compare_bytes","compare_decoded","compare_numbers","compare_strings","compare_with_null","whole_i64"],"struct":["Number","Scaled","Settings"]};

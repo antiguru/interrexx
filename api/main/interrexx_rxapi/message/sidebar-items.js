@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FIFO","LIFO","MAX_NAME","MAX_QUEUE_NAME","NO_WAIT","WAIT"],"enum":["Registry","Reply","Request"],"mod":["code","macro_position","wire"],"struct":["Item","Macro","Registered","Timestamp"]};

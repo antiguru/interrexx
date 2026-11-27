@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["classic_halt","classic_trace","create_instance","error_message","error_message_by_number","rexx_start","translate_file","translate_instore","version_information"],"struct":["InstanceOptions","Instore","Start","Started"]};

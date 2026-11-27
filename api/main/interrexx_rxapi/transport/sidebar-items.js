@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TransportError"],"mod":["unix"],"struct":["CancelToken"],"trait":["Transport"]};

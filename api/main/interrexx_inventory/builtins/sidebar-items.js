@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["EXCLUDED","LATER_LEVEL","PARTIALLY_EXCLUDED"],"fn":["excluded_names","in_scope","is_later_level","owner_of","wholly_excluded"],"static":["NAMES"]};

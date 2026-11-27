@@ -1,0 +1,985 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/interrexx-num/src/format.rs`."><title>format.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="interrexx_num" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">interrexx_num/</div>format.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `NUMERIC FORM ENGINEERING`, and the `FORMAT`/`TRUNC` builtins.
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use crate</span>::{Digits, Form, Number, signed_count, signed_len};
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>interrexx_cast::CastFrom;
+<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span>std::borrow::Cow;
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span>std::fmt::Write;
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a><span class="doccomment">/// What `FORMAT` can fail with. Both are error 93 (`Incorrect call to
+<a href=#9 id=9 data-nosnippet>9</a>/// method`); the interpreter further distinguishes 93.941/93.942, but this
+<a href=#10 id=10 data-nosnippet>10</a>/// crate follows `ArithError`'s lead and exposes only the number a trapped
+<a href=#11 id=11 data-nosnippet>11</a>/// Rexx program actually sees in `RC`, using the variant itself to carry the
+<a href=#12 id=12 data-nosnippet>12</a>/// finer distinction for Rust callers. Every raise site lives in this file,
+<a href=#13 id=13 data-nosnippet>13</a>/// so each variant carries the substitution *values* directly rather than
+<a href=#14 id=14 data-nosnippet>14</a>/// pre-rendered text -- `message()` renders from the generated table on
+<a href=#15 id=15 data-nosnippet>15</a>/// demand, and `additional()` exposes those same values in the
+<a href=#16 id=16 data-nosnippet>16</a>/// interpreter's own order (what `condition('o')~additional` would return).
+<a href=#17 id=17 data-nosnippet>17</a></span><span class="attr">#[derive(Clone, PartialEq, Eq, Debug)]
+<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">pub enum </span>FormatError {
+<a href=#19 id=19 data-nosnippet>19</a>    <span class="doccomment">/// `before` is too narrow for the integer part actually produced (which,
+<a href=#20 id=20 data-nosnippet>20</a>    /// in exponential form, means the mantissa's integer digits). Error
+<a href=#21 id=21 data-nosnippet>21</a>    /// 93.942; `additional()` is `[reported.format(digits), before]`.
+<a href=#22 id=22 data-nosnippet>22</a>    /// ```text
+<a href=#23 id=23 data-nosnippet>23</a>    /// format(1.5,0)                            "1.5"          no `after`, nothing rounded
+<a href=#24 id=24 data-nosnippet>24</a>    /// format(1.5,0,0)                          "2"            `after` rounded it, and carried
+<a href=#25 id=25 data-nosnippet>25</a>    /// format(99.996,2,2)                       "100.0"        the rounding's
+<a href=#26 id=26 data-nosnippet>26</a>    /// digit count, not four format(-0.5,1,0)                         "-1"
+<a href=#27 id=27 data-nosnippet>27</a>    /// the sign survives a full round-away format(123456.789,2)
+<a href=#28 id=28 data-nosnippet>28</a>    /// "123456.789"   plain: not reframed ENGINEERING format(123456.789,2,,,0)
+<a href=#29 id=29 data-nosnippet>29</a>    /// "123.456789"   reframed by the engineering exponent ENGINEERING
+<a href=#30 id=30 data-nosnippet>30</a>    /// format(123456.789,2,3,,0)    "123.457"      reframed and then rounded
+<a href=#31 id=31 data-nosnippet>31</a>    /// format(1e10,2,,0)                        "1E+10"        rendered through
+<a href=#32 id=32 data-nosnippet>32</a>    /// the string value ENGINEERING format(1e10,0,,0)            "10E+9"
+<a href=#33 id=33 data-nosnippet>33</a>    /// ...which honours FORM too
+<a href=#34 id=34 data-nosnippet>34</a>    /// ```
+<a href=#35 id=35 data-nosnippet>35</a>    </span>BeforeOversize {
+<a href=#36 id=36 data-nosnippet>36</a>        reported: Number,
+<a href=#37 id=37 data-nosnippet>37</a>        digits: u64,
+<a href=#38 id=38 data-nosnippet>38</a>        form: Form,
+<a href=#39 id=39 data-nosnippet>39</a>        before: u32,
+<a href=#40 id=40 data-nosnippet>40</a>    },
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="doccomment">/// `expp` is too narrow to hold the exponent's digits. Error 93.941;
+<a href=#42 id=42 data-nosnippet>42</a>    /// `additional()` is `[render(mantissa), width]`, where `render` is a
+<a href=#43 id=43 data-nosnippet>43</a>    /// plain (no `before`/`after`) rendering of `mantissa` -- see the two
+<a href=#44 id=44 data-nosnippet>44</a>    /// call sites (`format_with`'s inline check, and
+<a href=#45 id=45 data-nosnippet>45</a>    /// `post_carry_exponent_error`) for what `mantissa` is reframed to and
+<a href=#46 id=46 data-nosnippet>46</a>    /// why there are two of them.
+<a href=#47 id=47 data-nosnippet>47</a>    </span>ExponentOversize { mantissa: Number, width: u32 },
+<a href=#48 id=48 data-nosnippet>48</a>}
+<a href=#49 id=49 data-nosnippet>49</a>
+<a href=#50 id=50 data-nosnippet>50</a><span class="kw">impl </span>FormatError {
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="kw">pub fn </span>code(<span class="self">self</span>) -&gt; u16 {
+<a href=#52 id=52 data-nosnippet>52</a>        <span class="number">93
+<a href=#53 id=53 data-nosnippet>53</a>    </span>}
+<a href=#54 id=54 data-nosnippet>54</a>
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="doccomment">/// The sub-message identifying this failure's exact table row -- see
+<a href=#56 id=56 data-nosnippet>56</a>    /// `ArithError::sub_code`'s doc comment for why `code()` alone isn't
+<a href=#57 id=57 data-nosnippet>57</a>    /// enough (here it would be, since both variants share major 93, but
+<a href=#58 id=58 data-nosnippet>58</a>    /// the pattern matches the crate's other two error types).
+<a href=#59 id=59 data-nosnippet>59</a>    </span><span class="kw">fn </span>sub(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u16 {
+<a href=#60 id=60 data-nosnippet>60</a>        <span class="kw">match </span><span class="self">self </span>{
+<a href=#61 id=61 data-nosnippet>61</a>            FormatError::BeforeOversize { .. } =&gt; <span class="number">942</span>,
+<a href=#62 id=62 data-nosnippet>62</a>            FormatError::ExponentOversize { .. } =&gt; <span class="number">941</span>,
+<a href=#63 id=63 data-nosnippet>63</a>        }
+<a href=#64 id=64 data-nosnippet>64</a>    }
+<a href=#65 id=65 data-nosnippet>65</a>
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="doccomment">/// The full `(major, sub)` pair, for a caller that has to build the
+<a href=#67 id=67 data-nosnippet>67</a>    /// interpreter's own condition object rather than a message.
+<a href=#68 id=68 data-nosnippet>68</a>    </span><span class="kw">pub fn </span>sub_code(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (u16, u16) {
+<a href=#69 id=69 data-nosnippet>69</a>        (<span class="number">93</span>, <span class="self">self</span>.sub())
+<a href=#70 id=70 data-nosnippet>70</a>    }
+<a href=#71 id=71 data-nosnippet>71</a>
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="doccomment">/// The substitution values in the interpreter's own order -- what
+<a href=#73 id=73 data-nosnippet>73</a>    /// `condition('o')~additional` would return for this failure.
+<a href=#74 id=74 data-nosnippet>74</a>    </span><span class="kw">pub fn </span>additional(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
+<a href=#75 id=75 data-nosnippet>75</a>        <span class="kw">match </span><span class="self">self </span>{
+<a href=#76 id=76 data-nosnippet>76</a>            FormatError::BeforeOversize {
+<a href=#77 id=77 data-nosnippet>77</a>                reported,
+<a href=#78 id=78 data-nosnippet>78</a>                digits,
+<a href=#79 id=79 data-nosnippet>79</a>                form,
+<a href=#80 id=80 data-nosnippet>80</a>                before,
+<a href=#81 id=81 data-nosnippet>81</a>            } =&gt; {
+<a href=#82 id=82 data-nosnippet>82</a>                <span class="macro">vec!</span>[reported.format_form(<span class="kw-2">*</span>digits, <span class="kw-2">*</span>form), before.to_string()]
+<a href=#83 id=83 data-nosnippet>83</a>            }
+<a href=#84 id=84 data-nosnippet>84</a>            FormatError::ExponentOversize { mantissa, width } =&gt; {
+<a href=#85 id=85 data-nosnippet>85</a>                <span class="kw">let </span>rendered =
+<a href=#86 id=86 data-nosnippet>86</a>                    render_integer_padded(mantissa, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="number">0</span>, Form::Scientific)
+<a href=#87 id=87 data-nosnippet>87</a>                        .expect(<span class="string">"`before` is None, so the width check cannot fail"</span>);
+<a href=#88 id=88 data-nosnippet>88</a>                <span class="macro">vec!</span>[rendered, width.to_string()]
+<a href=#89 id=89 data-nosnippet>89</a>            }
+<a href=#90 id=90 data-nosnippet>90</a>        }
+<a href=#91 id=91 data-nosnippet>91</a>    }
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="doccomment">/// The interpreter's exact message text, rendered from the generated
+<a href=#94 id=94 data-nosnippet>94</a>    /// table on demand.
+<a href=#95 id=95 data-nosnippet>95</a>    </span><span class="kw">pub fn </span>message(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#96 id=96 data-nosnippet>96</a>        <span class="kw">let </span>subs = <span class="self">self</span>.additional();
+<a href=#97 id=97 data-nosnippet>97</a>        <span class="kw">let </span>refs: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = subs.iter().map(String::as_str).collect();
+<a href=#98 id=98 data-nosnippet>98</a>        <span class="kw">crate</span>::error_text(<span class="number">93</span>, <span class="self">self</span>.sub(), <span class="kw-2">&amp;</span>refs)
+<a href=#99 id=99 data-nosnippet>99</a>    }
+<a href=#100 id=100 data-nosnippet>100</a>}
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a><span class="kw">impl </span>Number {
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="doccomment">/// Renders the number the way automatic-conversion display and `FORMAT`'s
+<a href=#104 id=104 data-nosnippet>104</a>    /// defaults do, honouring `NUMERIC FORM`. `Number::format` only ever
+<a href=#105 id=105 data-nosnippet>105</a>    /// produces SCIENTIFIC; this is the form-aware entry point the brief
+<a href=#106 id=106 data-nosnippet>106</a>    /// asks for, implemented as the all-defaults case of [`Number::format_with`]
+<a href=#107 id=107 data-nosnippet>107</a>    /// so the two can never drift apart.
+<a href=#108 id=108 data-nosnippet>108</a>    </span><span class="kw">pub fn </span>format_form(<span class="kw-2">&amp;</span><span class="self">self</span>, digits: u64, form: Form) -&gt; String {
+<a href=#109 id=109 data-nosnippet>109</a>        <span class="self">self</span>.format_with(digits, form, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
+<a href=#110 id=110 data-nosnippet>110</a>            .expect(<span class="string">"no `before`/`expp` supplied, so no width check can fail"</span>)
+<a href=#111 id=111 data-nosnippet>111</a>    }
+<a href=#112 id=112 data-nosnippet>112</a>
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="doccomment">/// Writes into `out` what [`Number::format_form`] answers at `digits`,
+<a href=#114 id=114 data-nosnippet>114</a>    /// for a value with a fractional part that renders exactly and plainly
+<a href=#115 id=115 data-nosnippet>115</a>    /// in at most `out.len()` bytes; `None`, writing nothing, otherwise.
+<a href=#116 id=116 data-nosnippet>116</a>    ///
+<a href=#117 id=117 data-nosnippet>117</a>    /// Exact means no digit is rounded away (the value holds at most
+<a href=#118 id=118 data-nosnippet>118</a>    /// `digits` digits) and plain means no exponent, which is the same in
+<a href=#119 id=119 data-nosnippet>119</a>    /// either form. Under those conditions the rendering spells every
+<a href=#120 id=120 data-nosnippet>120</a>    /// stored digit and the negative exponent as the point's position, so
+<a href=#121 id=121 data-nosnippet>121</a>    /// parsing it back yields this number's digits and exponent unchanged.
+<a href=#122 id=122 data-nosnippet>122</a>    </span><span class="kw">pub fn </span>write_short_fraction(<span class="kw-2">&amp;</span><span class="self">self</span>, digits: u64, out: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#123 id=123 data-nosnippet>123</a>        <span class="kw">let </span>count = <span class="self">self</span>.digits.len();
+<a href=#124 id=124 data-nosnippet>124</a>        <span class="kw">if </span><span class="self">self</span>.exponent &gt;= <span class="number">0 </span>|| u64::cast_from(count) &gt; digits {
+<a href=#125 id=125 data-nosnippet>125</a>            <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#126 id=126 data-nosnippet>126</a>        }
+<a href=#127 id=127 data-nosnippet>127</a>        <span class="kw">let </span>places = usize::cast_from(<span class="self">self</span>.exponent.unsigned_abs());
+<a href=#128 id=128 data-nosnippet>128</a>        <span class="comment">// `format_with`'s exponential trigger for a value below one: more
+<a href=#129 id=129 data-nosnippet>129</a>        // places after the point than twice DIGITS.
+<a href=#130 id=130 data-nosnippet>130</a>        </span><span class="kw">let </span>adjusted = i64::from(<span class="self">self</span>.exponent) + signed_len(count) - <span class="number">1</span>;
+<a href=#131 id=131 data-nosnippet>131</a>        <span class="kw">if </span>adjusted &lt; <span class="number">0 </span>&amp;&amp; u64::cast_from(places) &gt; digits.saturating_mul(<span class="number">2</span>) {
+<a href=#132 id=132 data-nosnippet>132</a>            <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#133 id=133 data-nosnippet>133</a>        }
+<a href=#134 id=134 data-nosnippet>134</a>        <span class="kw">let </span>whole = count.saturating_sub(places);
+<a href=#135 id=135 data-nosnippet>135</a>        <span class="kw">let </span>leading_zeros = places.saturating_sub(count);
+<a href=#136 id=136 data-nosnippet>136</a>        <span class="kw">let </span>length = usize::from(<span class="self">self</span>.negative) + whole.max(<span class="number">1</span>) + <span class="number">1 </span>+ places;
+<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">if </span>length &gt; out.len() {
+<a href=#138 id=138 data-nosnippet>138</a>            <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#139 id=139 data-nosnippet>139</a>        }
+<a href=#140 id=140 data-nosnippet>140</a>        <span class="kw">let </span><span class="kw-2">mut </span>at = <span class="number">0</span>;
+<a href=#141 id=141 data-nosnippet>141</a>        <span class="kw">if </span><span class="self">self</span>.negative {
+<a href=#142 id=142 data-nosnippet>142</a>            out[at] = <span class="string">b'-'</span>;
+<a href=#143 id=143 data-nosnippet>143</a>            at += <span class="number">1</span>;
+<a href=#144 id=144 data-nosnippet>144</a>        }
+<a href=#145 id=145 data-nosnippet>145</a>        <span class="kw">if </span>whole == <span class="number">0 </span>{
+<a href=#146 id=146 data-nosnippet>146</a>            out[at] = <span class="string">b'0'</span>;
+<a href=#147 id=147 data-nosnippet>147</a>            at += <span class="number">1</span>;
+<a href=#148 id=148 data-nosnippet>148</a>        }
+<a href=#149 id=149 data-nosnippet>149</a>        <span class="kw">for </span><span class="kw-2">&amp;</span>digit <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.digits[..whole] {
+<a href=#150 id=150 data-nosnippet>150</a>            out[at] = <span class="string">b'0' </span>+ digit;
+<a href=#151 id=151 data-nosnippet>151</a>            at += <span class="number">1</span>;
+<a href=#152 id=152 data-nosnippet>152</a>        }
+<a href=#153 id=153 data-nosnippet>153</a>        out[at] = <span class="string">b'.'</span>;
+<a href=#154 id=154 data-nosnippet>154</a>        at += <span class="number">1</span>;
+<a href=#155 id=155 data-nosnippet>155</a>        <span class="kw">for </span>slot <span class="kw">in </span><span class="kw-2">&amp;mut </span>out[at..at + leading_zeros] {
+<a href=#156 id=156 data-nosnippet>156</a>            <span class="kw-2">*</span>slot = <span class="string">b'0'</span>;
+<a href=#157 id=157 data-nosnippet>157</a>        }
+<a href=#158 id=158 data-nosnippet>158</a>        at += leading_zeros;
+<a href=#159 id=159 data-nosnippet>159</a>        <span class="kw">for </span><span class="kw-2">&amp;</span>digit <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.digits[whole..] {
+<a href=#160 id=160 data-nosnippet>160</a>            out[at] = <span class="string">b'0' </span>+ digit;
+<a href=#161 id=161 data-nosnippet>161</a>            at += <span class="number">1</span>;
+<a href=#162 id=162 data-nosnippet>162</a>        }
+<a href=#163 id=163 data-nosnippet>163</a>        <span class="macro">debug_assert_eq!</span>(at, length);
+<a href=#164 id=164 data-nosnippet>164</a>        <span class="prelude-val">Some</span>(length)
+<a href=#165 id=165 data-nosnippet>165</a>    }
+<a href=#166 id=166 data-nosnippet>166</a>
+<a href=#167 id=167 data-nosnippet>167</a>    <span class="doccomment">/// Implements the `FORMAT(number, before, after, expp, expt)` builtin.
+<a href=#168 id=168 data-nosnippet>168</a>    </span><span class="kw">pub fn </span>format_with(
+<a href=#169 id=169 data-nosnippet>169</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#170 id=170 data-nosnippet>170</a>        digits: u64,
+<a href=#171 id=171 data-nosnippet>171</a>        form: Form,
+<a href=#172 id=172 data-nosnippet>172</a>        before: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#173 id=173 data-nosnippet>173</a>        after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#174 id=174 data-nosnippet>174</a>        expp: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#175 id=175 data-nosnippet>175</a>        expt: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#176 id=176 data-nosnippet>176</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;String, FormatError&gt; {
+<a href=#177 id=177 data-nosnippet>177</a>        <span class="comment">// Every FORMAT call rounds to the *current* DIGITS first, regardless
+<a href=#178 id=178 data-nosnippet>178</a>        // of what `expt` says -- `expt` only moves the exponential-form
+<a href=#179 id=179 data-nosnippet>179</a>        // trigger, it does not add or remove precision. Confirmed with a
+<a href=#180 id=180 data-nosnippet>180</a>        // 15-significant-digit literal at DIGITS 9: it always renders as if
+<a href=#181 id=181 data-nosnippet>181</a>        // it had been rounded to 9 digits first, however `expt` is set.
+<a href=#182 id=182 data-nosnippet>182</a>        </span><span class="kw">let </span>n1 = <span class="self">self</span>.round_to(digits);
+<a href=#183 id=183 data-nosnippet>183</a>        <span class="comment">// `BeforeOversize`'s &amp;1 comes from `(n1, digits)` -- see its doc
+<a href=#184 id=184 data-nosnippet>184</a>        // comment for what exactly that renders and why. Stored as the
+<a href=#185 id=185 data-nosnippet>185</a>        // `Number` and the `digits` it needs, not pre-rendered, since
+<a href=#186 id=186 data-nosnippet>186</a>        // `additional()` does the rendering on demand.
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>        // `expp == 0` is not "no padding": it suppresses exponential form
+<a href=#189 id=189 data-nosnippet>189</a>        // altogether, so a number that would otherwise trigger it renders in
+<a href=#190 id=190 data-nosnippet>190</a>        // full plain digits instead (verified with 1E100 at expp 0, which
+<a href=#191 id=191 data-nosnippet>191</a>        // prints all 101 digits). Everything else about it -- notably the
+<a href=#192 id=192 data-nosnippet>192</a>        // `before` check -- then operates on that plain rendering.
+<a href=#193 id=193 data-nosnippet>193</a>        </span><span class="kw">let </span>expt = trigger(digits, expp, expt);
+<a href=#194 id=194 data-nosnippet>194</a>
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="comment">// `expp` is checked *twice*. The first check runs against the exponent
+<a href=#196 id=196 data-nosnippet>196</a>        // derived from the number alone, before the section that applies
+<a href=#197 id=197 data-nosnippet>197</a>        // `after` and can carry -- it has no notion yet of the value carry will
+<a href=#198 id=198 data-nosnippet>198</a>        // eventually produce. So this first check (and its substitution) needs
+<a href=#199 id=199 data-nosnippet>199</a>        // the uncarried trigger/grouping -- `initial_exponent`, which is also
+<a href=#200 id=200 data-nosnippet>200</a>        // `resolve_exponential_shape`'s first guess -- not the final,
+<a href=#201 id=201 data-nosnippet>201</a>        // carry-resolved one that drives the successful-render path below. This
+<a href=#202 id=202 data-nosnippet>202</a>        // is shown by forcing a carry that bumps the exponent from 20 to 21
+<a href=#203 id=203 data-nosnippet>203</a>        // digits (`9.996E+20` rounded to 0 decimals) while `expp` is too narrow
+<a href=#204 id=204 data-nosnippet>204</a>        // for either: the reported mantissa is `"9.996"` (reframed at the
+<a href=#205 id=205 data-nosnippet>205</a>        // pre-carry 20), not `"0.9996"` (reframed at the post-carry 21).
+<a href=#206 id=206 data-nosnippet>206</a>        </span><span class="kw">let </span>initial_eng_exp = initial_exponent(Shape::of(<span class="kw-2">&amp;</span>n1), form, expt);
+<a href=#207 id=207 data-nosnippet>207</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(width) = expp {
+<a href=#208 id=208 data-nosnippet>208</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(exp0) = initial_eng_exp {
+<a href=#209 id=209 data-nosnippet>209</a>                <span class="kw">let </span>needed = u32::try_from(exp0.unsigned_abs().to_string().len())
+<a href=#210 id=210 data-nosnippet>210</a>                    .expect(<span class="string">"a u32 has at most ten digits"</span>);
+<a href=#211 id=211 data-nosnippet>211</a>                <span class="kw">if </span>needed &gt; width {
+<a href=#212 id=212 data-nosnippet>212</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(FormatError::ExponentOversize {
+<a href=#213 id=213 data-nosnippet>213</a>                        mantissa: reframe(<span class="kw-2">&amp;</span>n1, exp0),
+<a href=#214 id=214 data-nosnippet>214</a>                        width,
+<a href=#215 id=215 data-nosnippet>215</a>                    });
+<a href=#216 id=216 data-nosnippet>216</a>                }
+<a href=#217 id=217 data-nosnippet>217</a>            }
+<a href=#218 id=218 data-nosnippet>218</a>            <span class="comment">// The whole trigger/width check is redone a *second* time, right
+<a href=#219 id=219 data-nosnippet>219</a>            // after the decimal-rounding carry that the first check couldn't
+<a href=#220 id=220 data-nosnippet>220</a>            // have known about. Two shapes need it: a carry that grows an
+<a href=#221 id=221 data-nosnippet>221</a>            // *already* -triggered exponent's digit count (`9.996E+99` rounded
+<a href=#222 id=222 data-nosnippet>222</a>            // to 0 decimals at DIGITS 9, `expp` 2 -- pre-carry exponent 99
+<a href=#223 id=223 data-nosnippet>223</a>            // fits, post-carry 100 does not), and a carry that triggers
+<a href=#224 id=224 data-nosnippet>224</a>            // exponential form for the first time on a value that started plain
+<a href=#225 id=225 data-nosnippet>225</a>            // (`9999999999.6` at DIGITS 15, `expt` 10, `after` 0, `expp` 1 --
+<a href=#226 id=226 data-nosnippet>226</a>            // adjusted exponent 9 does not clear the trigger, but rounding away
+<a href=#227 id=227 data-nosnippet>227</a>            // the ".6" carries it to 10, which does). The first was a
+<a href=#228 id=228 data-nosnippet>228</a>            // regression caught by review, not by any of the 21,296 cases the
+<a href=#229 id=229 data-nosnippet>229</a>            // four curated FORMAT sets already ran.
+<a href=#230 id=230 data-nosnippet>230</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(err) =
+<a href=#231 id=231 data-nosnippet>231</a>                post_carry_exponent_error(<span class="kw-2">&amp;</span>n1, initial_eng_exp, form, expt, after, width)
+<a href=#232 id=232 data-nosnippet>232</a>            {
+<a href=#233 id=233 data-nosnippet>233</a>                <span class="kw">return </span><span class="prelude-val">Err</span>(err);
+<a href=#234 id=234 data-nosnippet>234</a>            }
+<a href=#235 id=235 data-nosnippet>235</a>        }
+<a href=#236 id=236 data-nosnippet>236</a>
+<a href=#237 id=237 data-nosnippet>237</a>        <span class="kw">let </span>(eng_exp, rounded) = resolve_exponential_state(<span class="kw-2">&amp;</span>n1, form, expt, after);
+<a href=#238 id=238 data-nosnippet>238</a>        <span class="comment">// What `BeforeOversize` substitutes, computed here rather than at the
+<a href=#239 id=239 data-nosnippet>239</a>        // raise site because it needs both exponent choices -- see
+<a href=#240 id=240 data-nosnippet>240</a>        // `reported_value` -- and computed only when `before` is supplied,
+<a href=#241 id=241 data-nosnippet>241</a>        // since nothing else can reach that raise.
+<a href=#242 id=242 data-nosnippet>242</a>        </span><span class="kw">let </span>reported = before.map(|<span class="kw">_</span>| reported_value(<span class="kw-2">&amp;</span>n1, initial_eng_exp, eng_exp, after));
+<a href=#243 id=243 data-nosnippet>243</a>
+<a href=#244 id=244 data-nosnippet>244</a>        <span class="comment">// The exponent check comes before the `before` check -- an exponent
+<a href=#245 id=245 data-nosnippet>245</a>        // that doesn't fit is reported even when `before` would have been
+<a href=#246 id=246 data-nosnippet>246</a>        // wide enough for the mantissa. It has already run above, so the
+<a href=#247 id=247 data-nosnippet>247</a>        // `?` here is the later of the two.
+<a href=#248 id=248 data-nosnippet>248</a>        </span><span class="kw">let </span>layout = pad_to_before(
+<a href=#249 id=249 data-nosnippet>249</a>            plain_layout(Shape::of(<span class="kw-2">&amp;</span>rounded), after),
+<a href=#250 id=250 data-nosnippet>250</a>            before,
+<a href=#251 id=251 data-nosnippet>251</a>            reported.as_ref(),
+<a href=#252 id=252 data-nosnippet>252</a>            digits,
+<a href=#253 id=253 data-nosnippet>253</a>            form,
+<a href=#254 id=254 data-nosnippet>254</a>        )<span class="question-mark">?</span>;
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="kw">let </span>field = ExponentField::decide(eng_exp, expp);
+<a href=#256 id=256 data-nosnippet>256</a>
+<a href=#257 id=257 data-nosnippet>257</a>        <span class="comment">// **Measured out first and written once**, which is what lets this
+<a href=#258 id=258 data-nosnippet>258</a>        // one `String` be allocated at its final size and never grow.
+<a href=#259 id=259 data-nosnippet>259</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>out = String::with_capacity(layout.len() + field.len());
+<a href=#260 id=260 data-nosnippet>260</a>        emit_plain(<span class="kw-2">&amp;mut </span>out, <span class="kw-2">&amp;</span>rounded, layout);
+<a href=#261 id=261 data-nosnippet>261</a>        field.push_to(<span class="kw-2">&amp;mut </span>out);
+<a href=#262 id=262 data-nosnippet>262</a>        <span class="comment">// What makes the layout a promise about the bytes rather than a
+<a href=#263 id=263 data-nosnippet>263</a>        // capacity hint for them -- and what says the allocation above stayed
+<a href=#264 id=264 data-nosnippet>264</a>        // one: the final length equals the capacity asked for, so nothing
+<a href=#265 id=265 data-nosnippet>265</a>        // pushed into it ever had to grow it.
+<a href=#266 id=266 data-nosnippet>266</a>        </span><span class="macro">debug_assert_eq!</span>(
+<a href=#267 id=267 data-nosnippet>267</a>            out.len(),
+<a href=#268 id=268 data-nosnippet>268</a>            layout.len() + field.len(),
+<a href=#269 id=269 data-nosnippet>269</a>            <span class="string">"the rendering disagrees with the layout it was emitted from"
+<a href=#270 id=270 data-nosnippet>270</a>        </span>);
+<a href=#271 id=271 data-nosnippet>271</a>        <span class="prelude-val">Ok</span>(out)
+<a href=#272 id=272 data-nosnippet>272</a>    }
+<a href=#273 id=273 data-nosnippet>273</a>
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="doccomment">/// The exponent a [`format_with`](Self::format_with) call with these same arguments would
+<a href=#275 id=275 data-nosnippet>275</a>    /// display, or `None` when the result is plain and no exponent field is
+<a href=#276 id=276 data-nosnippet>276</a>    /// written at all.
+<a href=#277 id=277 data-nosnippet>277</a>    </span><span class="kw">pub fn </span>format_exponent(
+<a href=#278 id=278 data-nosnippet>278</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#279 id=279 data-nosnippet>279</a>        digits: u64,
+<a href=#280 id=280 data-nosnippet>280</a>        form: Form,
+<a href=#281 id=281 data-nosnippet>281</a>        after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#282 id=282 data-nosnippet>282</a>        expp: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#283 id=283 data-nosnippet>283</a>        expt: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#284 id=284 data-nosnippet>284</a>    ) -&gt; <span class="prelude-ty">Option</span>&lt;i32&gt; {
+<a href=#285 id=285 data-nosnippet>285</a>        <span class="kw">let </span>n1 = <span class="self">self</span>.round_to(digits);
+<a href=#286 id=286 data-nosnippet>286</a>        resolve_exponential_state(<span class="kw-2">&amp;</span>n1, form, trigger(digits, expp, expt), after).<span class="number">0
+<a href=#287 id=287 data-nosnippet>287</a>    </span>}
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="doccomment">/// Implements `TRUNC(number, places)`. Truncates, does not round, and
+<a href=#290 id=290 data-nosnippet>290</a>    /// -- unlike `FORMAT` -- never produces exponential form: `TRUNC(1E10)`
+<a href=#291 id=291 data-nosnippet>291</a>    /// is the eleven-digit integer, not `1E+10`.
+<a href=#292 id=292 data-nosnippet>292</a>    </span><span class="kw">pub fn </span>trunc(<span class="kw-2">&amp;</span><span class="self">self</span>, digits: u64, places: u32) -&gt; String {
+<a href=#293 id=293 data-nosnippet>293</a>        <span class="kw">let </span>n = <span class="self">self</span>.round_to(digits);
+<a href=#294 id=294 data-nosnippet>294</a>        <span class="kw">let </span>truncated = truncate_to_places(<span class="kw-2">&amp;</span>n, places);
+<a href=#295 id=295 data-nosnippet>295</a>        <span class="comment">// `before` is always `None` here, so the oversize check can never
+<a href=#296 id=296 data-nosnippet>296</a>        // run and the placeholder `value`/`digits` are never read.
+<a href=#297 id=297 data-nosnippet>297</a>        </span>render_integer_padded(<span class="kw-2">&amp;</span>truncated, <span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(places), <span class="prelude-val">None</span>, <span class="number">0</span>, Form::Scientific)
+<a href=#298 id=298 data-nosnippet>298</a>            .expect(<span class="string">"`before` is None, so the width check cannot fail"</span>)
+<a href=#299 id=299 data-nosnippet>299</a>    }
+<a href=#300 id=300 data-nosnippet>300</a>}
+<a href=#301 id=301 data-nosnippet>301</a>
+<a href=#302 id=302 data-nosnippet>302</a><span class="doccomment">/// The exponential trigger `format_with` compares against, with `expp`'s
+<a href=#303 id=303 data-nosnippet>303</a>/// suppression folded in. `None` means "never exponential".
+<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">fn </span>trigger(digits: u64, expp: <span class="prelude-ty">Option</span>&lt;u32&gt;, expt: <span class="prelude-ty">Option</span>&lt;u32&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
+<a href=#305 id=305 data-nosnippet>305</a>    <span class="kw">if </span>expp == <span class="prelude-val">Some</span>(<span class="number">0</span>) {
+<a href=#306 id=306 data-nosnippet>306</a>        <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#307 id=307 data-nosnippet>307</a>    }
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="prelude-val">Some</span>(
+<a href=#309 id=309 data-nosnippet>309</a>        expt.map(i64::from)
+<a href=#310 id=310 data-nosnippet>310</a>            .unwrap_or_else(|| i64::try_from(digits).unwrap_or(i64::MAX)),
+<a href=#311 id=311 data-nosnippet>311</a>    )
+<a href=#312 id=312 data-nosnippet>312</a>}
+<a href=#313 id=313 data-nosnippet>313</a>
+<a href=#314 id=314 data-nosnippet>314</a><span class="doccomment">/// Chooses ENGINEERING's exponent for a value whose most significant digit
+<a href=#315 id=315 data-nosnippet>315</a>/// sits at `adjusted`: the largest multiple of 3 not exceeding it. Found by
+<a href=#316 id=316 data-nosnippet>316</a>/// sweeping literal `12eK` across `-30..=30` and comparing engineering to
+<a href=#317 id=317 data-nosnippet>317</a>/// scientific at each `K` -- `div_euclid` is exactly this floor division,
+<a href=#318 id=318 data-nosnippet>318</a>/// including on the negative side (`-25 -&gt; -27`, not `-24`).
+<a href=#319 id=319 data-nosnippet>319</a></span><span class="kw">fn </span>group(form: Form, adjusted: i32) -&gt; i32 {
+<a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">match </span>form {
+<a href=#321 id=321 data-nosnippet>321</a>        Form::Scientific =&gt; adjusted,
+<a href=#322 id=322 data-nosnippet>322</a>        Form::Engineering =&gt; adjusted.div_euclid(<span class="number">3</span>) * <span class="number">3</span>,
+<a href=#323 id=323 data-nosnippet>323</a>    }
+<a href=#324 id=324 data-nosnippet>324</a>}
+<a href=#325 id=325 data-nosnippet>325</a>
+<a href=#326 id=326 data-nosnippet>326</a><span class="doccomment">/// Rescales `n1` so its value reads as `mantissa * 10^exp`. Used both to turn
+<a href=#327 id=327 data-nosnippet>327</a>/// a number into the digits that sit before `E`, and -- inside
+<a href=#328 id=328 data-nosnippet>328</a>/// `resolve_exponential_shape` -- to redo that rescaling from scratch once
+<a href=#329 id=329 data-nosnippet>329</a>/// rounding has changed which `exp` is the right one, rather than patching a
+<a href=#330 id=330 data-nosnippet>330</a>/// stale mantissa.
+<a href=#331 id=331 data-nosnippet>331</a></span><span class="kw">fn </span>reframe(n1: <span class="kw-2">&amp;</span>Number, exp: i32) -&gt; Number {
+<a href=#332 id=332 data-nosnippet>332</a>    Number {
+<a href=#333 id=333 data-nosnippet>333</a>        negative: n1.negative,
+<a href=#334 id=334 data-nosnippet>334</a>        digits: n1.digits.clone(),
+<a href=#335 id=335 data-nosnippet>335</a>        exponent: Shape::of(n1).reframed(exp).exponent,
+<a href=#336 id=336 data-nosnippet>336</a>    }
+<a href=#337 id=337 data-nosnippet>337</a>}
+<a href=#338 id=338 data-nosnippet>338</a>
+<a href=#339 id=339 data-nosnippet>339</a><span class="doccomment">/// A number reduced to everything the exponential decision and the layout
+<a href=#340 id=340 data-nosnippet>340</a>/// read: how many digits it has, where the point sits relative to them, and
+<a href=#341 id=341 data-nosnippet>341</a>/// whether it has a sign.
+<a href=#342 id=342 data-nosnippet>342</a></span><span class="attr">#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+<a href=#343 id=343 data-nosnippet>343</a></span><span class="kw">struct </span>Shape {
+<a href=#344 id=344 data-nosnippet>344</a>    len: usize,
+<a href=#345 id=345 data-nosnippet>345</a>    exponent: i32,
+<a href=#346 id=346 data-nosnippet>346</a>    negative: bool,
+<a href=#347 id=347 data-nosnippet>347</a>}
+<a href=#348 id=348 data-nosnippet>348</a>
+<a href=#349 id=349 data-nosnippet>349</a><span class="kw">impl </span>Shape {
+<a href=#350 id=350 data-nosnippet>350</a>    <span class="kw">fn </span>of(n: <span class="kw-2">&amp;</span>Number) -&gt; <span class="self">Self </span>{
+<a href=#351 id=351 data-nosnippet>351</a>        Shape {
+<a href=#352 id=352 data-nosnippet>352</a>            len: n.digits.len(),
+<a href=#353 id=353 data-nosnippet>353</a>            exponent: n.exponent,
+<a href=#354 id=354 data-nosnippet>354</a>            negative: n.negative,
+<a href=#355 id=355 data-nosnippet>355</a>        }
+<a href=#356 id=356 data-nosnippet>356</a>    }
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="doccomment">/// The exponent of the most significant digit.
+<a href=#359 id=359 data-nosnippet>359</a>    </span><span class="kw">fn </span>adjusted(<span class="self">self</span>) -&gt; i32 {
+<a href=#360 id=360 data-nosnippet>360</a>        <span class="self">self</span>.exponent + signed_count(<span class="self">self</span>.len) - <span class="number">1
+<a href=#361 id=361 data-nosnippet>361</a>    </span>}
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="doccomment">/// The shape [`reframe`] produces: rescaling a value to read as
+<a href=#364 id=364 data-nosnippet>364</a>    /// `mantissa * 10^exp` moves the point and leaves the digits and the sign
+<a href=#365 id=365 data-nosnippet>365</a>    /// where they were.
+<a href=#366 id=366 data-nosnippet>366</a>    </span><span class="kw">fn </span>reframed(<span class="self">self</span>, exp: i32) -&gt; <span class="self">Self </span>{
+<a href=#367 id=367 data-nosnippet>367</a>        Shape {
+<a href=#368 id=368 data-nosnippet>368</a>            exponent: <span class="self">self</span>.exponent - exp,
+<a href=#369 id=369 data-nosnippet>369</a>            ..<span class="self">self
+<a href=#370 id=370 data-nosnippet>370</a>        </span>}
+<a href=#371 id=371 data-nosnippet>371</a>    }
+<a href=#372 id=372 data-nosnippet>372</a>}
+<a href=#373 id=373 data-nosnippet>373</a>
+<a href=#374 id=374 data-nosnippet>374</a><span class="doccomment">/// Whether a value of this shape renders exponentially before `after` has cut
+<a href=#375 id=375 data-nosnippet>375</a>/// anything, and at what exponent -- `None` for plain form.
+<a href=#376 id=376 data-nosnippet>376</a></span><span class="kw">fn </span>initial_exponent(shape: Shape, form: Form, expt: <span class="prelude-ty">Option</span>&lt;i64&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;i32&gt; {
+<a href=#377 id=377 data-nosnippet>377</a>    <span class="kw">let </span>expt = expt<span class="question-mark">?</span>;
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">let </span>a = shape.adjusted();
+<a href=#379 id=379 data-nosnippet>379</a>    <span class="comment">// `saturating_mul`: `expt` may itself be the saturated-i64 form of a huge
+<a href=#380 id=380 data-nosnippet>380</a>    // bare `digits` (see `trigger`), and doubling that must stay huge rather
+<a href=#381 id=381 data-nosnippet>381</a>    // than wrap.
+<a href=#382 id=382 data-nosnippet>382</a>    </span><span class="kw">let </span>triggered =
+<a href=#383 id=383 data-nosnippet>383</a>        i64::from(a) &gt;= expt || (a &lt; <span class="number">0 </span>&amp;&amp; i64::from(shape.exponent).abs() &gt; expt.saturating_mul(<span class="number">2</span>));
+<a href=#384 id=384 data-nosnippet>384</a>    triggered.then(|| group(form, a))
+<a href=#385 id=385 data-nosnippet>385</a>}
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a><span class="doccomment">/// Decides whether `n1` renders in exponential form and, if so, at what
+<a href=#388 id=388 data-nosnippet>388</a>/// exponent, then applies `after` to the resulting mantissa (or to `n1`
+<a href=#389 id=389 data-nosnippet>389</a>/// itself in plain form).
+<a href=#390 id=390 data-nosnippet>390</a></span><span class="kw">fn </span>resolve_exponential_shape(
+<a href=#391 id=391 data-nosnippet>391</a>    n1: <span class="kw-2">&amp;</span>Number,
+<a href=#392 id=392 data-nosnippet>392</a>    form: Form,
+<a href=#393 id=393 data-nosnippet>393</a>    expt: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+<a href=#394 id=394 data-nosnippet>394</a>    after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#395 id=395 data-nosnippet>395</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;i32&gt;, Shape) {
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">let </span>base = Shape::of(n1);
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="comment">// The shape a pass works on: `n1` reframed at the current guess, and cut
+<a href=#398 id=398 data-nosnippet>398</a>    // to `after` places if there is a cut to make. Reframing at `0` -- what an
+<a href=#399 id=399 data-nosnippet>399</a>    // untriggered guess gives -- is the identity, which is why the plain arm
+<a href=#400 id=400 data-nosnippet>400</a>    // needs no case of its own.
+<a href=#401 id=401 data-nosnippet>401</a>    </span><span class="kw">let </span>step = |eng_exp: <span class="prelude-ty">Option</span>&lt;i32&gt;| -&gt; Shape {
+<a href=#402 id=402 data-nosnippet>402</a>        <span class="kw">let </span>at = eng_exp.unwrap_or(<span class="number">0</span>);
+<a href=#403 id=403 data-nosnippet>403</a>        <span class="kw">match </span>after {
+<a href=#404 id=404 data-nosnippet>404</a>            <span class="prelude-val">None </span>=&gt; base.reframed(at),
+<a href=#405 id=405 data-nosnippet>405</a>            <span class="prelude-val">Some</span>(places) =&gt; Shape::of(<span class="kw-2">&amp;</span>round_to_places(<span class="kw-2">&amp;</span>reframe(n1, at), places)),
+<a href=#406 id=406 data-nosnippet>406</a>        }
+<a href=#407 id=407 data-nosnippet>407</a>    };
+<a href=#408 id=408 data-nosnippet>408</a>
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="comment">// The very first guess is the only place the low-end (fractional-value)
+<a href=#410 id=410 data-nosnippet>410</a>    // trigger matters -- see `initial_exponent`. That is fine: rounding only
+<a href=#411 id=411 data-nosnippet>411</a>    // ever grows a number, so a value already outside exponential range can
+<a href=#412 id=412 data-nosnippet>412</a>    // only move further from the fractional trigger's territory, never into
+<a href=#413 id=413 data-nosnippet>413</a>    // it.
+<a href=#414 id=414 data-nosnippet>414</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>eng_exp = initial_exponent(base, form, expt);
+<a href=#415 id=415 data-nosnippet>415</a>
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">8 </span>{
+<a href=#417 id=417 data-nosnippet>417</a>        <span class="kw">let </span>rounded = step(eng_exp);
+<a href=#418 id=418 data-nosnippet>418</a>        <span class="kw">let </span>true_adjusted = eng_exp.unwrap_or(<span class="number">0</span>) + rounded.adjusted();
+<a href=#419 id=419 data-nosnippet>419</a>        <span class="comment">// Once exponential, always exponential (growth cannot shrink a
+<a href=#420 id=420 data-nosnippet>420</a>        // magnitude back below the trigger); a number that started plain can
+<a href=#421 id=421 data-nosnippet>421</a>        // only newly trigger via the upper (adjusted &gt;= expt) arm.
+<a href=#422 id=422 data-nosnippet>422</a>        </span><span class="kw">let </span>new_eng_exp = <span class="kw">match </span>expt {
+<a href=#423 id=423 data-nosnippet>423</a>            <span class="prelude-val">Some</span>(expt) <span class="kw">if </span>eng_exp.is_some() || i64::from(true_adjusted) &gt;= expt =&gt; {
+<a href=#424 id=424 data-nosnippet>424</a>                <span class="prelude-val">Some</span>(group(form, true_adjusted))
+<a href=#425 id=425 data-nosnippet>425</a>            }
+<a href=#426 id=426 data-nosnippet>426</a>            <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#427 id=427 data-nosnippet>427</a>        };
+<a href=#428 id=428 data-nosnippet>428</a>        <span class="kw">if </span>new_eng_exp == eng_exp {
+<a href=#429 id=429 data-nosnippet>429</a>            <span class="kw">return </span>(eng_exp, rounded);
+<a href=#430 id=430 data-nosnippet>430</a>        }
+<a href=#431 id=431 data-nosnippet>431</a>        eng_exp = new_eng_exp;
+<a href=#432 id=432 data-nosnippet>432</a>    }
+<a href=#433 id=433 data-nosnippet>433</a>    (eng_exp, step(eng_exp))
+<a href=#434 id=434 data-nosnippet>434</a>}
+<a href=#435 id=435 data-nosnippet>435</a>
+<a href=#436 id=436 data-nosnippet>436</a><span class="doccomment">/// The value [`resolve_exponential_shape`] decided on, materialised.
+<a href=#437 id=437 data-nosnippet>437</a></span><span class="kw">fn </span>resolve_exponential_state&lt;<span class="lifetime">'a</span>&gt;(
+<a href=#438 id=438 data-nosnippet>438</a>    n1: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Number,
+<a href=#439 id=439 data-nosnippet>439</a>    form: Form,
+<a href=#440 id=440 data-nosnippet>440</a>    expt: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+<a href=#441 id=441 data-nosnippet>441</a>    after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#442 id=442 data-nosnippet>442</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;i32&gt;, Cow&lt;<span class="lifetime">'a</span>, Number&gt;) {
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">let </span>(eng_exp, shape) = resolve_exponential_shape(n1, form, expt, after);
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="kw">let </span>framed = <span class="kw">match </span>eng_exp {
+<a href=#445 id=445 data-nosnippet>445</a>        <span class="prelude-val">Some</span>(exp) =&gt; Cow::Owned(reframe(n1, exp)),
+<a href=#446 id=446 data-nosnippet>446</a>        <span class="prelude-val">None </span>=&gt; Cow::Borrowed(n1),
+<a href=#447 id=447 data-nosnippet>447</a>    };
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>rounded = <span class="kw">match </span>after {
+<a href=#449 id=449 data-nosnippet>449</a>        <span class="prelude-val">Some</span>(places) =&gt; Cow::Owned(round_to_places(<span class="kw-2">&amp;</span>framed, places)),
+<a href=#450 id=450 data-nosnippet>450</a>        <span class="prelude-val">None </span>=&gt; framed,
+<a href=#451 id=451 data-nosnippet>451</a>    };
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="comment">// The one place both halves are in hand at once: the shape the decision
+<a href=#453 id=453 data-nosnippet>453</a>    // settled on is the shape of the value built from it. That decision is
+<a href=#454 id=454 data-nosnippet>454</a>    // made in shape arithmetic, keeping no value it can be checked against --
+<a href=#455 id=455 data-nosnippet>455</a>    // so this is what says the arithmetic tracks what `reframe` and
+<a href=#456 id=456 data-nosnippet>456</a>    // `round_to_places` actually do.
+<a href=#457 id=457 data-nosnippet>457</a>    </span><span class="macro">debug_assert_eq!</span>(
+<a href=#458 id=458 data-nosnippet>458</a>        Shape::of(<span class="kw-2">&amp;</span>rounded),
+<a href=#459 id=459 data-nosnippet>459</a>        shape,
+<a href=#460 id=460 data-nosnippet>460</a>        <span class="string">"the resolved value disagrees with the shape resolved for it"
+<a href=#461 id=461 data-nosnippet>461</a>    </span>);
+<a href=#462 id=462 data-nosnippet>462</a>    (eng_exp, rounded)
+<a href=#463 id=463 data-nosnippet>463</a>}
+<a href=#464 id=464 data-nosnippet>464</a>
+<a href=#465 id=465 data-nosnippet>465</a><span class="doccomment">/// Redoes the exponent-width trigger/check after the decimal-place cut `after`
+<a href=#466 id=466 data-nosnippet>466</a>/// makes, as is done right after the rounding call -- see the call site's doc
+<a href=#467 id=467 data-nosnippet>467</a>/// comment for *why* a second check exists at all. Returns `None` when no cut
+<a href=#468 id=468 data-nosnippet>468</a>/// is even possible (`after` omitted), when the number has no decimals to cut,
+<a href=#469 id=469 data-nosnippet>469</a>/// or when nothing is actually dropped -- the interpreter's own decimals
+<a href=#470 id=470 data-nosnippet>470</a>/// section only reaches its redo under the same conditions.
+<a href=#471 id=471 data-nosnippet>471</a></span><span class="kw">fn </span>post_carry_exponent_error(
+<a href=#472 id=472 data-nosnippet>472</a>    n1: <span class="kw-2">&amp;</span>Number,
+<a href=#473 id=473 data-nosnippet>473</a>    eng_exp0: <span class="prelude-ty">Option</span>&lt;i32&gt;,
+<a href=#474 id=474 data-nosnippet>474</a>    form: Form,
+<a href=#475 id=475 data-nosnippet>475</a>    expt: <span class="prelude-ty">Option</span>&lt;i64&gt;,
+<a href=#476 id=476 data-nosnippet>476</a>    after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#477 id=477 data-nosnippet>477</a>    width: u32,
+<a href=#478 id=478 data-nosnippet>478</a>) -&gt; <span class="prelude-ty">Option</span>&lt;FormatError&gt; {
+<a href=#479 id=479 data-nosnippet>479</a>    <span class="kw">let </span>after = after<span class="question-mark">?</span>;
+<a href=#480 id=480 data-nosnippet>480</a>    <span class="comment">// The state the rounding actually rounds: reframed to mantissa scale by the
+<a href=#481 id=481 data-nosnippet>481</a>    // first check's exponent if it triggered, `n1` itself (a no-op reframe)
+<a href=#482 id=482 data-nosnippet>482</a>    // otherwise.
+<a href=#483 id=483 data-nosnippet>483</a>    </span><span class="kw">let </span>pre_round = reframe(n1, eng_exp0.unwrap_or(<span class="number">0</span>));
+<a href=#484 id=484 data-nosnippet>484</a>    <span class="kw">if </span>pre_round.exponent &gt;= <span class="number">0 </span>{
+<a href=#485 id=485 data-nosnippet>485</a>        <span class="kw">return </span><span class="prelude-val">None</span>; <span class="comment">// no decimal places to cut
+<a href=#486 id=486 data-nosnippet>486</a>    </span>}
+<a href=#487 id=487 data-nosnippet>487</a>    <span class="kw">let </span>adjusted_decimals = -i64::from(pre_round.exponent);
+<a href=#488 id=488 data-nosnippet>488</a>    <span class="kw">if </span>adjusted_decimals &lt;= i64::from(after) {
+<a href=#489 id=489 data-nosnippet>489</a>        <span class="kw">return </span><span class="prelude-val">None</span>; <span class="comment">// `after` already covers every decimal place present
+<a href=#490 id=490 data-nosnippet>490</a>    </span>}
+<a href=#491 id=491 data-nosnippet>491</a>    <span class="kw">let </span>excess = adjusted_decimals - i64::from(after);
+<a href=#492 id=492 data-nosnippet>492</a>    <span class="kw">let </span>len = signed_len(pre_round.digits.len());
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">if </span>excess &gt;= len {
+<a href=#494 id=494 data-nosnippet>494</a>        <span class="comment">// The interpreter's own "rounds away to a single digit or zero"
+<a href=#495 id=495 data-nosnippet>495</a>        // branch, which does not redo the trigger/width check at all.
+<a href=#496 id=496 data-nosnippet>496</a>        </span><span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#497 id=497 data-nosnippet>497</a>    }
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="comment">// `Number::round_to`'s carry -- bump the exponent, keep the digit count --
+<a href=#499 id=499 data-nosnippet>499</a>    // is the rounding here; `round_to_places` (used for the successful render)
+<a href=#500 id=500 data-nosnippet>500</a>    // grows the digit vector instead. See this function's doc comment for why
+<a href=#501 id=501 data-nosnippet>501</a>    // that difference matters here specifically.
+<a href=#502 id=502 data-nosnippet>502</a>    </span><span class="kw">let </span>rounded = pre_round.into_round((len - excess).unsigned_abs());
+<a href=#503 id=503 data-nosnippet>503</a>    <span class="comment">// Back to true scale: `rounded` is still relative to `eng_exp0`.
+<a href=#504 id=504 data-nosnippet>504</a>    </span><span class="kw">let </span>true_scale = Number {
+<a href=#505 id=505 data-nosnippet>505</a>        negative: rounded.negative,
+<a href=#506 id=506 data-nosnippet>506</a>        digits: rounded.digits,
+<a href=#507 id=507 data-nosnippet>507</a>        exponent: rounded.exponent + eng_exp0.unwrap_or(<span class="number">0</span>),
+<a href=#508 id=508 data-nosnippet>508</a>    };
+<a href=#509 id=509 data-nosnippet>509</a>    <span class="kw">let </span>adjusted2 = Shape::of(<span class="kw-2">&amp;</span>true_scale).adjusted();
+<a href=#510 id=510 data-nosnippet>510</a>    <span class="kw">let </span>triggered = eng_exp0.is_some()
+<a href=#511 id=511 data-nosnippet>511</a>        || <span class="macro">matches!</span>(
+<a href=#512 id=512 data-nosnippet>512</a>            expt,
+<a href=#513 id=513 data-nosnippet>513</a>            <span class="comment">// `saturating_mul` for the same reason as the other two
+<a href=#514 id=514 data-nosnippet>514</a>            // triggers: `expt` may be a saturated huge `digits` default.
+<a href=#515 id=515 data-nosnippet>515</a>            </span><span class="prelude-val">Some</span>(expt) <span class="kw">if </span>i64::from(adjusted2) &gt;= expt
+<a href=#516 id=516 data-nosnippet>516</a>                || (adjusted2 &lt; <span class="number">0 </span>&amp;&amp; i64::from(true_scale.exponent).abs() &gt; expt.saturating_mul(<span class="number">2</span>))
+<a href=#517 id=517 data-nosnippet>517</a>        );
+<a href=#518 id=518 data-nosnippet>518</a>    <span class="kw">if </span>!triggered {
+<a href=#519 id=519 data-nosnippet>519</a>        <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#520 id=520 data-nosnippet>520</a>    }
+<a href=#521 id=521 data-nosnippet>521</a>    <span class="kw">let </span>exp2 = group(form, adjusted2);
+<a href=#522 id=522 data-nosnippet>522</a>    <span class="kw">let </span>needed =
+<a href=#523 id=523 data-nosnippet>523</a>        u32::try_from(exp2.unsigned_abs().to_string().len()).expect(<span class="string">"a u32 has at most ten digits"</span>);
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="kw">if </span>needed &lt;= width {
+<a href=#525 id=525 data-nosnippet>525</a>        <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#526 id=526 data-nosnippet>526</a>    }
+<a href=#527 id=527 data-nosnippet>527</a>    <span class="prelude-val">Some</span>(FormatError::ExponentOversize {
+<a href=#528 id=528 data-nosnippet>528</a>        mantissa: reframe(<span class="kw-2">&amp;</span>true_scale, exp2),
+<a href=#529 id=529 data-nosnippet>529</a>        width,
+<a href=#530 id=530 data-nosnippet>530</a>    })
+<a href=#531 id=531 data-nosnippet>531</a>}
+<a href=#532 id=532 data-nosnippet>532</a>
+<a href=#533 id=533 data-nosnippet>533</a><span class="doccomment">/// The number the formatting is holding by the time it reports
+<a href=#534 id=534 data-nosnippet>534</a>/// `BeforeOversize`, which is neither the operand nor the rendered result.
+<a href=#535 id=535 data-nosnippet>535</a></span><span class="kw">fn </span>reported_value(
+<a href=#536 id=536 data-nosnippet>536</a>    n1: <span class="kw-2">&amp;</span>Number,
+<a href=#537 id=537 data-nosnippet>537</a>    eng_exp0: <span class="prelude-ty">Option</span>&lt;i32&gt;,
+<a href=#538 id=538 data-nosnippet>538</a>    eng_exp: <span class="prelude-ty">Option</span>&lt;i32&gt;,
+<a href=#539 id=539 data-nosnippet>539</a>    after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#540 id=540 data-nosnippet>540</a>) -&gt; Number {
+<a href=#541 id=541 data-nosnippet>541</a>    <span class="kw">let </span>framed = reframe(n1, eng_exp0.unwrap_or(<span class="number">0</span>));
+<a href=#542 id=542 data-nosnippet>542</a>    <span class="kw">let </span>cut = <span class="kw">match </span>after {
+<a href=#543 id=543 data-nosnippet>543</a>        <span class="prelude-val">None </span>=&gt; framed,
+<a href=#544 id=544 data-nosnippet>544</a>        <span class="prelude-val">Some</span>(places) =&gt; math_round_places(framed, places),
+<a href=#545 id=545 data-nosnippet>545</a>    };
+<a href=#546 id=546 data-nosnippet>546</a>    <span class="kw">let </span>true_scale = Number {
+<a href=#547 id=547 data-nosnippet>547</a>        negative: cut.negative,
+<a href=#548 id=548 data-nosnippet>548</a>        digits: cut.digits,
+<a href=#549 id=549 data-nosnippet>549</a>        exponent: cut.exponent + eng_exp0.unwrap_or(<span class="number">0</span>),
+<a href=#550 id=550 data-nosnippet>550</a>    };
+<a href=#551 id=551 data-nosnippet>551</a>    reframe(<span class="kw-2">&amp;</span>true_scale, eng_exp.unwrap_or(<span class="number">0</span>))
+<a href=#552 id=552 data-nosnippet>552</a>}
+<a href=#553 id=553 data-nosnippet>553</a>
+<a href=#554 id=554 data-nosnippet>554</a><span class="doccomment">/// The decimals cut the formatting makes, digit for digit.
+<a href=#555 id=555 data-nosnippet>555</a></span><span class="kw">fn </span>math_round_places(n: Number, places: u32) -&gt; Number {
+<a href=#556 id=556 data-nosnippet>556</a>    <span class="kw">if </span>n.exponent &gt;= <span class="number">0 </span>{
+<a href=#557 id=557 data-nosnippet>557</a>        <span class="kw">return </span>n;
+<a href=#558 id=558 data-nosnippet>558</a>    }
+<a href=#559 id=559 data-nosnippet>559</a>    <span class="kw">let </span>adjusted_decimals = -i64::from(n.exponent);
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="kw">if </span>adjusted_decimals &lt;= i64::from(places) {
+<a href=#561 id=561 data-nosnippet>561</a>        <span class="kw">return </span>n;
+<a href=#562 id=562 data-nosnippet>562</a>    }
+<a href=#563 id=563 data-nosnippet>563</a>    <span class="kw">let </span>excess = adjusted_decimals - i64::from(places);
+<a href=#564 id=564 data-nosnippet>564</a>    <span class="kw">let </span>len = signed_len(n.digits.len());
+<a href=#565 id=565 data-nosnippet>565</a>    <span class="kw">if </span>excess &lt; len {
+<a href=#566 id=566 data-nosnippet>566</a>        <span class="kw">return </span>n.into_round((len - excess).unsigned_abs());
+<a href=#567 id=567 data-nosnippet>567</a>    }
+<a href=#568 id=568 data-nosnippet>568</a>    <span class="kw">if </span>excess == len &amp;&amp; n.digits[<span class="number">0</span>] &gt;= <span class="number">5 </span>{
+<a href=#569 id=569 data-nosnippet>569</a>        <span class="comment">// `excess &lt; adjusted_decimals` always holds here, and
+<a href=#570 id=570 data-nosnippet>570</a>        // `adjusted_decimals` is within `MAX_EXPONENT`, so `places` fits i32.
+<a href=#571 id=571 data-nosnippet>571</a>        </span><span class="kw">return </span>Number {
+<a href=#572 id=572 data-nosnippet>572</a>            negative: n.negative,
+<a href=#573 id=573 data-nosnippet>573</a>            digits: Digits::single(<span class="number">1</span>),
+<a href=#574 id=574 data-nosnippet>574</a>            exponent: -i32::try_from(places).expect(<span class="string">"below the decimals"</span>),
+<a href=#575 id=575 data-nosnippet>575</a>        };
+<a href=#576 id=576 data-nosnippet>576</a>    }
+<a href=#577 id=577 data-nosnippet>577</a>    Number::zero()
+<a href=#578 id=578 data-nosnippet>578</a>}
+<a href=#579 id=579 data-nosnippet>579</a>
+<a href=#580 id=580 data-nosnippet>580</a><span class="doccomment">/// Rounds (half up) `n` to exactly `places` digits after the decimal point --
+<a href=#581 id=581 data-nosnippet>581</a>/// the cut FORMAT's `after` and TRUNC both make, just at a fixed decimal
+<a href=#582 id=582 data-nosnippet>582</a>/// position rather than a fixed significant-digit count. `Number::round_to`
+<a href=#583 id=583 data-nosnippet>583</a>/// cannot be reused here: its `digits == 0` is a no-op sentinel (see its own
+<a href=#584 id=584 data-nosnippet>584</a>/// doc comment for why), whereas `places == 0` is an ordinary, meaningful
+<a href=#585 id=585 data-nosnippet>585</a>/// cut for this crate's callers (`FORMAT(x, , 0)`), and must still round a
+<a href=#586 id=586 data-nosnippet>586</a>/// `0.6` up to `1`.
+<a href=#587 id=587 data-nosnippet>587</a></span><span class="kw">fn </span>round_to_places(n: <span class="kw-2">&amp;</span>Number, places: u32) -&gt; Number {
+<a href=#588 id=588 data-nosnippet>588</a>    <span class="comment">// Widened to `i64` up front: `-(places as i32)` alone overflows once
+<a href=#589 id=589 data-nosnippet>589</a>    // `places &gt;= 2^31` (a `u32` value the interpreter accepts without
+<a href=#590 id=590 data-nosnippet>590</a>    // complaint), so even deciding which branch to take must not go
+<a href=#591 id=591 data-nosnippet>591</a>    // through `i32`.
+<a href=#592 id=592 data-nosnippet>592</a>    </span><span class="kw">let </span>target_exponent_wide = -i64::from(places);
+<a href=#593 id=593 data-nosnippet>593</a>    <span class="kw">if </span>i64::from(n.exponent) &gt;= target_exponent_wide {
+<a href=#594 id=594 data-nosnippet>594</a>        <span class="kw">return </span>n.clone();
+<a href=#595 id=595 data-nosnippet>595</a>    }
+<a href=#596 id=596 data-nosnippet>596</a>
+<a href=#597 id=597 data-nosnippet>597</a>    <span class="comment">// Only reachable once `target_exponent_wide &gt; n.exponent`. `n.exponent`
+<a href=#598 id=598 data-nosnippet>598</a>    // is always within `+/-MAX_EXPONENT` (comfortably inside `i32`), and
+<a href=#599 id=599 data-nosnippet>599</a>    // `target_exponent_wide &lt;= 0` always (`places` is never negative), so
+<a href=#600 id=600 data-nosnippet>600</a>    // it is squeezed into `(n.exponent, 0]` here -- which always fits `i32`.
+<a href=#601 id=601 data-nosnippet>601</a>    // A `places` large enough to overflow can therefore never reach this
+<a href=#602 id=602 data-nosnippet>602</a>    // branch; it always takes the early return above instead.
+<a href=#603 id=603 data-nosnippet>603</a>    </span><span class="kw">let </span>target_exponent =
+<a href=#604 id=604 data-nosnippet>604</a>        i32::try_from(target_exponent_wide).expect(<span class="string">"between the exponent and zero"</span>);
+<a href=#605 id=605 data-nosnippet>605</a>    <span class="kw">let </span>drop = usize::cast_from((target_exponent - n.exponent).unsigned_abs());
+<a href=#606 id=606 data-nosnippet>606</a>    <span class="kw">let </span>len = n.digits.len();
+<a href=#607 id=607 data-nosnippet>607</a>    <span class="kw">if </span>drop &gt; len {
+<a href=#608 id=608 data-nosnippet>608</a>        <span class="comment">// The cut falls to the left of every stored digit -- the digit that
+<a href=#609 id=609 data-nosnippet>609</a>        // would decide round-up-or-down is an implicit, unstored zero, so
+<a href=#610 id=610 data-nosnippet>610</a>        // there is nothing to round: `0.04` to 0 places rounds down to zero.
+<a href=#611 id=611 data-nosnippet>611</a>        // But it is a *fixed-decimal* zero, not the canonical one --
+<a href=#612 id=612 data-nosnippet>612</a>        // `Number::zero()`/`assemble` would collapse it to exponent 0 and
+<a href=#613 id=613 data-nosnippet>613</a>        // lose the requested `places`, when the caller needs it preserved
+<a href=#614 id=614 data-nosnippet>614</a>        // (`FORMAT`/`TRUNC` on `0.000012345` at 1 place is `0.0`, not `0`,
+<a href=#615 id=615 data-nosnippet>615</a>        // confirmed against the interpreter). The sign is still dropped: a
+<a href=#616 id=616 data-nosnippet>616</a>        // value that rounds away to nothing has no sign left to show,
+<a href=#617 id=617 data-nosnippet>617</a>        // exactly as a whole-number underflow already does.
+<a href=#618 id=618 data-nosnippet>618</a>        </span><span class="kw">return </span>Number {
+<a href=#619 id=619 data-nosnippet>619</a>            negative: <span class="bool-val">false</span>,
+<a href=#620 id=620 data-nosnippet>620</a>            digits: Digits::single(<span class="number">0</span>),
+<a href=#621 id=621 data-nosnippet>621</a>            exponent: target_exponent,
+<a href=#622 id=622 data-nosnippet>622</a>        };
+<a href=#623 id=623 data-nosnippet>623</a>    }
+<a href=#624 id=624 data-nosnippet>624</a>    <span class="kw">let </span>keep = len - drop;
+<a href=#625 id=625 data-nosnippet>625</a>    <span class="kw">let </span><span class="kw-2">mut </span>kept = Digits::from_slice(<span class="kw-2">&amp;</span>n.digits[..keep]);
+<a href=#626 id=626 data-nosnippet>626</a>    <span class="kw">if </span>n.digits[keep] &gt;= <span class="number">5 </span>{
+<a href=#627 id=627 data-nosnippet>627</a>        <span class="comment">// A full carry chain (all-9s down to `keep`) grows the digit count
+<a href=#628 id=628 data-nosnippet>628</a>        // by one instead of shifting the exponent -- unlike `round_to`,
+<a href=#629 id=629 data-nosnippet>629</a>        // which holds the digit count fixed and lets the exponent absorb the
+<a href=#630 id=630 data-nosnippet>630</a>        // growth. Here the exponent (`places`, hence `target_exponent`) is
+<a href=#631 id=631 data-nosnippet>631</a>        // what the caller fixed, so the growth has to show up as an extra
+<a href=#632 id=632 data-nosnippet>632</a>        // digit: `99.96` to 1 place is `100.0`, not `10.0` at one exponent
+<a href=#633 id=633 data-nosnippet>633</a>        // higher.
+<a href=#634 id=634 data-nosnippet>634</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>i = keep;
+<a href=#635 id=635 data-nosnippet>635</a>        <span class="kw">loop </span>{
+<a href=#636 id=636 data-nosnippet>636</a>            <span class="kw">if </span>i == <span class="number">0 </span>{
+<a href=#637 id=637 data-nosnippet>637</a>                kept.insert_front(<span class="number">1</span>);
+<a href=#638 id=638 data-nosnippet>638</a>                <span class="kw">break</span>;
+<a href=#639 id=639 data-nosnippet>639</a>            }
+<a href=#640 id=640 data-nosnippet>640</a>            i -= <span class="number">1</span>;
+<a href=#641 id=641 data-nosnippet>641</a>            <span class="kw">if </span>kept[i] == <span class="number">9 </span>{
+<a href=#642 id=642 data-nosnippet>642</a>                kept[i] = <span class="number">0</span>;
+<a href=#643 id=643 data-nosnippet>643</a>            } <span class="kw">else </span>{
+<a href=#644 id=644 data-nosnippet>644</a>                kept[i] += <span class="number">1</span>;
+<a href=#645 id=645 data-nosnippet>645</a>                <span class="kw">break</span>;
+<a href=#646 id=646 data-nosnippet>646</a>            }
+<a href=#647 id=647 data-nosnippet>647</a>        }
+<a href=#648 id=648 data-nosnippet>648</a>    }
+<a href=#649 id=649 data-nosnippet>649</a>    <span class="kw">if </span>kept.is_empty() {
+<a href=#650 id=650 data-nosnippet>650</a>        <span class="comment">// `keep == 0` and no carry: rounds down to nothing, same underflow
+<a href=#651 id=651 data-nosnippet>651</a>        // as the `drop &gt; len` branch above, and the same reason `assemble`
+<a href=#652 id=652 data-nosnippet>652</a>        // cannot be used -- it would collapse this to the canonical zero
+<a href=#653 id=653 data-nosnippet>653</a>        // and lose `target_exponent` (`0.001` to 2 places is `0.00`, not
+<a href=#654 id=654 data-nosnippet>654</a>        // `0`, confirmed against the interpreter). A carry reaching this
+<a href=#655 id=655 data-nosnippet>655</a>        // point instead (`if i == 0` above) leaves `kept` non-empty, so it
+<a href=#656 id=656 data-nosnippet>656</a>        // takes the normal `assemble` path below.
+<a href=#657 id=657 data-nosnippet>657</a>        </span><span class="kw">return </span>Number {
+<a href=#658 id=658 data-nosnippet>658</a>            negative: <span class="bool-val">false</span>,
+<a href=#659 id=659 data-nosnippet>659</a>            digits: Digits::single(<span class="number">0</span>),
+<a href=#660 id=660 data-nosnippet>660</a>            exponent: target_exponent,
+<a href=#661 id=661 data-nosnippet>661</a>        };
+<a href=#662 id=662 data-nosnippet>662</a>    }
+<a href=#663 id=663 data-nosnippet>663</a>    Number::assemble(n.negative, kept, target_exponent)
+<a href=#664 id=664 data-nosnippet>664</a>}
+<a href=#665 id=665 data-nosnippet>665</a>
+<a href=#666 id=666 data-nosnippet>666</a><span class="doccomment">/// TRUNC's cut: same fixed decimal position as `round_to_places`, but drops
+<a href=#667 id=667 data-nosnippet>667</a>/// the extra digits outright instead of deciding whether to carry. Padding
+<a href=#668 id=668 data-nosnippet>668</a>/// (when `n` already has at most `places` decimal digits) is deferred to
+<a href=#669 id=669 data-nosnippet>669</a>/// `render_integer_padded` the same way and for the same reason -- see
+<a href=#670 id=670 data-nosnippet>670</a>/// `round_to_places`'s doc comment.
+<a href=#671 id=671 data-nosnippet>671</a></span><span class="kw">fn </span>truncate_to_places(n: <span class="kw-2">&amp;</span>Number, places: u32) -&gt; Number {
+<a href=#672 id=672 data-nosnippet>672</a>    <span class="kw">let </span>target_exponent_wide = -i64::from(places);
+<a href=#673 id=673 data-nosnippet>673</a>    <span class="kw">if </span>i64::from(n.exponent) &gt;= target_exponent_wide {
+<a href=#674 id=674 data-nosnippet>674</a>        <span class="kw">return </span>n.clone();
+<a href=#675 id=675 data-nosnippet>675</a>    }
+<a href=#676 id=676 data-nosnippet>676</a>    <span class="kw">let </span>target_exponent =
+<a href=#677 id=677 data-nosnippet>677</a>        i32::try_from(target_exponent_wide).expect(<span class="string">"between the exponent and zero"</span>);
+<a href=#678 id=678 data-nosnippet>678</a>    <span class="kw">let </span>drop = usize::cast_from((target_exponent - n.exponent).unsigned_abs());
+<a href=#679 id=679 data-nosnippet>679</a>    <span class="kw">let </span>len = n.digits.len();
+<a href=#680 id=680 data-nosnippet>680</a>    <span class="kw">if </span>drop &gt;= len {
+<a href=#681 id=681 data-nosnippet>681</a>        <span class="comment">// Everything gets dropped -- same underflow as `round_to_places`,
+<a href=#682 id=682 data-nosnippet>682</a>        // and the same fix: keep `target_exponent` so the requested
+<a href=#683 id=683 data-nosnippet>683</a>        // decimal-place count still shows (`TRUNC(0.000012345, 1)` is
+<a href=#684 id=684 data-nosnippet>684</a>        // `0.0`, not `0`), constructed directly rather than through
+<a href=#685 id=685 data-nosnippet>685</a>        // `assemble`, which would collapse it back to the canonical zero.
+<a href=#686 id=686 data-nosnippet>686</a>        </span><span class="kw">return </span>Number {
+<a href=#687 id=687 data-nosnippet>687</a>            negative: <span class="bool-val">false</span>,
+<a href=#688 id=688 data-nosnippet>688</a>            digits: Digits::single(<span class="number">0</span>),
+<a href=#689 id=689 data-nosnippet>689</a>            exponent: target_exponent,
+<a href=#690 id=690 data-nosnippet>690</a>        };
+<a href=#691 id=691 data-nosnippet>691</a>    }
+<a href=#692 id=692 data-nosnippet>692</a>    <span class="kw">let </span>keep = len - drop;
+<a href=#693 id=693 data-nosnippet>693</a>    <span class="comment">// `assemble` here only ever sees a genuinely nonzero leading digit
+<a href=#694 id=694 data-nosnippet>694</a>    // (`keep &gt; 0` and `n` is nonzero, which never stores a leading zero),
+<a href=#695 id=695 data-nosnippet>695</a>    // so it cannot re-trigger the collapse above. At `places == 0` the
+<a href=#696 id=696 data-nosnippet>696</a>    // branch above and this one agree anyway -- `target_exponent` is 0
+<a href=#697 id=697 data-nosnippet>697</a>    // there, which is exactly `Number::zero()` -- so `TRUNC(-0.5, 0)` still
+<a href=#698 id=698 data-nosnippet>698</a>    // drops its sign; it is only `places &gt; 0` where preserving the exponent
+<a href=#699 id=699 data-nosnippet>699</a>    // here matters.
+<a href=#700 id=700 data-nosnippet>700</a>    </span>Number::assemble(
+<a href=#701 id=701 data-nosnippet>701</a>        n.negative,
+<a href=#702 id=702 data-nosnippet>702</a>        Digits::from_slice(<span class="kw-2">&amp;</span>n.digits[..keep]),
+<a href=#703 id=703 data-nosnippet>703</a>        target_exponent,
+<a href=#704 id=704 data-nosnippet>704</a>    )
+<a href=#705 id=705 data-nosnippet>705</a>}
+<a href=#706 id=706 data-nosnippet>706</a>
+<a href=#707 id=707 data-nosnippet>707</a><span class="doccomment">/// A plain rendering of `n` on its own: [`plain_layout`] and [`pad_to_before`]
+<a href=#708 id=708 data-nosnippet>708</a>/// decide it, [`emit_plain`] writes it. For the callers that want no exponent
+<a href=#709 id=709 data-nosnippet>709</a>/// field at all -- `TRUNC`, and the substitution `ExponentOversize` carries.
+<a href=#710 id=710 data-nosnippet>710</a></span><span class="kw">fn </span>render_integer_padded(
+<a href=#711 id=711 data-nosnippet>711</a>    n: <span class="kw-2">&amp;</span>Number,
+<a href=#712 id=712 data-nosnippet>712</a>    before: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#713 id=713 data-nosnippet>713</a>    after: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#714 id=714 data-nosnippet>714</a>    reported: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Number&gt;,
+<a href=#715 id=715 data-nosnippet>715</a>    oversize_digits: u64,
+<a href=#716 id=716 data-nosnippet>716</a>    oversize_form: Form,
+<a href=#717 id=717 data-nosnippet>717</a>) -&gt; <span class="prelude-ty">Result</span>&lt;String, FormatError&gt; {
+<a href=#718 id=718 data-nosnippet>718</a>    <span class="kw">let </span>layout = pad_to_before(
+<a href=#719 id=719 data-nosnippet>719</a>        plain_layout(Shape::of(n), after),
+<a href=#720 id=720 data-nosnippet>720</a>        before,
+<a href=#721 id=721 data-nosnippet>721</a>        reported,
+<a href=#722 id=722 data-nosnippet>722</a>        oversize_digits,
+<a href=#723 id=723 data-nosnippet>723</a>        oversize_form,
+<a href=#724 id=724 data-nosnippet>724</a>    )<span class="question-mark">?</span>;
+<a href=#725 id=725 data-nosnippet>725</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = String::with_capacity(layout.len());
+<a href=#726 id=726 data-nosnippet>726</a>    emit_plain(<span class="kw-2">&amp;mut </span>out, n, layout);
+<a href=#727 id=727 data-nosnippet>727</a>    <span class="macro">debug_assert_eq!</span>(
+<a href=#728 id=728 data-nosnippet>728</a>        out.len(),
+<a href=#729 id=729 data-nosnippet>729</a>        layout.len(),
+<a href=#730 id=730 data-nosnippet>730</a>        <span class="string">"the rendering disagrees with the layout it was emitted from"
+<a href=#731 id=731 data-nosnippet>731</a>    </span>);
+<a href=#732 id=732 data-nosnippet>732</a>    <span class="prelude-val">Ok</span>(out)
+<a href=#733 id=733 data-nosnippet>733</a>}
+<a href=#734 id=734 data-nosnippet>734</a>
+<a href=#735 id=735 data-nosnippet>735</a><span class="doccomment">/// The exact byte counts a plain rendering is about to have, decided before
+<a href=#736 id=736 data-nosnippet>736</a>/// any of those bytes exist.
+<a href=#737 id=737 data-nosnippet>737</a></span><span class="attr">#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+<a href=#738 id=738 data-nosnippet>738</a></span><span class="kw">struct </span>PlainLayout {
+<a href=#739 id=739 data-nosnippet>739</a>    <span class="doccomment">/// The spaces `before` asks for, ahead of the sign.
+<a href=#740 id=740 data-nosnippet>740</a>    </span>pad: usize,
+<a href=#741 id=741 data-nosnippet>741</a>    <span class="doccomment">/// The sign, written only for a negative value.
+<a href=#742 id=742 data-nosnippet>742</a>    </span>sign: usize,
+<a href=#743 id=743 data-nosnippet>743</a>    <span class="doccomment">/// Digits before the decimal point, including the lone `0` a value below
+<a href=#744 id=744 data-nosnippet>744</a>    /// one shows there.
+<a href=#745 id=745 data-nosnippet>745</a>    </span>int_len: usize,
+<a href=#746 id=746 data-nosnippet>746</a>    <span class="doccomment">/// The decimal part as (the value's own digits, the trailing zeros
+<a href=#747 id=747 data-nosnippet>747</a>    /// `after` adds beyond them). `None` is "no decimal part", which is not
+<a href=#748 id=748 data-nosnippet>748</a>    /// the same as `Some((0, 0))`: the first prints no `.` and the second
+<a href=#749 id=749 data-nosnippet>749</a>    /// would.
+<a href=#750 id=750 data-nosnippet>750</a>    </span>dec: <span class="prelude-ty">Option</span>&lt;(usize, usize)&gt;,
+<a href=#751 id=751 data-nosnippet>751</a>    <span class="doccomment">/// Where the decimal point falls inside the digit run. Meaningful only
+<a href=#752 id=752 data-nosnippet>752</a>    /// for a negative exponent -- a non-negative one puts the point past
+<a href=#753 id=753 data-nosnippet>753</a>    /// every digit, which is the arm that has no natural decimal part at all.
+<a href=#754 id=754 data-nosnippet>754</a>    </span>point: i32,
+<a href=#755 id=755 data-nosnippet>755</a>}
+<a href=#756 id=756 data-nosnippet>756</a>
+<a href=#757 id=757 data-nosnippet>757</a><span class="kw">impl </span>PlainLayout {
+<a href=#758 id=758 data-nosnippet>758</a>    <span class="doccomment">/// The `+ 1` is the point itself, and it is inside the `map_or` rather
+<a href=#759 id=759 data-nosnippet>759</a>    /// than added unconditionally: a value with no decimal part prints no
+<a href=#760 id=760 data-nosnippet>760</a>    /// point, and a count one byte over would be right by luck rather than by
+<a href=#761 id=761 data-nosnippet>761</a>    /// construction.
+<a href=#762 id=762 data-nosnippet>762</a>    </span><span class="kw">fn </span>len(<span class="self">self</span>) -&gt; usize {
+<a href=#763 id=763 data-nosnippet>763</a>        <span class="self">self</span>.pad
+<a href=#764 id=764 data-nosnippet>764</a>            + <span class="self">self</span>.sign
+<a href=#765 id=765 data-nosnippet>765</a>            + <span class="self">self</span>.int_len
+<a href=#766 id=766 data-nosnippet>766</a>            + <span class="self">self</span>.dec.map_or(<span class="number">0</span>, |(natural, extra)| <span class="number">1 </span>+ natural + extra)
+<a href=#767 id=767 data-nosnippet>767</a>    }
+<a href=#768 id=768 data-nosnippet>768</a>}
+<a href=#769 id=769 data-nosnippet>769</a>
+<a href=#770 id=770 data-nosnippet>770</a><span class="doccomment">/// The number of decimal digits `value` is written with, without writing it.
+<a href=#771 id=771 data-nosnippet>771</a></span><span class="kw">fn </span>decimal_width(value: u32) -&gt; usize {
+<a href=#772 id=772 data-nosnippet>772</a>    usize::cast_from(value.checked_ilog10().unwrap_or(<span class="number">0</span>)) + <span class="number">1
+<a href=#773 id=773 data-nosnippet>773</a></span>}
+<a href=#774 id=774 data-nosnippet>774</a>
+<a href=#775 id=775 data-nosnippet>775</a><span class="doccomment">/// Everything a rendering carries after its mantissa, decided once so that
+<a href=#776 id=776 data-nosnippet>776</a>/// the count reserving room for it and the code writing it read the same
+<a href=#777 id=777 data-nosnippet>777</a>/// decision.
+<a href=#778 id=778 data-nosnippet>778</a></span><span class="attr">#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+<a href=#779 id=779 data-nosnippet>779</a></span><span class="kw">enum </span>ExponentField {
+<a href=#780 id=780 data-nosnippet>780</a>    <span class="doccomment">/// Nothing follows -- plain form, or a displayed exponent of exactly zero
+<a href=#781 id=781 data-nosnippet>781</a>    /// with no explicit `expp` whose field would need reserving.
+<a href=#782 id=782 data-nosnippet>782</a>    </span>Absent,
+<a href=#783 id=783 data-nosnippet>783</a>    <span class="doccomment">/// A displayed exponent of exactly zero *with* an explicit `expp`: the
+<a href=#784 id=784 data-nosnippet>784</a>    /// field it would have taken is reserved as this many blanks rather than
+<a href=#785 id=785 data-nosnippet>785</a>    /// vanishing outright.
+<a href=#786 id=786 data-nosnippet>786</a>    </span>Reserved(usize),
+<a href=#787 id=787 data-nosnippet>787</a>    <span class="doccomment">/// `E`, a sign, `zeros` leading zeros, and then `exp`'s own digits.
+<a href=#788 id=788 data-nosnippet>788</a>    </span>Present { exp: i32, zeros: usize },
+<a href=#789 id=789 data-nosnippet>789</a>}
+<a href=#790 id=790 data-nosnippet>790</a>
+<a href=#791 id=791 data-nosnippet>791</a><span class="kw">impl </span>ExponentField {
+<a href=#792 id=792 data-nosnippet>792</a>    <span class="kw">fn </span>decide(eng_exp: <span class="prelude-ty">Option</span>&lt;i32&gt;, expp: <span class="prelude-ty">Option</span>&lt;u32&gt;) -&gt; <span class="self">Self </span>{
+<a href=#793 id=793 data-nosnippet>793</a>        <span class="kw">let </span><span class="prelude-val">Some</span>(exp) = eng_exp <span class="kw">else </span>{
+<a href=#794 id=794 data-nosnippet>794</a>            <span class="kw">return </span>ExponentField::Absent;
+<a href=#795 id=795 data-nosnippet>795</a>        };
+<a href=#796 id=796 data-nosnippet>796</a>        <span class="kw">if </span>exp == <span class="number">0 </span>{
+<a href=#797 id=797 data-nosnippet>797</a>            <span class="comment">// A displayed exponent of exactly zero is never written as `E+0`
+<a href=#798 id=798 data-nosnippet>798</a>            // -- confirmed with `format(3.14159,,,,0)` at DIGITS 5 (adjusted
+<a href=#799 id=799 data-nosnippet>799</a>            // exponent 0 exactly), which prints `3.1416`, not `3.1416E+0`,
+<a href=#800 id=800 data-nosnippet>800</a>            // and with ENGINEERING grouping an adjusted exponent of 1 or 2
+<a href=#801 id=801 data-nosnippet>801</a>            // down to a displayed 0 the same way.
+<a href=#802 id=802 data-nosnippet>802</a>            </span><span class="kw">return match </span>expp {
+<a href=#803 id=803 data-nosnippet>803</a>                <span class="prelude-val">Some</span>(width) =&gt; ExponentField::Reserved(usize::cast_from(width) + <span class="number">2</span>),
+<a href=#804 id=804 data-nosnippet>804</a>                <span class="prelude-val">None </span>=&gt; ExponentField::Absent,
+<a href=#805 id=805 data-nosnippet>805</a>            };
+<a href=#806 id=806 data-nosnippet>806</a>        }
+<a href=#807 id=807 data-nosnippet>807</a>        <span class="comment">// **Not `format!("{:0width$}", ..)`.** Rust's format width is a
+<a href=#808 id=808 data-nosnippet>808</a>        // `u16`, so that spelling panics with "Formatting argument out of
+<a href=#809 id=809 data-nosnippet>809</a>        // range" at `expp == 65536`, where the interpreter answers a
+<a href=#810 id=810 data-nosnippet>810</a>        // 65,539-byte result. Measured both sides:
+<a href=#811 id=811 data-nosnippet>811</a>        // `length(format(1e10,,,65535))` is 65538 and
+<a href=#812 id=812 data-nosnippet>812</a>        // `length(format(1e10,,,65536))` is 65539.
+<a href=#813 id=813 data-nosnippet>813</a>        </span><span class="kw">let </span>zeros = <span class="kw">match </span>expp {
+<a href=#814 id=814 data-nosnippet>814</a>            <span class="prelude-val">Some</span>(width) =&gt; {
+<a href=#815 id=815 data-nosnippet>815</a>                usize::cast_from(width).saturating_sub(decimal_width(exp.unsigned_abs()))
+<a href=#816 id=816 data-nosnippet>816</a>            }
+<a href=#817 id=817 data-nosnippet>817</a>            <span class="prelude-val">None </span>=&gt; <span class="number">0</span>,
+<a href=#818 id=818 data-nosnippet>818</a>        };
+<a href=#819 id=819 data-nosnippet>819</a>        ExponentField::Present { exp, zeros }
+<a href=#820 id=820 data-nosnippet>820</a>    }
+<a href=#821 id=821 data-nosnippet>821</a>
+<a href=#822 id=822 data-nosnippet>822</a>    <span class="kw">fn </span>len(<span class="self">self</span>) -&gt; usize {
+<a href=#823 id=823 data-nosnippet>823</a>        <span class="kw">match </span><span class="self">self </span>{
+<a href=#824 id=824 data-nosnippet>824</a>            ExponentField::Absent =&gt; <span class="number">0</span>,
+<a href=#825 id=825 data-nosnippet>825</a>            ExponentField::Reserved(blanks) =&gt; blanks,
+<a href=#826 id=826 data-nosnippet>826</a>            <span class="comment">// The `E` and the sign, then the padding and the digits.
+<a href=#827 id=827 data-nosnippet>827</a>            </span>ExponentField::Present { exp, zeros } =&gt; <span class="number">2 </span>+ zeros + decimal_width(exp.unsigned_abs()),
+<a href=#828 id=828 data-nosnippet>828</a>        }
+<a href=#829 id=829 data-nosnippet>829</a>    }
+<a href=#830 id=830 data-nosnippet>830</a>
+<a href=#831 id=831 data-nosnippet>831</a>    <span class="kw">fn </span>push_to(<span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>String) {
+<a href=#832 id=832 data-nosnippet>832</a>        <span class="kw">match </span><span class="self">self </span>{
+<a href=#833 id=833 data-nosnippet>833</a>            ExponentField::Absent =&gt; {}
+<a href=#834 id=834 data-nosnippet>834</a>            ExponentField::Reserved(blanks) =&gt; push_repeated(out, <span class="string">' '</span>, blanks),
+<a href=#835 id=835 data-nosnippet>835</a>            ExponentField::Present { exp, zeros } =&gt; {
+<a href=#836 id=836 data-nosnippet>836</a>                out.push(<span class="string">'E'</span>);
+<a href=#837 id=837 data-nosnippet>837</a>                out.push(<span class="kw">if </span>exp &lt; <span class="number">0 </span>{ <span class="string">'-' </span>} <span class="kw">else </span>{ <span class="string">'+' </span>});
+<a href=#838 id=838 data-nosnippet>838</a>                push_repeated(out, <span class="string">'0'</span>, zeros);
+<a href=#839 id=839 data-nosnippet>839</a>                <span class="comment">// Written straight into `out` rather than through
+<a href=#840 id=840 data-nosnippet>840</a>                // `to_string`, which would allocate a `String` to be copied
+<a href=#841 id=841 data-nosnippet>841</a>                // into this one; `write!` to a `String` cannot fail.
+<a href=#842 id=842 data-nosnippet>842</a>                </span><span class="kw">let _ </span>= <span class="macro">write!</span>(out, <span class="string">"{}"</span>, exp.unsigned_abs());
+<a href=#843 id=843 data-nosnippet>843</a>            }
+<a href=#844 id=844 data-nosnippet>844</a>        }
+<a href=#845 id=845 data-nosnippet>845</a>    }
+<a href=#846 id=846 data-nosnippet>846</a>}
+<a href=#847 id=847 data-nosnippet>847</a>
+<a href=#848 id=848 data-nosnippet>848</a><span class="doccomment">/// Decides [`PlainLayout`] for a value of this shape, before `before` has had
+<a href=#849 id=849 data-nosnippet>849</a>/// its say. **Infallible, and that is deliberate**: `before` is the only
+<a href=#850 id=850 data-nosnippet>850</a>/// argument that can raise, so keeping it out of here leaves a rendering that
+<a href=#851 id=851 data-nosnippet>851</a>/// supplies none -- which is what a number's ordinary display is -- with no
+<a href=#852 id=852 data-nosnippet>852</a>/// `Result` carrying a `Number` to construct and drop.
+<a href=#853 id=853 data-nosnippet>853</a></span><span class="kw">fn </span>plain_layout(shape: Shape, after: <span class="prelude-ty">Option</span>&lt;u32&gt;) -&gt; PlainLayout {
+<a href=#854 id=854 data-nosnippet>854</a>    <span class="kw">let </span>point = signed_count(shape.len) + shape.exponent;
+<a href=#855 id=855 data-nosnippet>855</a>    <span class="kw">let </span>int_len = <span class="kw">if </span>shape.exponent &gt;= <span class="number">0 </span>{
+<a href=#856 id=856 data-nosnippet>856</a>        shape.len + usize::cast_from(shape.exponent.unsigned_abs())
+<a href=#857 id=857 data-nosnippet>857</a>    } <span class="kw">else if </span>point &gt; <span class="number">0 </span>{
+<a href=#858 id=858 data-nosnippet>858</a>        usize::cast_from(point.unsigned_abs())
+<a href=#859 id=859 data-nosnippet>859</a>    } <span class="kw">else </span>{
+<a href=#860 id=860 data-nosnippet>860</a>        <span class="number">1 </span><span class="comment">// the "0" before the point
+<a href=#861 id=861 data-nosnippet>861</a>    </span>};
+<a href=#862 id=862 data-nosnippet>862</a>    <span class="comment">// The digits this value naturally shows after the point, before `after`
+<a href=#863 id=863 data-nosnippet>863</a>    // asks for more. `None` is "no decimal part", which is not the same as
+<a href=#864 id=864 data-nosnippet>864</a>    // `Some(0)`: the first prints no `.` and the second would.
+<a href=#865 id=865 data-nosnippet>865</a>    </span><span class="kw">let </span>natural_dec = <span class="kw">if </span>shape.exponent &gt;= <span class="number">0 </span>{
+<a href=#866 id=866 data-nosnippet>866</a>        <span class="prelude-val">None
+<a href=#867 id=867 data-nosnippet>867</a>    </span>} <span class="kw">else if </span>point &gt; <span class="number">0 </span>{
+<a href=#868 id=868 data-nosnippet>868</a>        <span class="prelude-val">Some</span>(shape.len - usize::cast_from(point.unsigned_abs()))
+<a href=#869 id=869 data-nosnippet>869</a>    } <span class="kw">else </span>{
+<a href=#870 id=870 data-nosnippet>870</a>        <span class="prelude-val">Some</span>(usize::cast_from(point.unsigned_abs()) + shape.len)
+<a href=#871 id=871 data-nosnippet>871</a>    };
+<a href=#872 id=872 data-nosnippet>872</a>    <span class="comment">// The decimal part as (natural digits, trailing zeros `after` adds).
+<a href=#873 id=873 data-nosnippet>873</a>    </span><span class="kw">let </span>dec = <span class="kw">match </span>after {
+<a href=#874 id=874 data-nosnippet>874</a>        <span class="prelude-val">None </span>=&gt; natural_dec.map(|natural| (natural, <span class="number">0usize</span>)),
+<a href=#875 id=875 data-nosnippet>875</a>        <span class="prelude-val">Some</span>(<span class="number">0</span>) =&gt; <span class="prelude-val">None</span>,
+<a href=#876 id=876 data-nosnippet>876</a>        <span class="prelude-val">Some</span>(places) =&gt; {
+<a href=#877 id=877 data-nosnippet>877</a>            <span class="kw">let </span>natural = natural_dec.unwrap_or(<span class="number">0</span>);
+<a href=#878 id=878 data-nosnippet>878</a>            <span class="kw">let </span>extra = usize::cast_from(places).saturating_sub(natural);
+<a href=#879 id=879 data-nosnippet>879</a>            <span class="prelude-val">Some</span>((natural, extra))
+<a href=#880 id=880 data-nosnippet>880</a>        }
+<a href=#881 id=881 data-nosnippet>881</a>    };
+<a href=#882 id=882 data-nosnippet>882</a>    PlainLayout {
+<a href=#883 id=883 data-nosnippet>883</a>        pad: <span class="number">0</span>,
+<a href=#884 id=884 data-nosnippet>884</a>        sign: usize::from(shape.negative),
+<a href=#885 id=885 data-nosnippet>885</a>        int_len,
+<a href=#886 id=886 data-nosnippet>886</a>        dec,
+<a href=#887 id=887 data-nosnippet>887</a>        point,
+<a href=#888 id=888 data-nosnippet>888</a>    }
+<a href=#889 id=889 data-nosnippet>889</a>}
+<a href=#890 id=890 data-nosnippet>890</a>
+<a href=#891 id=891 data-nosnippet>891</a><span class="doccomment">/// Applies `before` to a layout: the leading spaces that widen the integer
+<a href=#892 id=892 data-nosnippet>892</a>/// part to it, or the raise for an integer part already wider.
+<a href=#893 id=893 data-nosnippet>893</a></span><span class="kw">fn </span>pad_to_before(
+<a href=#894 id=894 data-nosnippet>894</a>    layout: PlainLayout,
+<a href=#895 id=895 data-nosnippet>895</a>    before: <span class="prelude-ty">Option</span>&lt;u32&gt;,
+<a href=#896 id=896 data-nosnippet>896</a>    <span class="comment">// `Some` exactly when `before` is, which is the only way the oversize
+<a href=#897 id=897 data-nosnippet>897</a>    // raise below can be reached.
+<a href=#898 id=898 data-nosnippet>898</a>    </span>reported: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Number&gt;,
+<a href=#899 id=899 data-nosnippet>899</a>    oversize_digits: u64,
+<a href=#900 id=900 data-nosnippet>900</a>    <span class="comment">// Only ever read to build `BeforeOversize`, which renders `reported`
+<a href=#901 id=901 data-nosnippet>901</a>    // through the string value and so honours `NUMERIC FORM` as well as
+<a href=#902 id=902 data-nosnippet>902</a>    // `DIGITS`. Every call that passes `before: None` can never reach that raise
+<a href=#903 id=903 data-nosnippet>903</a>    // and passes `Form::Scientific` as an unread placeholder.
+<a href=#904 id=904 data-nosnippet>904</a>    </span>oversize_form: Form,
+<a href=#905 id=905 data-nosnippet>905</a>) -&gt; <span class="prelude-ty">Result</span>&lt;PlainLayout, FormatError&gt; {
+<a href=#906 id=906 data-nosnippet>906</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(before) = before <span class="kw">else </span>{
+<a href=#907 id=907 data-nosnippet>907</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(layout);
+<a href=#908 id=908 data-nosnippet>908</a>    };
+<a href=#909 id=909 data-nosnippet>909</a>    <span class="kw">let </span>needed = signed_len(layout.int_len);
+<a href=#910 id=910 data-nosnippet>910</a>    <span class="comment">// Widened to `i64`: `before` is a legitimate `u32` up to `u32::MAX` (the
+<a href=#911 id=911 data-nosnippet>911</a>    // interpreter accepts `FORMAT(1, 3000000000)` and returns the
+<a href=#912 id=912 data-nosnippet>912</a>    // three-billion-character result), and casting it to `i32` first can turn
+<a href=#913 id=913 data-nosnippet>913</a>    // it negative, producing a spurious oversize error instead of the huge
+<a href=#914 id=914 data-nosnippet>914</a>    // space-padding the interpreter actually shows.
+<a href=#915 id=915 data-nosnippet>915</a>    </span><span class="kw">let </span>available = i64::from(before) - signed_len(layout.sign);
+<a href=#916 id=916 data-nosnippet>916</a>    <span class="kw">if </span>available &lt; needed {
+<a href=#917 id=917 data-nosnippet>917</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(FormatError::BeforeOversize {
+<a href=#918 id=918 data-nosnippet>918</a>            reported: reported
+<a href=#919 id=919 data-nosnippet>919</a>                .expect(<span class="string">"`before` is Some here, and the caller pairs the two"</span>)
+<a href=#920 id=920 data-nosnippet>920</a>                .clone(),
+<a href=#921 id=921 data-nosnippet>921</a>            digits: oversize_digits,
+<a href=#922 id=922 data-nosnippet>922</a>            form: oversize_form,
+<a href=#923 id=923 data-nosnippet>923</a>            before,
+<a href=#924 id=924 data-nosnippet>924</a>        });
+<a href=#925 id=925 data-nosnippet>925</a>    }
+<a href=#926 id=926 data-nosnippet>926</a>    <span class="prelude-val">Ok</span>(PlainLayout {
+<a href=#927 id=927 data-nosnippet>927</a>        <span class="comment">// At most `before`, a `u32`.
+<a href=#928 id=928 data-nosnippet>928</a>        </span>pad: usize::try_from(available - needed).expect(<span class="string">"at most a u32"</span>),
+<a href=#929 id=929 data-nosnippet>929</a>        ..layout
+<a href=#930 id=930 data-nosnippet>930</a>    })
+<a href=#931 id=931 data-nosnippet>931</a>}
+<a href=#932 id=932 data-nosnippet>932</a>
+<a href=#933 id=933 data-nosnippet>933</a><span class="doccomment">/// Writes the bytes [`plain_layout`] counted, and decides nothing of its own:
+<a href=#934 id=934 data-nosnippet>934</a>/// every branch here is keyed on the exponent and the `point` the layout
+<a href=#935 id=935 data-nosnippet>935</a>/// already carries.
+<a href=#936 id=936 data-nosnippet>936</a></span><span class="kw">fn </span>emit_plain(out: <span class="kw-2">&amp;mut </span>String, n: <span class="kw-2">&amp;</span>Number, layout: PlainLayout) {
+<a href=#937 id=937 data-nosnippet>937</a>    <span class="kw">let </span>(dec, point) = (layout.dec, layout.point);
+<a href=#938 id=938 data-nosnippet>938</a>    push_repeated(out, <span class="string">' '</span>, layout.pad);
+<a href=#939 id=939 data-nosnippet>939</a>    <span class="kw">if </span>n.negative {
+<a href=#940 id=940 data-nosnippet>940</a>        out.push(<span class="string">'-'</span>);
+<a href=#941 id=941 data-nosnippet>941</a>    }
+<a href=#942 id=942 data-nosnippet>942</a>    <span class="kw">if </span>n.exponent &gt;= <span class="number">0 </span>{
+<a href=#943 id=943 data-nosnippet>943</a>        push_digits(out, n.digits.as_slice());
+<a href=#944 id=944 data-nosnippet>944</a>        push_repeated(out, <span class="string">'0'</span>, usize::cast_from(n.exponent.unsigned_abs()));
+<a href=#945 id=945 data-nosnippet>945</a>    } <span class="kw">else if </span>point &gt; <span class="number">0 </span>{
+<a href=#946 id=946 data-nosnippet>946</a>        push_digits(
+<a href=#947 id=947 data-nosnippet>947</a>            out,
+<a href=#948 id=948 data-nosnippet>948</a>            <span class="kw-2">&amp;</span>n.digits.as_slice()[..usize::cast_from(point.unsigned_abs())],
+<a href=#949 id=949 data-nosnippet>949</a>        );
+<a href=#950 id=950 data-nosnippet>950</a>    } <span class="kw">else </span>{
+<a href=#951 id=951 data-nosnippet>951</a>        out.push(<span class="string">'0'</span>);
+<a href=#952 id=952 data-nosnippet>952</a>    }
+<a href=#953 id=953 data-nosnippet>953</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, extra)) = dec {
+<a href=#954 id=954 data-nosnippet>954</a>        out.push(<span class="string">'.'</span>);
+<a href=#955 id=955 data-nosnippet>955</a>        <span class="comment">// The natural digits, which exist only for a negative exponent. A
+<a href=#956 id=956 data-nosnippet>956</a>        // non-negative one reaches here only because `after` asked for places,
+<a href=#957 id=957 data-nosnippet>957</a>        // and then the whole decimal part is the zeros below.
+<a href=#958 id=958 data-nosnippet>958</a>        </span><span class="kw">if </span>n.exponent &lt; <span class="number">0 </span>{
+<a href=#959 id=959 data-nosnippet>959</a>            <span class="kw">if </span>point &gt; <span class="number">0 </span>{
+<a href=#960 id=960 data-nosnippet>960</a>                push_digits(
+<a href=#961 id=961 data-nosnippet>961</a>                    out,
+<a href=#962 id=962 data-nosnippet>962</a>                    <span class="kw-2">&amp;</span>n.digits.as_slice()[usize::cast_from(point.unsigned_abs())..],
+<a href=#963 id=963 data-nosnippet>963</a>                );
+<a href=#964 id=964 data-nosnippet>964</a>            } <span class="kw">else </span>{
+<a href=#965 id=965 data-nosnippet>965</a>                push_repeated(out, <span class="string">'0'</span>, usize::cast_from(point.unsigned_abs()));
+<a href=#966 id=966 data-nosnippet>966</a>                push_digits(out, n.digits.as_slice());
+<a href=#967 id=967 data-nosnippet>967</a>            }
+<a href=#968 id=968 data-nosnippet>968</a>        }
+<a href=#969 id=969 data-nosnippet>969</a>        push_repeated(out, <span class="string">'0'</span>, extra);
+<a href=#970 id=970 data-nosnippet>970</a>    }
+<a href=#971 id=971 data-nosnippet>971</a>}
+<a href=#972 id=972 data-nosnippet>972</a>
+<a href=#973 id=973 data-nosnippet>973</a><span class="doccomment">/// Appends `digits` -- one decimal digit per byte, as [`Number`] stores them --
+<a href=#974 id=974 data-nosnippet>974</a>/// to `out` as characters.
+<a href=#975 id=975 data-nosnippet>975</a></span><span class="kw">fn </span>push_digits(out: <span class="kw-2">&amp;mut </span>String, digits: <span class="kw-2">&amp;</span>[u8]) {
+<a href=#976 id=976 data-nosnippet>976</a>    out.extend(digits.iter().map(|d| char::from(<span class="string">b'0' </span>+ d)));
+<a href=#977 id=977 data-nosnippet>977</a>}
+<a href=#978 id=978 data-nosnippet>978</a>
+<a href=#979 id=979 data-nosnippet>979</a><span class="doccomment">/// Appends `count` copies of `ch` to `out`.
+<a href=#980 id=980 data-nosnippet>980</a></span><span class="kw">fn </span>push_repeated(out: <span class="kw-2">&amp;mut </span>String, ch: char, count: usize) {
+<a href=#981 id=981 data-nosnippet>981</a>    <span class="kw">for _ in </span><span class="number">0</span>..count {
+<a href=#982 id=982 data-nosnippet>982</a>        out.push(ch);
+<a href=#983 id=983 data-nosnippet>983</a>    }
+<a href=#984 id=984 data-nosnippet>984</a>}
+</code></pre></div></section></main></body></html>

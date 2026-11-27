@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ClassKind","InheritRefusal","MethodSlot"],"fn":["deferred_classes","native_classes","native_classes_for_bootstrap","remove_setup_methods","setup_class_names","setup_method_names"],"struct":["BehaviourHandle","ClassGraph","ClassRegistry","Deferral","Epoch","MethodDict","MethodId"]};

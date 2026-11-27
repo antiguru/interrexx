@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Argument","BufferKind","CallBack","MethodObject","PoolAnswer","PoolRequest"],"struct":["DecodedCondition"],"trait":["Surface"]};

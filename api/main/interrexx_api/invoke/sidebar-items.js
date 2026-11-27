@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_NATIVE_ARGUMENTS"],"fn":["call_held_method","call_held_routine","call_method","call_routine","command","exit","finish","held_method","held_routine","held_routine_signature","held_signature","hook","method","prepare","routine","routine_signature","signature"],"struct":["Completion","NativeCall"]};

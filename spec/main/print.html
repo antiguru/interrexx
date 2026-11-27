@@ -91365,6 +91365,34 @@ is not a terminal is buffered, as <a href="environment/../deviations.html#40-buf
 of an option word in <code>.syscargs</code></a>. ooRexx writes
 unbuffered output whatever the words say, and ignores <code>-u</code> as an option word
 it does not know.</p>
+<div class="rule" id="r-env.invocation.heap-limit"><a href="environment/invocation.html#r-env.invocation.heap-limit">[env.invocation.heap-limit]</a></div>
+<p>The environment variable <code>REXX_HEAP_LIMIT</code> bounds the memory a run's objects
+may hold. Its value is decimal digits, optionally followed by <code>K</code>, <code>M</code> or <code>G</code>
+in either case, for that many units of 1024, 1024² or 1024³ bytes. An empty
+value is the same as none, and none leaves the memory unbounded. <code>rexx</code>
+refuses any other value, writing why to standard error and ending with the
+status 2 without running the program; an embedded run writes the same to its
+standard error and runs unbounded. An embedding can set the bound itself, in
+place of the variable's. The bound counts the bytes of strings, buffers and
+the slots of collections; the interpreter's own structures, such as its
+frames and translated programs, are not counted.</p>
+<div class="rule" id="r-env.invocation.heap-limit.raise"><a href="environment/invocation.html#r-env.invocation.heap-limit.raise">[env.invocation.heap-limit.raise]</a></div>
+<p>Under a bound, a single request for more than the bound, for an array, a
+buffer or a string sized by a number the program gives, raises <code>SYNTAX 5.0</code>
+where it is made. Memory that grows past the bound otherwise raises
+<code>SYNTAX 5.0</code> at the end of a clause of a program the run was given, not of
+the interpreter's own library, once a collection of unreachable objects has
+found more than the bound still in use; a clause whose own condition a
+<code>SIGNAL ON</code> trap takes raises only that. The bound is the interpreter's, not a thread's:
+the condition is raised on whichever thread first ends such a clause. By then
+the run may hold more than the bound: by up to a step, and what the clause
+that crossed it allocated, where a step is a sixteenth of the bound or 64
+KiB, whichever is more. The condition is raised again when a later collection
+finds the memory in use grown by more than a step past what the run could
+hold when it was last raised, or, after a collection has found it within the
+bound, past the bound again. Without a bound, a request the host refuses
+raises <code>SYNTAX 5.0</code> where it can, and a request the host grants but cannot
+back may end the process. ooRexx has no such bound.</p>
 <h2 id="running-a-string"><a class="header" href="#running-a-string">Running a string</a></h2>
 <div class="rule" id="r-env.invocation.expression"><a href="environment/invocation.html#r-env.invocation.expression">[env.invocation.expression]</a></div>
 <p>An option word <code>-e</code> takes the next word as the text of a program, and runs
@@ -100631,7 +100659,8 @@ argument written <code>()</code>; <code>FXCLASSICUPPER</code> is the same functi
 capitals; <code>FxClassicFail</code> refuses every call; and <code>FxClassicNone</code> answers no
 result.</p>
 <p><code>specnewer</code> has a package entry that asks for an interpreter newer than any
-there is, with the one routine <code>FxNewer</code>.</p>
+there is, with the one routine <code>FxNewer</code>. Its loader would set
+<code>SPECNEWER.LOADED</code> in <code>.local</code>.</p>
 <p><code>specraising</code> has a package entry whose loader raises <code>SYNTAX 93.900</code> with the
 message <code>raising loader</code>, and whose one routine is the classic function
 <code>FxClassicJoin</code>, as <code>specclassic</code>'s.</p>
@@ -100717,7 +100746,8 @@ the first attempt to load it raises <code>SYNTAX 98.982</code>, whichever of the
 directive of the main program that is before the first clause. After that
 refusal the library counts as loaded and provides nothing: a later
 <code>::REQUIRES</code> directive raises nothing, <code>loadLibrary</code> answers <code>1</code>, RXFUNCADD
-answers <code>1</code>, and none of its routines can be called.
+answers <code>1</code>, and none of its routines can be called. A later <code>EXTERNAL</code>
+declaration that tries to bind one of its routines raises <code>SYNTAX 90.999</code>.
 Whether the refused library's unloader runs when the instance ends is
 unspecified, and the loader never runs.</p>
 <pre><code class="language-rexx">say 'not reached'
@@ -100728,6 +100758,7 @@ unspecified, and the loader never runs.</p>
 call try '::requires "specnewer" LIBRARY'
 say rxfuncadd('FxNewer', 'specnewer') rxfuncquery('FxNewer')
 say .context~package~loadLibrary('specnewer')
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
 exit
 try:
   signal on syntax name e
@@ -100741,14 +100772,43 @@ e: say arg(1) '=&gt;' condition('o')~code
 ::requires "specnewer" LIBRARY =&gt; ok
 1 1
 1
+loader ran 0
 </code></pre>
-<pre><code class="language-rexx">signal on syntax name b
+<pre><code class="language-rexx">signal on syntax name refused
+p = .package~new('n1zqrequires', .array~of('::requires "specnewer" LIBRARY'))
+say 'loaded'
+exit
+refused:
+  say condition('o')~code
+  say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+</code></pre>
+<pre><code class="language-output">98.982
+loader ran 0
+</code></pre>
+<pre><code class="language-rexx">call load
 say .context~package~loadLibrary('specnewer')
-b: say condition('o')~code
 say rxfuncadd('FxNewer', 'specnewer')
+call bind
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+exit
+load:
+  signal on syntax name refused
+  say .context~package~loadLibrary('specnewer')
+  return
+bind:
+  signal on syntax name refused
+  p = .package~new('n1zqrefused', .array~of('::routine r external "LIBRARY specnewer FxNewer"'))
+  say 'bound'
+  return
+refused:
+  say condition('o')~code
+  return
 </code></pre>
 <pre><code class="language-output">98.982
 1
+1
+90.999
+loader ran 0
 </code></pre>
 <pre><code class="language-rexx">signal on syntax name a
 say rxfuncadd('FxNewer', 'specnewer') rxfuncquery('FxNewer')

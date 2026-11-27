@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CALL_BACK_NOT_STARTED","POOL_UNAVAILABLE"],"fn":["call_back","halt_calling","share_session_queue","variable_pool"]};

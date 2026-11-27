@@ -237,6 +237,34 @@ is not a terminal is buffered, as <a href="../deviations.html#40-buffered-standa
 of an option word in <code>.syscargs</code></a>. ooRexx writes
 unbuffered output whatever the words say, and ignores <code>-u</code> as an option word
 it does not know.</p>
+<div class="rule" id="r-env.invocation.heap-limit"><a href="#r-env.invocation.heap-limit">[env.invocation.heap-limit]</a></div>
+<p>The environment variable <code>REXX_HEAP_LIMIT</code> bounds the memory a run's objects
+may hold. Its value is decimal digits, optionally followed by <code>K</code>, <code>M</code> or <code>G</code>
+in either case, for that many units of 1024, 1024² or 1024³ bytes. An empty
+value is the same as none, and none leaves the memory unbounded. <code>rexx</code>
+refuses any other value, writing why to standard error and ending with the
+status 2 without running the program; an embedded run writes the same to its
+standard error and runs unbounded. An embedding can set the bound itself, in
+place of the variable's. The bound counts the bytes of strings, buffers and
+the slots of collections; the interpreter's own structures, such as its
+frames and translated programs, are not counted.</p>
+<div class="rule" id="r-env.invocation.heap-limit.raise"><a href="#r-env.invocation.heap-limit.raise">[env.invocation.heap-limit.raise]</a></div>
+<p>Under a bound, a single request for more than the bound, for an array, a
+buffer or a string sized by a number the program gives, raises <code>SYNTAX 5.0</code>
+where it is made. Memory that grows past the bound otherwise raises
+<code>SYNTAX 5.0</code> at the end of a clause of a program the run was given, not of
+the interpreter's own library, once a collection of unreachable objects has
+found more than the bound still in use; a clause whose own condition a
+<code>SIGNAL ON</code> trap takes raises only that. The bound is the interpreter's, not a thread's:
+the condition is raised on whichever thread first ends such a clause. By then
+the run may hold more than the bound: by up to a step, and what the clause
+that crossed it allocated, where a step is a sixteenth of the bound or 64
+KiB, whichever is more. The condition is raised again when a later collection
+finds the memory in use grown by more than a step past what the run could
+hold when it was last raised, or, after a collection has found it within the
+bound, past the bound again. Without a bound, a request the host refuses
+raises <code>SYNTAX 5.0</code> where it can, and a request the host grants but cannot
+back may end the process. ooRexx has no such bound.</p>
 <h2 id="running-a-string"><a class="header" href="#running-a-string">Running a string</a></h2>
 <div class="rule" id="r-env.invocation.expression"><a href="#r-env.invocation.expression">[env.invocation.expression]</a></div>
 <p>An option word <code>-e</code> takes the next word as the text of a program, and runs

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["EXPORTS","SPELLED_POINTERS"],"enum":["Declared"],"fn":["export_types","pointer_types","spelled_pointer_types"],"mod":["signatures"],"struct":["Export"],"type":["PFNREXXCREATEQUEUE","PFNREXXOPENQUEUE","PFNREXXREGISTEREXITDLL","PFNREXXREGISTEREXITEXE","PFNREXXREGISTERSUBCOMDLL","PFNREXXREGISTERSUBCOMEXE"]};

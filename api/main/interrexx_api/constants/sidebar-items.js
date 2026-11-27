@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["API_VERSIONS","ARGUMENT_TYPEDEFS","ARGUMENT_TYPES","CLASSIC_CONSTANTS","CLASSIC_LIMITS","ENTRY_CONSTANTS","ENVIRONMENT_KINDS","OPTIONAL_VALUES","OPTION_NAMES","VALUE_ALIASES"],"enum":["Form"],"fn":["argument_type_names","error_code","has_error_code","optional_argument_types","value_codes"],"struct":["CConstant"]};

@@ -255,7 +255,8 @@ the first attempt to load it raises <code>SYNTAX 98.982</code>, whichever of the
 directive of the main program that is before the first clause. After that
 refusal the library counts as loaded and provides nothing: a later
 <code>::REQUIRES</code> directive raises nothing, <code>loadLibrary</code> answers <code>1</code>, RXFUNCADD
-answers <code>1</code>, and none of its routines can be called.
+answers <code>1</code>, and none of its routines can be called. A later <code>EXTERNAL</code>
+declaration that tries to bind one of its routines raises <code>SYNTAX 90.999</code>.
 Whether the refused library's unloader runs when the instance ends is
 unspecified, and the loader never runs.</p>
 <pre><code class="language-rexx">say 'not reached'
@@ -266,6 +267,7 @@ unspecified, and the loader never runs.</p>
 call try '::requires "specnewer" LIBRARY'
 say rxfuncadd('FxNewer', 'specnewer') rxfuncquery('FxNewer')
 say .context~package~loadLibrary('specnewer')
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
 exit
 try:
   signal on syntax name e
@@ -279,14 +281,43 @@ e: say arg(1) '=&gt;' condition('o')~code
 ::requires "specnewer" LIBRARY =&gt; ok
 1 1
 1
+loader ran 0
 </code></pre>
-<pre><code class="language-rexx">signal on syntax name b
+<pre><code class="language-rexx">signal on syntax name refused
+p = .package~new('n1zqrequires', .array~of('::requires "specnewer" LIBRARY'))
+say 'loaded'
+exit
+refused:
+  say condition('o')~code
+  say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+</code></pre>
+<pre><code class="language-output">98.982
+loader ran 0
+</code></pre>
+<pre><code class="language-rexx">call load
 say .context~package~loadLibrary('specnewer')
-b: say condition('o')~code
 say rxfuncadd('FxNewer', 'specnewer')
+call bind
+say 'loader ran' .local~hasIndex('SPECNEWER.LOADED')
+exit
+load:
+  signal on syntax name refused
+  say .context~package~loadLibrary('specnewer')
+  return
+bind:
+  signal on syntax name refused
+  p = .package~new('n1zqrefused', .array~of('::routine r external "LIBRARY specnewer FxNewer"'))
+  say 'bound'
+  return
+refused:
+  say condition('o')~code
+  return
 </code></pre>
 <pre><code class="language-output">98.982
 1
+1
+90.999
+loader ran 0
 </code></pre>
 <pre><code class="language-rexx">signal on syntax name a
 say rxfuncadd('FxNewer', 'specnewer') rxfuncquery('FxNewer')

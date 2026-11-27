@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["HELLO_LENGTH","PROTOCOL_VERSION","WELCOME_LENGTH"],"enum":["Command"],"fn":["decode_command","decode_reply","encode_reply","encode_request","encode_stop","frame","hello","hello_version","read_frame","read_welcome","welcome"],"struct":["Malformed"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["COMPILE_SAME_FILE_STATUS","COMPILE_USAGE_STATUS","USAGE","USAGE_STATUS"],"enum":["Command","Program"],"fn":["instore_status","load","output_unwritable","parse","parse_compile","program_not_found","program_unreadable","resolve_program","same_file_message","translate","version_banner"],"struct":["Compile","Run"]};

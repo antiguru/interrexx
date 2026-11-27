@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CONTEXTS","PLATFORMS","PLATFORM_DIR","TABLES"],"enum":["Body","Tag"],"fn":["begin_marker","end_marker","files","methods","prototype","sections","splice"],"struct":["ErrorRow","Method","Platform","Section","Struct"]};

@@ -1,0 +1,181 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `crates/interrexx-parse/src/instruction/address.rs`."><title>address.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="interrexx_parse" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0 (0ef1bc386 2026-11-09)" data-channel="1.100.0" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">interrexx_parse/instruction/</div>address.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `ADDRESS` and the redirections of its `WITH` clause.
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>interrexx_inventory::errors::{
+<a href=#4 id=4 data-nosnippet>4</a>    E20_932, E20_933, E25_930, E25_931, E25_932, E25_933, E25_934, E35_914, E35_935,
+<a href=#5 id=5 data-nosnippet>5</a>};
+<a href=#6 id=6 data-nosnippet>6</a>
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span><span class="kw">crate</span>::ast::{Address, AddressIo, OutputOption, Redirection};
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::expr::{Terminators, parse_constant_expression};
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span><span class="kw">crate</span>::token::{ParseError, SymbolClass, Tag, TokenKind};
+<a href=#10 id=10 data-nosnippet>10</a>
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use super</span>::{
+<a href=#12 id=12 data-nosnippet>12</a>    Inst, SUB_APPEND, SUB_ERROR, SUB_INPUT, SUB_NORMAL, SUB_OUTPUT, SUB_REPLACE, SUB_STEM,
+<a href=#13 id=13 data-nosnippet>13</a>    SUB_STREAM, SUB_USING, SUB_VALUE, SUB_WITH,
+<a href=#14 id=14 data-nosnippet>14</a>};
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; Inst&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#17 id=17 data-nosnippet>17</a>    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>address(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Address, ParseError&gt; {
+<a href=#18 id=18 data-nosnippet>18</a>        <span class="kw">let </span><span class="kw-2">mut </span>address = Address::default();
+<a href=#19 id=19 data-nosnippet>19</a>        <span class="kw">let </span><span class="prelude-val">Some</span>(index) = <span class="self">self</span>.peek_real_index() <span class="kw">else </span>{
+<a href=#20 id=20 data-nosnippet>20</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(address);
+<a href=#21 id=21 data-nosnippet>21</a>        };
+<a href=#22 id=22 data-nosnippet>22</a>        <span class="kw">let </span>token = <span class="kw-2">&amp;</span><span class="self">self</span>.ctx.tokens[index];
+<a href=#23 id=23 data-nosnippet>23</a>        <span class="kw">if </span>!<span class="macro">matches!</span>(token.kind.tag(), Tag::Symbol | Tag::Literal) {
+<a href=#24 id=24 data-nosnippet>24</a>            <span class="comment">// An implicit `ADDRESS VALUE`, with the token left in place.
+<a href=#25 id=25 data-nosnippet>25</a>            // Measured: `address (e)` is rc 0.
+<a href=#26 id=26 data-nosnippet>26</a>            </span>address.dynamic = <span class="self">self</span>.opt_expr(Terminators::PARSE_WITH)<span class="question-mark">?</span>;
+<a href=#27 id=27 data-nosnippet>27</a>        } <span class="kw">else if </span><span class="self">self</span>.sub_keyword(token) == <span class="prelude-val">Some</span>(SUB_VALUE) {
+<a href=#28 id=28 data-nosnippet>28</a>            <span class="self">self</span>.seek(index + <span class="number">1</span>);
+<a href=#29 id=29 data-nosnippet>29</a>            <span class="comment">// Measured as 35.914 for `address value`.
+<a href=#30 id=30 data-nosnippet>30</a>            </span>address.dynamic = <span class="prelude-val">Some</span>(<span class="self">self</span>.expr(Terminators::PARSE_WITH, E35_914)<span class="question-mark">?</span>);
+<a href=#31 id=31 data-nosnippet>31</a>        } <span class="kw">else </span>{
+<a href=#32 id=32 data-nosnippet>32</a>            <span class="self">self</span>.seek(index + <span class="number">1</span>);
+<a href=#33 id=33 data-nosnippet>33</a>            address.environment = <span class="prelude-val">Some</span>(<span class="self">self</span>.value_of(token));
+<a href=#34 id=34 data-nosnippet>34</a>            <span class="kw">if </span>!<span class="self">self</span>.at_end() {
+<a href=#35 id=35 data-nosnippet>35</a>                <span class="comment">// The command expression stops at WITH, so what follows is
+<a href=#36 id=36 data-nosnippet>36</a>                // either that keyword or the end of the clause. This can come
+<a href=#37 id=37 data-nosnippet>37</a>                // back empty, which is `ADDRESS env WITH ...`: a configuration
+<a href=#38 id=38 data-nosnippet>38</a>                // with no command.
+<a href=#39 id=39 data-nosnippet>39</a>                </span>address.command = <span class="self">self</span>.opt_expr(Terminators::PARSE_WITH)<span class="question-mark">?</span>;
+<a href=#40 id=40 data-nosnippet>40</a>            }
+<a href=#41 id=41 data-nosnippet>41</a>        }
+<a href=#42 id=42 data-nosnippet>42</a>        <span class="kw">let </span>with = <span class="self">self
+<a href=#43 id=43 data-nosnippet>43</a>            </span>.peek_real()
+<a href=#44 id=44 data-nosnippet>44</a>            .filter(|token| <span class="self">self</span>.sub_keyword(token) == <span class="prelude-val">Some</span>(SUB_WITH));
+<a href=#45 id=45 data-nosnippet>45</a>        <span class="kw">if </span>with.is_some() {
+<a href=#46 id=46 data-nosnippet>46</a>            <span class="self">self</span>.next_real();
+<a href=#47 id=47 data-nosnippet>47</a>            address.io = <span class="prelude-val">Some</span>(Box::new(<span class="self">self</span>.address_with()<span class="question-mark">?</span>));
+<a href=#48 id=48 data-nosnippet>48</a>        }
+<a href=#49 id=49 data-nosnippet>49</a>        <span class="prelude-val">Ok</span>(address)
+<a href=#50 id=50 data-nosnippet>50</a>    }
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="doccomment">/// The `INPUT`, `OUTPUT` and `ERROR` redirections, each at most once and in
+<a href=#53 id=53 data-nosnippet>53</a>    /// any order.
+<a href=#54 id=54 data-nosnippet>54</a>    </span><span class="kw">fn </span>address_with(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;AddressIo, ParseError&gt; {
+<a href=#55 id=55 data-nosnippet>55</a>        <span class="kw">let </span><span class="kw-2">mut </span>io = AddressIo::default();
+<a href=#56 id=56 data-nosnippet>56</a>        <span class="comment">// Measured as 20.933 for `address system with`.
+<a href=#57 id=57 data-nosnippet>57</a>        </span><span class="kw">if </span><span class="self">self</span>.at_end() {
+<a href=#58 id=58 data-nosnippet>58</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.error(E20_933, []));
+<a href=#59 id=59 data-nosnippet>59</a>        }
+<a href=#60 id=60 data-nosnippet>60</a>        <span class="kw">let </span><span class="kw-2">mut </span>seen = [<span class="bool-val">false</span>; <span class="number">3</span>];
+<a href=#61 id=61 data-nosnippet>61</a>        <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = <span class="self">self</span>.next_real() {
+<a href=#62 id=62 data-nosnippet>62</a>            <span class="kw">if </span>token.kind.tag() != Tag::Symbol {
+<a href=#63 id=63 data-nosnippet>63</a>                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.error(E20_933, []));
+<a href=#64 id=64 data-nosnippet>64</a>            }
+<a href=#65 id=65 data-nosnippet>65</a>            <span class="comment">// The three duplicate errors are 25.930, 25.931 and 25.932, one per
+<a href=#66 id=66 data-nosnippet>66</a>            // stream. Measured: `with input normal input normal` is 25.930.
+<a href=#67 id=67 data-nosnippet>67</a>            </span><span class="kw">let </span>stream = <span class="kw">match </span><span class="self">self</span>.sub_keyword(token) {
+<a href=#68 id=68 data-nosnippet>68</a>                <span class="prelude-val">Some</span>(SUB_INPUT) =&gt; <span class="number">0</span>,
+<a href=#69 id=69 data-nosnippet>69</a>                <span class="prelude-val">Some</span>(SUB_OUTPUT) =&gt; <span class="number">1</span>,
+<a href=#70 id=70 data-nosnippet>70</a>                <span class="prelude-val">Some</span>(SUB_ERROR) =&gt; <span class="number">2</span>,
+<a href=#71 id=71 data-nosnippet>71</a>                <span class="comment">// Measured as
+<a href=#72 id=72 data-nosnippet>72</a>                // 25.934 for `address system with foo` and for `with 1`.
+<a href=#73 id=73 data-nosnippet>73</a>                </span><span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.found(E25_934, <span class="prelude-val">Some</span>(token))),
+<a href=#74 id=74 data-nosnippet>74</a>            };
+<a href=#75 id=75 data-nosnippet>75</a>            <span class="kw">if </span>seen[stream] {
+<a href=#76 id=76 data-nosnippet>76</a>                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.error([E25_930, E25_931, E25_932][stream], []));
+<a href=#77 id=77 data-nosnippet>77</a>            }
+<a href=#78 id=78 data-nosnippet>78</a>            seen[stream] = <span class="bool-val">true</span>;
+<a href=#79 id=79 data-nosnippet>79</a>            <span class="comment">// `NORMAL` resets the stream and takes no target.
+<a href=#80 id=80 data-nosnippet>80</a>            </span><span class="kw">let </span>normal = <span class="self">self
+<a href=#81 id=81 data-nosnippet>81</a>                </span>.peek_real()
+<a href=#82 id=82 data-nosnippet>82</a>                .filter(|token| <span class="self">self</span>.sub_keyword(token) == <span class="prelude-val">Some</span>(SUB_NORMAL));
+<a href=#83 id=83 data-nosnippet>83</a>            <span class="kw">if </span>normal.is_some() {
+<a href=#84 id=84 data-nosnippet>84</a>                <span class="self">self</span>.next_real();
+<a href=#85 id=85 data-nosnippet>85</a>                <span class="kw">match </span>stream {
+<a href=#86 id=86 data-nosnippet>86</a>                    <span class="number">0 </span>=&gt; io.input = Redirection::Normal,
+<a href=#87 id=87 data-nosnippet>87</a>                    <span class="number">1 </span>=&gt; io.output = Redirection::Normal,
+<a href=#88 id=88 data-nosnippet>88</a>                    <span class="kw">_ </span>=&gt; io.error = Redirection::Normal,
+<a href=#89 id=89 data-nosnippet>89</a>                }
+<a href=#90 id=90 data-nosnippet>90</a>                <span class="kw">continue</span>;
+<a href=#91 id=91 data-nosnippet>91</a>            }
+<a href=#92 id=92 data-nosnippet>92</a>            <span class="comment">// Only an output stream takes APPEND or REPLACE, and both are
+<a href=#93 id=93 data-nosnippet>93</a>            // optional.
+<a href=#94 id=94 data-nosnippet>94</a>            </span><span class="kw">if </span>stream != <span class="number">0 </span>{
+<a href=#95 id=95 data-nosnippet>95</a>                <span class="kw">let </span>option = <span class="self">self</span>.output_option();
+<a href=#96 id=96 data-nosnippet>96</a>                <span class="kw">if </span>stream == <span class="number">1 </span>{
+<a href=#97 id=97 data-nosnippet>97</a>                    io.output_option = option;
+<a href=#98 id=98 data-nosnippet>98</a>                } <span class="kw">else </span>{
+<a href=#99 id=99 data-nosnippet>99</a>                    io.error_option = option;
+<a href=#100 id=100 data-nosnippet>100</a>                }
+<a href=#101 id=101 data-nosnippet>101</a>            }
+<a href=#102 id=102 data-nosnippet>102</a>            <span class="kw">let </span>target = <span class="self">self</span>.redirect_target()<span class="question-mark">?</span>;
+<a href=#103 id=103 data-nosnippet>103</a>            <span class="kw">match </span>stream {
+<a href=#104 id=104 data-nosnippet>104</a>                <span class="number">0 </span>=&gt; io.input = target,
+<a href=#105 id=105 data-nosnippet>105</a>                <span class="number">1 </span>=&gt; io.output = target,
+<a href=#106 id=106 data-nosnippet>106</a>                <span class="kw">_ </span>=&gt; io.error = target,
+<a href=#107 id=107 data-nosnippet>107</a>            }
+<a href=#108 id=108 data-nosnippet>108</a>        }
+<a href=#109 id=109 data-nosnippet>109</a>        <span class="prelude-val">Ok</span>(io)
+<a href=#110 id=110 data-nosnippet>110</a>    }
+<a href=#111 id=111 data-nosnippet>111</a>
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="doccomment">/// `APPEND` or `REPLACE`, or neither, in which case nothing is consumed.
+<a href=#113 id=113 data-nosnippet>113</a>    </span><span class="kw">fn </span>output_option(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; OutputOption {
+<a href=#114 id=114 data-nosnippet>114</a>        <span class="kw">let </span><span class="prelude-val">Some</span>(token) = <span class="self">self</span>.peek_real() <span class="kw">else </span>{
+<a href=#115 id=115 data-nosnippet>115</a>            <span class="kw">return </span>OutputOption::Default;
+<a href=#116 id=116 data-nosnippet>116</a>        };
+<a href=#117 id=117 data-nosnippet>117</a>        <span class="kw">let </span>option = <span class="kw">match </span><span class="self">self</span>.sub_keyword(token) {
+<a href=#118 id=118 data-nosnippet>118</a>            <span class="prelude-val">Some</span>(SUB_REPLACE) =&gt; OutputOption::Replace,
+<a href=#119 id=119 data-nosnippet>119</a>            <span class="prelude-val">Some</span>(SUB_APPEND) =&gt; OutputOption::Append,
+<a href=#120 id=120 data-nosnippet>120</a>            <span class="comment">// Probably one of the target keywords, so leave it in place.
+<a href=#121 id=121 data-nosnippet>121</a>            </span><span class="kw">_ </span>=&gt; <span class="kw">return </span>OutputOption::Default,
+<a href=#122 id=122 data-nosnippet>122</a>        };
+<a href=#123 id=123 data-nosnippet>123</a>        <span class="self">self</span>.next_real();
+<a href=#124 id=124 data-nosnippet>124</a>        option
+<a href=#125 id=125 data-nosnippet>125</a>    }
+<a href=#126 id=126 data-nosnippet>126</a>
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="doccomment">/// Where one stream goes.
+<a href=#128 id=128 data-nosnippet>128</a>    </span><span class="kw">fn </span>redirect_target(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Redirection, ParseError&gt; {
+<a href=#129 id=129 data-nosnippet>129</a>        <span class="comment">// Measured as 25.933 for `address system with input` and for `with input
+<a href=#130 id=130 data-nosnippet>130</a>        // foo`.
+<a href=#131 id=131 data-nosnippet>131</a>        </span><span class="kw">let </span><span class="prelude-val">Some</span>(token) = <span class="self">self</span>.next_real() <span class="kw">else </span>{
+<a href=#132 id=132 data-nosnippet>132</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.found(E25_933, <span class="prelude-val">None</span>));
+<a href=#133 id=133 data-nosnippet>133</a>        };
+<a href=#134 id=134 data-nosnippet>134</a>        <span class="kw">if </span>token.kind.tag() != Tag::Symbol {
+<a href=#135 id=135 data-nosnippet>135</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.found(E25_933, <span class="prelude-val">Some</span>(token)));
+<a href=#136 id=136 data-nosnippet>136</a>        }
+<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">match </span><span class="self">self</span>.sub_keyword(token) {
+<a href=#138 id=138 data-nosnippet>138</a>            <span class="prelude-val">Some</span>(SUB_STEM) =&gt; {
+<a href=#139 id=139 data-nosnippet>139</a>                <span class="comment">// Measured as
+<a href=#140 id=140 data-nosnippet>140</a>                // 20.932 for `with input stem a`, because `a` is a variable and
+<a href=#141 id=141 data-nosnippet>141</a>                // not a stem.
+<a href=#142 id=142 data-nosnippet>142</a>                </span><span class="kw">let </span><span class="prelude-val">Some</span>(name) = <span class="self">self</span>.next_real() <span class="kw">else </span>{
+<a href=#143 id=143 data-nosnippet>143</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.error(E20_932, []));
+<a href=#144 id=144 data-nosnippet>144</a>                };
+<a href=#145 id=145 data-nosnippet>145</a>                <span class="kw">let </span>TokenKind::Symbol {
+<a href=#146 id=146 data-nosnippet>146</a>                    id,
+<a href=#147 id=147 data-nosnippet>147</a>                    class: SymbolClass::Stem,
+<a href=#148 id=148 data-nosnippet>148</a>                } = name.kind
+<a href=#149 id=149 data-nosnippet>149</a>                <span class="kw">else </span>{
+<a href=#150 id=150 data-nosnippet>150</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="self">self</span>.error(E20_932, []));
+<a href=#151 id=151 data-nosnippet>151</a>                };
+<a href=#152 id=152 data-nosnippet>152</a>                <span class="prelude-val">Ok</span>(Redirection::Stem(id))
+<a href=#153 id=153 data-nosnippet>153</a>            }
+<a href=#154 id=154 data-nosnippet>154</a>            <span class="comment">// Both take the constant-expression form, so a bare variable is
+<a href=#155 id=155 data-nosnippet>155</a>            // 35.1: measured, `with error using x` is rc 221 while
+<a href=#156 id=156 data-nosnippet>156</a>            // `with error using (x)` would be accepted.
+<a href=#157 id=157 data-nosnippet>157</a>            </span><span class="prelude-val">Some</span>(index @ (SUB_STREAM | SUB_USING)) =&gt; {
+<a href=#158 id=158 data-nosnippet>158</a>                <span class="kw">match </span>parse_constant_expression(<span class="self">self</span>.ctx, <span class="kw-2">&amp;mut </span><span class="self">self</span>.cursor)<span class="question-mark">? </span>{
+<a href=#159 id=159 data-nosnippet>159</a>                    <span class="comment">// Measured as
+<a href=#160 id=160 data-nosnippet>160</a>                    // 35.935 for `with input stream`, naming the keyword and
+<a href=#161 id=161 data-nosnippet>161</a>                    // the instruction.
+<a href=#162 id=162 data-nosnippet>162</a>                    </span><span class="prelude-val">None </span>=&gt; {
+<a href=#163 id=163 data-nosnippet>163</a>                        <span class="kw">let </span>keyword: <span class="kw-2">&amp;</span>[u8] = <span class="kw">if </span>index == SUB_STREAM {
+<a href=#164 id=164 data-nosnippet>164</a>                            <span class="string">b"STREAM"
+<a href=#165 id=165 data-nosnippet>165</a>                        </span>} <span class="kw">else </span>{
+<a href=#166 id=166 data-nosnippet>166</a>                            <span class="string">b"USING"
+<a href=#167 id=167 data-nosnippet>167</a>                        </span>};
+<a href=#168 id=168 data-nosnippet>168</a>                        <span class="prelude-val">Err</span>(<span class="self">self</span>.error(E35_935, [keyword.to_vec(), <span class="string">b"ADDRESS"</span>.to_vec()]))
+<a href=#169 id=169 data-nosnippet>169</a>                    }
+<a href=#170 id=170 data-nosnippet>170</a>                    <span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Ok</span>(<span class="kw">if </span>index == SUB_STREAM {
+<a href=#171 id=171 data-nosnippet>171</a>                        Redirection::Stream(value)
+<a href=#172 id=172 data-nosnippet>172</a>                    } <span class="kw">else </span>{
+<a href=#173 id=173 data-nosnippet>173</a>                        Redirection::Using(value)
+<a href=#174 id=174 data-nosnippet>174</a>                    }),
+<a href=#175 id=175 data-nosnippet>175</a>                }
+<a href=#176 id=176 data-nosnippet>176</a>            }
+<a href=#177 id=177 data-nosnippet>177</a>            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="self">self</span>.found(E25_933, <span class="prelude-val">Some</span>(token))),
+<a href=#178 id=178 data-nosnippet>178</a>        }
+<a href=#179 id=179 data-nosnippet>179</a>    }
+<a href=#180 id=180 data-nosnippet>180</a>}
+</code></pre></div></section></main></body></html>
