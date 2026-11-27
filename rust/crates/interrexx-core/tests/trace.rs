@@ -78,3 +78,27 @@ fn an_instance_stops_reaching_a_dropped_variable() {
     // than merely hide it.
     assert_eq!(out, vec![class, scope]);
 }
+
+#[test]
+fn an_instance_stops_reaching_a_dropped_variable_but_keeps_its_scope() {
+    let scope = ObjRef::heap(1_000_000, 0);
+    let (v, w) = (ObjRef::heap(9, 0), ObjRef::heap(10, 0));
+    let mut pools = ScopePools::new();
+    pools.set(scope, b"V", v);
+    pools.set(scope, b"W", w);
+    pools.clear(scope, b"V");
+    let mut out = Vec::new();
+    let class = ObjRef::heap(1_000_000 + 2, 0);
+    Body::Instance {
+        class,
+        behaviour: BehaviourHandle::new(0),
+        name: None,
+        pools,
+        own: None,
+        native: None,
+    }
+    .trace(&mut out);
+    // The dropped value is unreached while the scope, which still binds `W`,
+    // and `W`'s value are.
+    assert_eq!(out, vec![class, scope, w]);
+}
