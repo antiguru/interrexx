@@ -290,14 +290,17 @@ rc=0
 
 # Memory that passes the limit inside a method the interpreter's library
 # writes in Rexx is raised at the end of the program's clause that sent it,
-# not inside the library.
+# not inside the library. Each pass adds a slot per item, so the passes cross
+# the limit whatever a slot's size.
 
 run limit=4M
-b = .Array~new(150000)~fill(1)
+b = .Array~new(10000)~fill(1)
 a = .Array~new
-a~appendAll(b)
+do 1000
+  a~appendAll(b)
+end
 say 'no error'
 ----
 rc=251
-     3 *-* a~appendAll(b)
-Error 5 running INSTORE line 3:  System resources exhausted.
+     4 *-*   a~appendAll(b)
+Error 5 running INSTORE line 4:  System resources exhausted.
