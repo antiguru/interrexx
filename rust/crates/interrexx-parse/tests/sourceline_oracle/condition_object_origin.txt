@@ -1,10 +1,13 @@
-count 84
+count 85
 /* Condition object entries: NOMETHOD and NOSTRING name the receiver as
    ADDITIONAL; conditions from the interpreter's own library name the REXX
    package; a SYNTAX code with no sub has MESSAGE .nil. Compare the program's
    frames and positions. Library positions, library and built-in frame counts,
    and message wording are unspecified (r[cond.information.library],
-   r[class.stackframe.builtin], r[conv.error.text]). */
+   r[class.stackframe.builtin], r[conv.error.text]), and so is PROPAGATED for
+   a condition that a built-in function or method, or a method of the class
+   library, raised itself (r[cond.information.propagated]): dump leaves it
+   out for those. */
 signal on nomethod name n1
 'object'~no_method
 n1: call dump 'nomethod string'
@@ -21,24 +24,22 @@ x = .stream~new('/')~lines
 call off notready
 signal on notready name s1
 x = charin('/nonexistent-t69/zz')
-s1: call dump 'notready signal'
+s1: call dump 'notready signal', .false
 signal on notready name s2
 x = stream('/', 'c', 'open read')
-/* stream_command_open_failure.rex compares PROPAGATED on failed COMMAND
-   opens, including the internal routine case below (issue #801). */
 s2: call dump 'notready propagated', .false
 signal on syntax name s4
 say .Validate~number('LENGTH', 'abc')
-s4: call dump 'library syntax'
+s4: call dump 'library syntax', .false
 signal on syntax name s5
 .stream~new('/tmp/t69-none')~charin(1, 2, 3)
-s5: call dump 'library arguments'
+s5: call dump 'library arguments', .false
 signal on syntax name s6
 raise syntax 93
 s6: call dump 'bare code'
 signal on syntax name s7
 x = linein('/tmp/t69-none', 1, 2)
-s7: call dump 'linein code'
+s7: call dump 'linein code', .false
 /* The internal call's copy of the trap takes it, so what follows runs in
    that call. */
 signal on notready name s3
@@ -47,7 +48,7 @@ s3: call dump 'notready propagated twice', .false
 call propagate_nomethod
 exit
 
-notready_call: call dump 'notready call'; return
+notready_call: call dump 'notready call', .false; return
 
 dump:
   use arg heading, showPropagated = .true

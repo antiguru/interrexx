@@ -1,5 +1,5 @@
 call on error name errtrap
-say 'filespec' filespec('N', '/tmp/zz.txt')
+say 'exists  ' SysFileExists('data.txt')
 say 'lines   ' lines('data.txt')
 say 'dotname ' .SOMENAME
 object = .Guarded~new

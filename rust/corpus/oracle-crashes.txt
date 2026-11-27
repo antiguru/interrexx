@@ -1131,8 +1131,8 @@ SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`, nothing
 The message formatter takes
 each value through the object-to-string conversion, which catches the raise and answers `NULL`, and the
 message's `&1` then runs `strlen` on it. A raising value the message does not refer to is safe:
-the other values are still converted and the last raise is the routine's answer, which the corpus
-witness `lang/rexxutil_messages.rex` runs. This crate answers the raise here too, pinned by
+its raise is the routine's answer and no later value is converted, which the corpus witness
+`lang/rexxutil_messages.rex` runs. This crate answers the raise here too, pinned by
 `builtin::rexxutil::messages::tests::a_raising_value_the_message_refers_to_is_trapped`. No
 upstream ticket.
 

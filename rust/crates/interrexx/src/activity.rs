@@ -90,6 +90,10 @@ pub(crate) struct Activity {
     /// The primitive methods running Rexx code on this Rust stack, innermost
     /// last.
     pub(crate) method_levels: Vec<MethodLevel>,
+    /// The level of the primitive running a [`crate::Interp::deferred_level`]
+    /// body, until Rexx code starts and pushes it onto
+    /// [`Activity::method_levels`].
+    pub(crate) deferred_level: Option<DeferredLevel>,
     /// The thread context every native call and package hook is handed,
     /// which an extension may keep for as long as this interpreter runs;
     /// made by the first ([`crate::Interp::thread_context`]).
@@ -299,6 +303,10 @@ pub(crate) struct Activity {
     /// Whether this activity delivers a trace line another activity wrote, to
     /// the end of that line's `LINEOUT`.
     pub(crate) delivering: bool,
+    /// The activity whose line a delivering activity delivers, while that
+    /// activity waits for it: the one whose number `.CONTEXT~THREAD`
+    /// answers, whichever activity asks (`r[instr.trace.delivery.thread]`).
+    pub(crate) delivers_for: Option<crate::scheduler::ActivityId>,
     /// The clauses a delivering activity has run since a slice fell due.
     pub(crate) delivery_clauses: u32,
     /// The nesting depth of the code whose trace line this activity
@@ -440,6 +448,28 @@ pub(crate) struct Activity {
     /// The heap's tag for this activity, `Heap::sharing_tag`.
     #[cfg(feature = "sharing")]
     pub(crate) sharing_tag: u32,
+}
+
+/// A [`MethodLevel`] not yet pushed: what pushing it needs, and where it
+/// belongs.
+pub(crate) struct DeferredLevel {
+    /// The activation the method was sent from, which is running while the
+    /// level may be pushed.
+    pub(crate) caller: Option<crate::activation::ActivationId>,
+    pub(crate) name: &'static [u8],
+    pub(crate) receiver: ObjRef,
+    pub(crate) arguments: [Option<ObjRef>; DeferredLevel::MAX_ARGUMENTS],
+    pub(crate) count: usize,
+}
+
+impl DeferredLevel {
+    /// The most arguments a deferred level keeps; a method sent more takes its
+    /// level at once.
+    pub(crate) const MAX_ARGUMENTS: usize = 2;
+
+    pub(crate) fn arguments(&self) -> &[Option<ObjRef>] {
+        &self.arguments[..self.count]
+    }
 }
 
 /// A `CallRoutine` or `CallProgram` call in progress. It runs on a new
@@ -588,6 +618,7 @@ impl Activity {
             internal_levels: Vec::new(),
             internal_depth: 0,
             method_levels: Vec::new(),
+            deferred_level: None,
             clause_state: ClauseState::new(),
             flat_loops: Vec::new(),
             flat_top: None,
@@ -640,6 +671,7 @@ impl Activity {
             fragment_clause: 0,
             routing_trace: false,
             delivering: false,
+            delivers_for: None,
             delivery_clauses: 0,
             depth_base: 0,
             guarded_slices: 0,
@@ -773,6 +805,7 @@ impl Activity {
             internal_levels,
             internal_depth,
             method_levels,
+            deferred_level,
             clause_state: _,
             // The `DO OVER` snapshot sits in a register held for the loop's
             // lifetime, and `RootSet` reaches a register as a temp.
@@ -838,6 +871,7 @@ impl Activity {
             fragment_clause: _,
             routing_trace: _,
             delivering: _,
+            delivers_for: _,
             delivery_clauses: _,
             depth_base: _,
             guarded_slices: _,
@@ -936,6 +970,10 @@ impl Activity {
         for level in method_levels {
             out.push(level.receiver);
             out.extend(level.arguments.iter().flatten().copied());
+        }
+        if let Some(level) = deferred_level {
+            out.push(level.receiver);
+            out.extend(level.arguments().iter().flatten().copied());
         }
         out.extend(
             internal_levels[..*internal_depth]

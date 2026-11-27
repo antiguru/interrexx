@@ -704,6 +704,9 @@ impl Interp {
         let propagated = std::mem::take(&mut self.activity.failure_propagated);
         let reraised = std::mem::take(&mut self.activity.failure_reraised);
         self.activity.propagate_absorb = 0;
+        // A propagated condition trapped here is reported by nothing, so a
+        // later untrapped one must not show its `TRACEBACK`.
+        self.activity.traceback_object = None;
         self.set_sigl(self.activity.clause_state.line());
         if let Some(rc) = &raised.rc {
             // A `RAISE` that named an object for `RC` holds it for the
