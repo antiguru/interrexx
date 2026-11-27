@@ -351,6 +351,16 @@ fn a_constant_used_only_in_until_can_run_in_generated_code() {
     check_header_constant("until i >= LIMIT");
 }
 
+#[test]
+fn exclusive_or_in_while_runs_in_generated_code() {
+    check_header_constant("while (i <= LIMIT) && (i < 0)");
+}
+
+#[test]
+fn negation_in_until_runs_in_generated_code() {
+    check_header_constant("until \\(i < LIMIT)");
+}
+
 fn check_header_constant(condition: &str) {
     let boundaries = |limit: u32| {
         reset_compiled_runs();

@@ -268,13 +268,25 @@ pub(crate) enum CondStep {
         rhs: u16,
         dst: u16,
     },
-    /// `&` (`and`) or `|` of two values that are already `0` or `1`.
+    /// A binary operation on two values that are already `0` or `1`.
     Logic {
-        and: bool,
+        op: Logic,
         lhs: u16,
         rhs: u16,
         dst: u16,
     },
+    /// Logical negation of a value that is already `0` or `1`.
+    Not {
+        src: u16,
+        dst: u16,
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Logic {
+    And,
+    Or,
+    Xor,
 }
 
 /// What a loop's pass boundary tests besides its step.
@@ -833,6 +845,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                 .iter()
                 .map(|step| match *step {
                     CondStep::Const { dst, .. } | CondStep::Load { dst, .. } => dst,
+                    CondStep::Not { src, dst } => src.max(dst),
                     CondStep::Arith { lhs, rhs, dst, .. }
                     | CondStep::Compare { lhs, rhs, dst, .. }
                     | CondStep::Logic { lhs, rhs, dst, .. } => lhs.max(rhs).max(dst),
@@ -1487,7 +1500,7 @@ fn run_condition(e: &mut Emit<'_, '_>, steps: &[CondStep], dst: u16, bail: Block
             CondStep::Compare { op, lhs, rhs, dst } => {
                 compare(e, Slow::Bail(bail), op, lhs, rhs, dst);
             }
-            CondStep::Logic { and, lhs, rhs, dst } => {
+            CondStep::Logic { op, lhs, rhs, dst } => {
                 let left = e.register(lhs);
                 let right = e.register(rhs);
                 let left_true = holds(e, left, true);
@@ -1500,19 +1513,33 @@ fn run_condition(e: &mut Emit<'_, '_>, steps: &[CondStep], dst: u16, bail: Block
                 let on = e.b.create_block();
                 e.b.ins().brif(ok, on, &[], bail, &[]);
                 e.b.switch_to_block(on);
-                let both = if and {
-                    e.b.ins().band(left_true, right_true)
-                } else {
-                    e.b.ins().bor(left_true, right_true)
+                let truth = match op {
+                    Logic::And => e.b.ins().band(left_true, right_true),
+                    Logic::Or => e.b.ins().bor(left_true, right_true),
+                    Logic::Xor => e.b.ins().bxor(left_true, right_true),
                 };
-                let yes = e.b.ins().iconst(types::I64, layout::TRUE_BITS);
-                let no = e.b.ins().iconst(types::I64, layout::FALSE_BITS);
-                let value = e.b.ins().select(both, yes, no);
-                e.set_register(dst, value);
+                store_logical(e, dst, truth);
+            }
+            CondStep::Not { src, dst } => {
+                let value = e.register(src);
+                let is_true = holds(e, value, true);
+                let is_false = holds(e, value, false);
+                let ok = e.b.ins().bor(is_true, is_false);
+                let on = e.b.create_block();
+                e.b.ins().brif(ok, on, &[], bail, &[]);
+                e.b.switch_to_block(on);
+                store_logical(e, dst, is_false);
             }
         }
     }
     e.register(dst)
+}
+
+fn store_logical(e: &mut Emit<'_, '_>, dst: u16, truth: Value) {
+    let yes = e.b.ins().iconst(types::I64, layout::TRUE_BITS);
+    let no = e.b.ins().iconst(types::I64, layout::FALSE_BITS);
+    let value = e.b.ins().select(truth, yes, no);
+    e.set_register(dst, value);
 }
 
 /// Whether `value` is the logical `1` (`truth`) or `0`, as the condition's

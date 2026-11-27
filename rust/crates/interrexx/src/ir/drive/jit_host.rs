@@ -25,12 +25,12 @@ use interrexx_cast::CastFrom;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use interrexx_parse::Operator;
+use interrexx_parse::{Operator, PrefixOp};
 
 use super::*;
 use crate::jit::layout::{self, Native};
 use crate::jit::{
-    self, Arith, BRANCH, CONTINUE, Compare, CondStep, FAST, Host, JUMP, Pass, STOP, Step,
+    self, Arith, BRANCH, CONTINUE, Compare, CondStep, FAST, Host, JUMP, Logic, Pass, STOP, Step,
 };
 use crate::run::FlatStep;
 use crate::run::{QuickKind, QuickTest};
@@ -915,17 +915,27 @@ fn loop_test(code: &Code<'_>, chunk: &Chunk, do_index: u32) -> jit::LoopTest {
                 ..
             } if let Some(op) = quick_compare(op) => CondStep::Compare { op, lhs, rhs, dst },
             Op::Binary {
-                op: op @ (Operator::And | Operator::Or),
+                op: op @ (Operator::And | Operator::Or | Operator::Xor),
                 lhs,
                 rhs,
                 dst,
                 ..
             } => CondStep::Logic {
-                and: op == Operator::And,
+                op: match op {
+                    Operator::And => Logic::And,
+                    Operator::Or => Logic::Or,
+                    Operator::Xor => Logic::Xor,
+                    _ => unreachable!("only the three logical operators match"),
+                },
                 lhs,
                 rhs,
                 dst,
             },
+            Op::Prefix {
+                op: PrefixOp::Not,
+                src,
+                dst,
+            } => CondStep::Not { src, dst },
             _ => return jit::LoopTest::Host,
         };
         steps.push(step);

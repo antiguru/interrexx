@@ -1377,6 +1377,33 @@ syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
 syntax 34 34.901 line 7 9000 9000
 compiled: line 3
 
+# exclusive OR and logical negation hand a nonlogical operand to the host
+run
+signal on syntax
+x = 1; y = 0; n = 0
+do i = 1 while x && y
+  n = n + 1
+  if i = 9000 then y = 2
+end
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 6 9001 9000
+compiled: line 3
+
+run
+signal on syntax
+x = 1; n = 0
+do i = 1 until \x
+  n = n + 1
+  if i = 9000 then x = 2
+end
+exit
+syntax: say 'syntax' rc condition('o')~code 'line' sigl i n; exit
+----
+syntax 34 34.901 line 6 9000 9000
+compiled: line 3
+
 # an inner counted loop in a compiled body: its start and each pass boundary
 # through the host, its body compiled. The outer body's own work is what
 # passes the gate, so the outer loop compiles with the inner one in it
