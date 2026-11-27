@@ -82640,9 +82640,10 @@ error <code>40.3</code>, with these differences: the point and a subcode from 1 
 required, and the major number is from 1 to 99. A <code>code</code> of any other form, <code>98</code>
 and <code>40.0</code> and <code>100.1</code> and <code>40.1000</code> and <code>x</code> among them, raises <code>SYNTAX 93.900</code>
 in the handler and raises nothing in the command. A well formed <code>code</code> for which
-no error has a message raises <code>SYNTAX 98.941</code> at the clause. <code>additional</code> is for
-the message of the error: an <code>Array</code> gives the values for its places in order,
-and any other object is the one value, so that the <code>ADDITIONAL</code> entry of the
+no error has a message raises <code>SYNTAX 98.941</code> at the clause. Its <code>ADDITIONAL</code>
+array contains just that code, written as <code>major.sub</code>. For a code that has a
+message, an <code>Array</code> given as <code>additional</code> supplies the values for its places in
+order, and any other object supplies one value, so the <code>ADDITIONAL</code> entry of the
 condition is always an <code>Array</code>, empty when <code>additional</code> is omitted or <code>.nil</code>.
 The text of the message is not specified. <code>code</code> is required (<code>SYNTAX 93.901</code>).
 The method reads a string by its own characters and sends other code objects
@@ -82702,7 +82703,7 @@ refused:
 x        went through, rc 0
 </code></pre>
 <pre><code class="language-rexx">x = .commandhandler~register('spec_cc_addl', .w~new)
-do w over 'text none nil array two'~makeArray(' ')
+do w over 'text none nil array two bad pad exact'~makeArray(' ')
   call try w
 end
 x = .commandhandler~deregister('spec_cc_addl')
@@ -82727,6 +82728,9 @@ raised:
       .array~of('in array'))
     when command = 'two' then x = caller~raise('SYNTAX', 98.900,,
       .array~of('a', 'b'))
+    when command = 'bad' then x = caller~raise('SYNTAX', '40.999', .array~of('a', 'b'))
+    when command = 'pad' then x = caller~raise('SYNTAX', '40.0999', .array~of('a', 'b'))
+    when command = 'exact' then x = caller~raise('SYNTAX', '98.941', .array~of('a', 'b'))
   end
   return 0
 </code></pre>
@@ -82735,6 +82739,9 @@ none  98.900 Array 0
 nil   98.900 Array 0 
 array 98.900 Array 1 in array
 two   98.900 Array 2 a|b
+bad   98.941 Array 1 40.999
+pad   98.941 Array 1 40.999
+exact 98.941 Array 2 a|b
 </code></pre>
 <div class="rule" id="r-class.commandcontext.raise.once"><a href="classes/commandcontext.html#r-class.commandcontext.raise.once">[class.commandcontext.raise.once]</a></div>
 <p>A command raises at most one condition. After a call of <code>raise</code>, <code>raiseError</code>
