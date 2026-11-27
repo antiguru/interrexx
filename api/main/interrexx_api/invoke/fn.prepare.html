@@ -2,7 +2,7 @@
     native: &amp;mut <a class="struct" href="struct.NativeCall.html" title="struct interrexx_api::invoke::NativeCall">NativeCall</a>,
     signature: &amp;[<a class="primitive" href="https://doc.rust-lang.org/1.100.0/std/primitive.u16.html">u16</a>],
     cx: &amp;<a class="struct" href="../values/struct.Activation.html" title="struct interrexx_api::values::Activation">Activation</a>&lt;'_&gt;,
-    arguments: &amp;[<a class="enum" href="https://doc.rust-lang.org/1.100.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../../interrexx_core/handle/struct.ObjRef.html" title="struct interrexx_core::handle::ObjRef">ObjRef</a>&gt;],
+    arguments: &amp;[<a class="enum" href="https://doc.rust-lang.org/1.100.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;ObjRef&gt;],
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.100.0/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.100.0/std/primitive.unit.html">()</a>, <a class="enum" href="../values/enum.Failure.html" title="enum interrexx_api::values::Failure">Failure</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p><code>arguments</code> converted into <code>native</code>’s descriptors as
 <code>signature</code> declares them. <code>native</code> is filled in place rather than
 answered, which keeps the descriptor array from being copied.</p>
