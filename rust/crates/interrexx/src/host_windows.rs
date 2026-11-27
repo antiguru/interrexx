@@ -875,3 +875,463 @@ pub(crate) fn set_default_printer(name: &str) -> u32 {
     }
     0
 }
+
+pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> Vec<u8> {
+    use std::sync::atomic::Ordering;
+    use windows_sys::Win32::{
+        Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
+        System::{
+            Console::{
+                GetConsoleMode, GetStdHandle, INPUT_RECORD, KEY_EVENT, ReadConsoleInputW,
+                STD_INPUT_HANDLE,
+            },
+            Threading::WaitForSingleObject,
+        },
+    };
+
+    let mut mode = 0;
+    // SAFETY: GetStdHandle supplies a borrowed standard handle; it is validated
+    // by GetConsoleMode and the pointer to mode is live and writable.
+    let handle = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
+    if unsafe { GetConsoleMode(handle, &mut mode) } == 0 {
+        return Vec::new();
+    }
+    let mut units = Vec::with_capacity(2);
+    while !stopped.load(Ordering::Relaxed) {
+        // SAFETY: the console handle was validated above and is not owned here.
+        match unsafe { WaitForSingleObject(handle, 30) } {
+            WAIT_TIMEOUT => continue,
+            WAIT_OBJECT_0 => {}
+            _ => break,
+        }
+        // Cancellation can arrive while the console handle is being waited on.
+        if stopped.load(Ordering::Relaxed) {
+            break;
+        }
+        let mut event = INPUT_RECORD::default();
+        let mut count = 0;
+        // SAFETY: both outputs point into distinct live stack locals.
+        if unsafe { ReadConsoleInputW(handle, &mut event, 1, &mut count) } == 0 || count == 0 {
+            break;
+        }
+        if u32::from(event.EventType) != KEY_EVENT {
+            continue;
+        }
+        // SAFETY: KEY_EVENT identifies the initialized union member.
+        let key = unsafe { event.Event.KeyEvent };
+        // SAFETY: this event was read using ReadConsoleInputW.
+        let unit = unsafe { key.uChar.UnicodeChar };
+        if key.bKeyDown == 0 || unit == 0 {
+            continue;
+        }
+        units.push(unit);
+        if units.len() == 2 || !(0xd800..=0xdbff).contains(&unit) {
+            return String::from_utf16_lossy(&units).into_bytes();
+        }
+    }
+    Vec::new()
+}
+
+pub(crate) fn wait_named_pipe(
+    name: &[u16],
+    timeout: i64,
+    stopped: &std::sync::atomic::AtomicBool,
+) -> u32 {
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
+    use windows_sys::Win32::{
+        Foundation::{ERROR_OPERATION_ABORTED, ERROR_SEM_TIMEOUT, GetLastError},
+        System::Pipes::WaitNamedPipeW,
+    };
+
+    let end = (timeout > 0).then(|| crate::sync::now() + Duration::from_millis(timeout as u64));
+    loop {
+        if stopped.load(Ordering::Relaxed) {
+            return ERROR_OPERATION_ABORTED;
+        }
+        let slice = match end {
+            Some(end) => {
+                let remaining = end.saturating_duration_since(crate::sync::now());
+                u32::try_from(remaining.as_millis().clamp(1, 100)).unwrap_or(100)
+            }
+            None if timeout < 0 => 100,
+            None => 0, // The named pipe server's default timeout.
+        };
+        // SAFETY: name is the live NUL-terminated path supplied by RexxUtil.
+        let code = unsafe {
+            if WaitNamedPipeW(name.as_ptr(), slice) != 0 {
+                return 0;
+            }
+            GetLastError()
+        };
+        if code != ERROR_SEM_TIMEOUT
+            || timeout == 0
+            || end.is_some_and(|end| crate::sync::now() >= end)
+        {
+            return code;
+        }
+    }
+}
+
+thread_local! {
+    // The modal loop and timer callback run on the same pool thread.
+    static MESSAGE_BOX_STOPPED: std::cell::Cell<*const std::sync::atomic::AtomicBool> =
+        const { std::cell::Cell::new(std::ptr::null()) };
+}
+
+pub(crate) fn message_box(
+    text: &[u16],
+    title: &[u16],
+    flags: u32,
+    stopped: &std::sync::atomic::AtomicBool,
+) -> u32 {
+    use std::{ptr::null_mut, sync::atomic::Ordering};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{IDCANCEL, KillTimer, MessageBoxW, SetTimer};
+
+    if stopped.load(Ordering::Relaxed) {
+        return IDCANCEL as u32;
+    }
+    // SAFETY: timer callbacks run on this same thread during the modal loop.
+    let timer = unsafe { SetTimer(null_mut(), 0, 25, Some(cancel_modal_dialog)) };
+    if timer == 0 {
+        return 0;
+    }
+    MESSAGE_BOX_STOPPED.set(std::ptr::from_ref(stopped));
+    // SAFETY: the strings are live and NUL terminated; null selects no owner.
+    let result = unsafe { MessageBoxW(null_mut(), text.as_ptr(), title.as_ptr(), flags) };
+    MESSAGE_BOX_STOPPED.set(std::ptr::null());
+    // SAFETY: timer is the identifier SetTimer returned on this thread.
+    unsafe { KillTimer(null_mut(), timer) };
+    result as u32
+}
+
+unsafe extern "system" fn cancel_modal_dialog(
+    _: windows_sys::Win32::Foundation::HWND,
+    _: u32,
+    _: usize,
+    _: u32,
+) {
+    use std::sync::atomic::Ordering;
+    use windows_sys::Win32::UI::WindowsAndMessaging::EnumThreadWindows;
+
+    // SAFETY: message_box clears the thread-local pointer before the borrow
+    // ends. A timer message left in the queue after KillTimer sees null.
+    if unsafe { MESSAGE_BOX_STOPPED.get().as_ref() }
+        .is_some_and(|stopped| stopped.load(Ordering::Relaxed))
+    {
+        // SAFETY: only this worker's own thread windows are enumerated.
+        unsafe { EnumThreadWindows(thread_id(), Some(close_modal_dialog), 0) };
+    }
+}
+
+unsafe extern "system" fn close_modal_dialog(
+    window: windows_sys::Win32::Foundation::HWND,
+    _: isize,
+) -> i32 {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{EndDialog, GetClassNameW, IDCANCEL};
+    let mut class = [0; 16];
+    // SAFETY: Windows supplies the current thread's window. The class
+    // buffer is live and writable for class.len() UTF-16 units.
+    let length = unsafe { GetClassNameW(window, class.as_mut_ptr(), class.len() as i32) };
+    let dialog_class = [35, 51, 50, 55, 55, 48]; // #32770
+    if length == dialog_class.len() as i32 && class[..dialog_class.len()] == dialog_class {
+        // SAFETY: this thread owns the dialog. EndDialog exits its modal
+        // loop even when the selected button set has no Cancel button.
+        unsafe { EndDialog(window, IDCANCEL as isize) };
+        return 0;
+    }
+    1
+}
+
+pub(crate) fn switch_window(title: &[u16]) -> u32 {
+    use std::ptr::null;
+    use windows_sys::Win32::{
+        Foundation::{ERROR_ACCESS_DENIED, ERROR_INVALID_WINDOW_HANDLE},
+        UI::WindowsAndMessaging::{FindWindowW, FlashWindow, SetForegroundWindow},
+    };
+
+    // SAFETY: title is live and NUL terminated, and Windows validates window handles.
+    unsafe {
+        let window = FindWindowW(null(), title.as_ptr());
+        if window.is_null() {
+            return ERROR_INVALID_WINDOW_HANDLE;
+        }
+        if SetForegroundWindow(window) == 0 {
+            FlashWindow(window, 1);
+            return ERROR_ACCESS_DENIED;
+        }
+    }
+    0
+}
+
+pub(crate) fn thread_id() -> u32 {
+    use windows_sys::Win32::System::Threading::GetCurrentThreadId;
+    // SAFETY: this query has no arguments.
+    unsafe { GetCurrentThreadId() }
+}
+
+pub(crate) fn process_priority() -> u32 {
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetPriorityClass};
+    // SAFETY: the pseudo handle refers to the process making the query.
+    unsafe { GetPriorityClass(GetCurrentProcess()) }
+}
+
+pub(crate) fn thread_priority() -> i32 {
+    use windows_sys::Win32::System::Threading::{GetCurrentThread, GetThreadPriority};
+    // SAFETY: the pseudo handle refers to the current thread.
+    unsafe { GetThreadPriority(GetCurrentThread()) }
+}
+
+pub(crate) fn set_priority(class: u32, delta: i32) -> u32 {
+    use windows_sys::Win32::{
+        Foundation::GetLastError,
+        System::Threading::{
+            GetCurrentProcess, GetCurrentThread, GetPriorityClass, SetPriorityClass,
+            SetThreadPriority,
+        },
+    };
+    // SAFETY: pseudo handles always refer to the caller; the APIs validate
+    // the numeric priorities. Restore the process class when the thread
+    // change fails and return the original error.
+    unsafe {
+        let process = GetCurrentProcess();
+        let previous = GetPriorityClass(process);
+        if SetPriorityClass(process, class) == 0 {
+            return GetLastError();
+        }
+        if SetThreadPriority(GetCurrentThread(), delta) == 0 {
+            let status = GetLastError();
+            if previous != 0 {
+                SetPriorityClass(process, previous);
+            }
+            return status;
+        }
+    }
+    0
+}
+
+pub(crate) fn execution_times(thread: bool) -> Option<[u64; 3]> {
+    use windows_sys::Win32::{
+        Foundation::FILETIME,
+        System::Threading::{GetCurrentProcess, GetCurrentThread, GetProcessTimes, GetThreadTimes},
+    };
+
+    let mut created = FILETIME::default();
+    let mut exited = FILETIME::default();
+    let mut kernel = FILETIME::default();
+    let mut user = FILETIME::default();
+    // SAFETY: all output pointers refer to distinct FILETIMEs.
+    let ok = unsafe {
+        if thread {
+            GetThreadTimes(
+                GetCurrentThread(),
+                &mut created,
+                &mut exited,
+                &mut kernel,
+                &mut user,
+            )
+        } else {
+            GetProcessTimes(
+                GetCurrentProcess(),
+                &mut created,
+                &mut exited,
+                &mut kernel,
+                &mut user,
+            )
+        }
+    };
+    (ok != 0).then(|| {
+        [created, kernel, user]
+            .map(|time| (u64::from(time.dwHighDateTime) << 32) | u64::from(time.dwLowDateTime))
+    })
+}
+
+pub(crate) fn windows_directory() -> Option<String> {
+    use windows_sys::Win32::System::SystemInformation::GetWindowsDirectoryW;
+    // SAFETY: wide_path_answer provides a buffer that can hold length units.
+    wide_path_answer(|buffer, length| unsafe { GetWindowsDirectoryW(buffer, length) })
+}
+
+pub(crate) fn launch_windows_program(
+    image: &std::path::Path,
+    command: &str,
+    cwd: &std::path::Path,
+    show: u16,
+    environment: &[(Vec<u8>, Vec<u8>)],
+) -> Result<u32, u32> {
+    use std::ptr::null;
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, ERROR_INVALID_PARAMETER, GetLastError},
+        System::Threading::{
+            CREATE_UNICODE_ENVIRONMENT, CreateProcessW, PROCESS_INFORMATION, STARTF_USESHOWWINDOW,
+            STARTUPINFOW,
+        },
+    };
+
+    let image = file_path(image).map_err(|_| ERROR_INVALID_PARAMETER)?;
+    let cwd = file_path(cwd).map_err(|_| ERROR_INVALID_PARAMETER)?;
+    let mut command: Vec<_> = command.encode_utf16().chain([0]).collect();
+    let mut entries: Vec<_> = environment
+        .iter()
+        .filter_map(|(name, value)| {
+            let name = std::str::from_utf8(name).ok()?;
+            let value = std::str::from_utf8(value).ok()?;
+            (!name.contains('\0') && !value.contains('\0')).then_some((name, value))
+        })
+        .collect();
+    entries.sort_by(|(left, _), (right, _)| {
+        left.to_ascii_uppercase().cmp(&right.to_ascii_uppercase())
+    });
+    let mut block = Vec::new();
+    for (name, value) in entries {
+        block.extend(
+            name.encode_utf16()
+                .chain([u16::from(b'=')])
+                .chain(value.encode_utf16())
+                .chain([0]),
+        );
+    }
+    if block.is_empty() {
+        block.push(0);
+    }
+    block.push(0);
+    let startup = STARTUPINFOW {
+        cb: std::mem::size_of::<STARTUPINFOW>() as u32,
+        dwFlags: STARTF_USESHOWWINDOW,
+        wShowWindow: show,
+        ..Default::default()
+    };
+    let mut child = PROCESS_INFORMATION::default();
+    // SAFETY: the strings and environment block are live and terminated as
+    // required; command is writable and startup and child are distinct.
+    unsafe {
+        if CreateProcessW(
+            image.as_ptr(),
+            command.as_mut_ptr(),
+            null(),
+            null(),
+            0,
+            CREATE_UNICODE_ENVIRONMENT,
+            block.as_ptr().cast(),
+            cwd.as_ptr(),
+            &startup,
+            &mut child,
+        ) == 0
+        {
+            return Err(GetLastError());
+        }
+        CloseHandle(child.hThread);
+        CloseHandle(child.hProcess);
+    }
+    Ok(child.dwProcessId)
+}
+
+pub(crate) fn request_shutdown(
+    computer: Option<&[u16]>,
+    message: &[u16],
+    timeout: u32,
+    force: bool,
+    reboot: bool,
+) -> u32 {
+    use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+    use std::ptr::{null, null_mut};
+    use windows_sys::Win32::{
+        Foundation::{ERROR_SUCCESS, GetLastError, LUID},
+        Security::{
+            AdjustTokenPrivileges, LUID_AND_ATTRIBUTES, LookupPrivilegeValueW,
+            SE_PRIVILEGE_ENABLED, SE_SHUTDOWN_NAME, TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES,
+            TOKEN_QUERY,
+        },
+        System::{
+            Shutdown::InitiateSystemShutdownW,
+            Threading::{GetCurrentProcess, OpenProcessToken},
+        },
+    };
+
+    if let Some(computer) = computer {
+        // The remote computer checks the authenticated caller's privilege.
+        // SAFETY: both arguments are live NUL-terminated UTF-16 strings.
+        return unsafe {
+            if InitiateSystemShutdownW(
+                computer.as_ptr(),
+                message.as_ptr(),
+                timeout,
+                i32::from(force),
+                i32::from(reboot),
+            ) == 0
+            {
+                GetLastError()
+            } else {
+                ERROR_SUCCESS
+            }
+        };
+    }
+
+    // Keep changes to the process privilege serialized, and restore the
+    // prior token state whether the requested shutdown succeeds or fails.
+    static SHUTDOWN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _guard = SHUTDOWN.lock().expect("Windows shutdown privilege lock");
+    let mut raw = null_mut();
+    let mut identifier = LUID::default();
+    // SAFETY: identifier and raw each point to live writable storage.
+    let token = unsafe {
+        if LookupPrivilegeValueW(null(), SE_SHUTDOWN_NAME, &mut identifier) == 0
+            || OpenProcessToken(
+                GetCurrentProcess(),
+                TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                &mut raw,
+            ) == 0
+        {
+            return GetLastError();
+        }
+        OwnedHandle::from_raw_handle(raw)
+    };
+    let requested = TOKEN_PRIVILEGES {
+        PrivilegeCount: 1,
+        Privileges: [LUID_AND_ATTRIBUTES {
+            Luid: identifier,
+            Attributes: SE_PRIVILEGE_ENABLED,
+        }],
+    };
+    let mut previous = TOKEN_PRIVILEGES::default();
+    let mut previous_len = 0;
+    // SAFETY: token is owned for these calls; buffers have room for the
+    // single privilege requested, and the inputs are NUL-terminated.
+    unsafe {
+        let ok = AdjustTokenPrivileges(
+            token.as_raw_handle(),
+            0,
+            &requested,
+            std::mem::size_of_val(&previous) as u32,
+            &mut previous,
+            &mut previous_len,
+        );
+        let error = GetLastError();
+        if ok == 0 || error != ERROR_SUCCESS {
+            return error;
+        }
+        let result = InitiateSystemShutdownW(
+            null(),
+            message.as_ptr(),
+            timeout,
+            i32::from(force),
+            i32::from(reboot),
+        );
+        let status = if result == 0 {
+            GetLastError()
+        } else {
+            ERROR_SUCCESS
+        };
+        if previous.PrivilegeCount != 0 {
+            AdjustTokenPrivileges(
+                token.as_raw_handle(),
+                0,
+                &previous,
+                0,
+                null_mut(),
+                null_mut(),
+            );
+        }
+        status
+    }
+}

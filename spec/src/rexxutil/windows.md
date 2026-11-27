@@ -202,3 +202,43 @@ followed by two commas.
 `SysWinSetDefaultPrinter(name)` accepts a printer name or a description. Text is UTF-8, with input
 bytes that are not UTF-8 read using the active Windows ANSI code page.
 It answers zero on success or a Windows system error code on failure.
+
+## Windows interaction
+
+r[util.windows.interaction]
+`RxMessageBox` displays the supplied text and returns the selected
+button's Windows identifier. These interaction routines take UTF-8 text
+and read other input bytes using the active Windows ANSI code page.
+`SysSwitchSession` looks up a top-level
+window by title and asks Windows to bring it forward.
+`SysWaitNamedPipe(name[, timeout])` waits for an available server
+instance. It uses the server's default timeout for zero and waits
+without a deadline for minus one. It answers zero for an available
+pipe or the Windows system error code. `SysGetKey` reads one character
+from the Windows keyboard with optional echo. A keyboard, pipe or
+message-box wait parks its calling Rexx activity. Halting the activity
+waiting for a message box closes that dialog.
+
+## Windows processes
+
+r[util.windows.process]
+On Windows `SysQueryProcess` accepts `PID`, `TID`, `PPRIO`,
+`TPRIO`, `PTIME` and `TTIME`. The default selector is `PID`, and any other
+selector raises `SYNTAX 40.1`. `PTIME` and `TTIME` answer the creation date
+and time of the process or thread as `YYYY-MM-DD hh:mm:ss`, then the time it
+ran in kernel mode and the time it ran in user mode, each in seconds with
+seven decimal places, separated by blanks.
+`SysSetPriority` selects a process priority class and a thread
+priority and answers a Windows status. Unlike [the argument
+rule](r:util.syssetpriority.args) on Unix-like systems, the class may be `0`
+to `3` or one of `IDLE`, `NORMAL`, `HIGH` and `REALTIME`, and the delta a
+whole number from `-15` to `15` or one of `IDLE`, `LOWEST`, `BELOW_NORMAL`,
+`NORMAL`, `ABOVE_NORMAL`, `HIGHEST` and `TIME_CRITICAL`. Another class
+answers `307` and another delta `87`. `RxWinExec` starts a Windows
+program from a command line with the requested window style. It
+answers the process ID on success. Windows errors through 32 are returned
+as positive numbers, and errors above 32 as negative numbers. `SysShutdownSystem` requests
+shutdown or reboot through Windows using the caller's token. The command
+line of `RxWinExec` and the computer name and message of
+`SysShutdownSystem` are UTF-8, with bytes that are not UTF-8 read in the
+active Windows ANSI code page.

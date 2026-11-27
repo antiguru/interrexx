@@ -1805,6 +1805,10 @@ impl Interp {
         #[cfg(test)]
         self.note_cancelled_wait();
         self.activity.when_parked = false;
+        #[cfg(windows)]
+        {
+            self.activity.windows_util_wait = None;
+        }
         #[cfg(unix)]
         {
             self.activity.socket_wait = None;
@@ -3518,6 +3522,15 @@ impl Interp {
             {
                 let deadline = self.now() + crate::dispatch::queue_methods::WAIT_POLL;
                 Some(ParkReason::Sleep { deadline })
+            }
+            #[cfg(windows)]
+            ParkReason::Sleep { .. }
+                if !self.activity.woken_by_halt
+                    && crate::builtin::rexxutil::windows_interaction::waiting(self) =>
+            {
+                Some(crate::builtin::rexxutil::windows_interaction::next_poll(
+                    self,
+                ))
             }
             #[cfg(any(unix, windows))]
             ParkReason::Sleep { .. } if !self.activity.woken_by_halt => {
