@@ -1325,9 +1325,10 @@ error `40.3`, with these differences: the point and a subcode from 1 to 999 are
 required, and the major number is from 1 to 99. A `code` of any other form, `98`
 and `40.0` and `100.1` and `40.1000` and `x` among them, raises `SYNTAX 93.900`
 in the handler and raises nothing in the command. A well formed `code` for which
-no error has a message raises `SYNTAX 98.941` at the clause. `additional` is for
-the message of the error: an `Array` gives the values for its places in order,
-and any other object is the one value, so that the `ADDITIONAL` entry of the
+no error has a message raises `SYNTAX 98.941` at the clause. Its `ADDITIONAL`
+array contains just that code, written as `major.sub`. For a code that has a
+message, an `Array` given as `additional` supplies the values for its places in
+order, and any other object supplies one value, so the `ADDITIONAL` entry of the
 condition is always an `Array`, empty when `additional` is omitted or `.nil`.
 The text of the message is not specified. `code` is required (`SYNTAX 93.901`).
 The method reads a string by its own characters and sends other code objects
@@ -1393,7 +1394,7 @@ x        went through, rc 0
 
 ```rexx
 x = .commandhandler~register('spec_cc_addl', .w~new)
-do w over 'text none nil array two'~makeArray(' ')
+do w over 'text none nil array two bad pad exact'~makeArray(' ')
   call try w
 end
 x = .commandhandler~deregister('spec_cc_addl')
@@ -1418,6 +1419,9 @@ raised:
       .array~of('in array'))
     when command = 'two' then x = caller~raise('SYNTAX', 98.900,,
       .array~of('a', 'b'))
+    when command = 'bad' then x = caller~raise('SYNTAX', '40.999', .array~of('a', 'b'))
+    when command = 'pad' then x = caller~raise('SYNTAX', '40.0999', .array~of('a', 'b'))
+    when command = 'exact' then x = caller~raise('SYNTAX', '98.941', .array~of('a', 'b'))
   end
   return 0
 ```
@@ -1428,6 +1432,9 @@ none  98.900 Array 0
 nil   98.900 Array 0 
 array 98.900 Array 1 in array
 two   98.900 Array 2 a|b
+bad   98.941 Array 1 40.999
+pad   98.941 Array 1 40.999
+exact 98.941 Array 2 a|b
 ```
 
 r[class.commandcontext.raise.once]

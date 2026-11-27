@@ -618,10 +618,13 @@ impl Interp {
                         .unwrap_or_default()
                 })
                 .collect();
-            if additional.is_some() {
+            let raised = crate::run::raised_for_code(code, texts);
+            // An unknown code raises 98.941 with its own ADDITIONAL array.
+            let unknown_code = (raised.number, raised.sub) == (98, 941) && code != 98_941;
+            if additional.is_some() && !unknown_code {
                 self.activity.pending_additional = additional;
             }
-            return Err(crate::run::raised_for_code(code, texts).into());
+            return Err(raised.into());
         }
         let (text, description_is_nil) = match item(2) {
             // A `String` subclass instance is read by its own characters
