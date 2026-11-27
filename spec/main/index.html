@@ -194,6 +194,19 @@ the book says explicitly that a behavior is not specified.</p>
 overview at the top of a page, and every note, which is set as a block
 quote that begins <strong>Note.</strong> A note explains where a rule comes from or how
 another definition of Rexx differs; it never adds to or changes a rule.</p>
+<h2 id="language-level"><a class="header" href="#language-level">Language level</a></h2>
+<p>A language level names the features an interpreter implements, as a decimal
+number such as 6.06. An interpreter has one level, the same for every program
+it runs. <a href="instructions/parse.html#r-instr.parse.version">PARSE VERSION</a>,
+<a href="classes/rexxinfo.html#r-class.rexxinfo.version"><code>.RexxInfo~languageLevel</code></a> and <a href="native/header.html#r-native.header.versions">the native
+interface</a> report it, and a compiled image records
+the level its program needs (<a href="environment/invocation.html#r-env.invocation.rexxc.required-level">the required-level
+rule</a>).</p>
+<blockquote>
+<p><strong>Note.</strong> interrexx implements level 6.06, and ooRexx level 6.07. <a href="deviations.html#179-language-level-606">Deviation
+179</a> lists what differs, and #804
+tracks implementing 6.07.</p>
+</blockquote>
 <h2 id="terms"><a class="header" href="#terms">Terms</a></h2>
 <p><strong>ooRexx.</strong> The open-source C++ implementation of Object Rexx, version 5.
 interrexx is written to run ooRexx programs, and the book's examples are also

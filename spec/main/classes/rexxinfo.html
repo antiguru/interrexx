@@ -175,7 +175,7 @@
                     <main>
                         <h1 id="rexxinfo"><a class="header" href="#rexxinfo">RexxInfo</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RexxInfo Class; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; architecture; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; caseSensitiveFiles; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; date; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; debug; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; digits; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; directorySeparator; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; endofline; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; executable; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; form; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; fuzz; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; internalDigits; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; internalMaxNumber; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; internalMinNumber; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; languageLevel; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; libraryPath; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; majorVersion; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; maxArraySize; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; maxExponent; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; maxPathLength; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; minExponent; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; modification; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; name; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; package; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; pathSeparator; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; platform; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; release; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; revision; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; version</p>
-<p class="deviations">Deviations: D63</p>
+<p class="deviations">Deviations: D63, D179</p>
 <p><code>.REXXINFO</code> is an object that describes the interpreter that runs the program
 and the system it runs on: its version, its numeric limits and defaults, and
 the separators and paths of the host. Its class is <code>RexxInfo</code>, which a program
@@ -309,13 +309,16 @@ say substr('abc', r~internalMaxNumber)'|'
 <div class="rule" id="r-class.rexxinfo.version"><a href="#r-class.rexxinfo.version">[class.rexxinfo.version]</a></div>
 <p><code>name</code>, <code>version</code>, <code>majorVersion</code>, <code>release</code>, <code>modification</code>,
 <code>languageLevel</code>, <code>date</code>, <code>platform</code> and <code>revision</code> describe the interpreter.
-Their values are not specified; the book gives their forms and what each
-says of the others. <code>version</code> is <code>majorVersion</code>, <code>release</code> and
+<code>languageLevel</code> is the level <a href="#r-class.rexxinfo.version.deviation.179">Deviation
+179</a> gives. The values of the others
+are not specified; the book gives their forms and what each says of the
+others. <code>version</code> is <code>majorVersion</code>, <code>release</code> and
 <code>modification</code> as three whole numbers joined by points. <code>name</code> is the string
 that <a href="../instructions/parse.html#r-instr.parse.version">PARSE VERSION</a> reads, so that <code>languageLevel</code> is
-its second word and <code>date</code> its last three, written as a day, a three-letter
-month and a year; <code>platform</code> is a string without blanks, and <code>revision</code>
-a string whose form is not specified either.</p>
+its second word (the <a href="../introduction.html#language-level">language level</a>) and
+<code>date</code> its last three, written as a day, a three-letter month and a year.
+<code>platform</code> is a string without blanks, and <code>revision</code> is a string of
+unspecified form.</p>
 <pre><code class="language-rexx">r = .rexxinfo
 parse version id level d m y
 say (r~name == id level d m y) (r~languageLevel == level) (r~date == d m y)
@@ -399,6 +402,14 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">.rexxinfo~copy:.object =&gt; 93.970
 .rexxinfo~copy =&gt; 93.970
 .rexxinfo~send(.array~of("copy", .object)) =&gt; 93.970
+</code></pre>
+<div class="rule" id="r-class.rexxinfo.version.deviation.179"><a href="#r-class.rexxinfo.version.deviation.179">[class.rexxinfo.version.deviation.179]</a></div>
+<p><code>languageLevel</code> is <code>6.06</code>, the level interrexx implements, and so is the
+second word of <code>name</code> (<a href="../deviations.html">Deviation 179</a>). ooRexx, at level
+6.07, answers <code>6.07</code> for both.</p>
+<pre><code class="language-rexx">say .rexxinfo~languageLevel .rexxinfo~name~word(2)
+</code></pre>
+<pre><code class="language-output">6.06 6.06
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> <a href="../deviations.html">Deviation 96</a> changes the banners of interrexx,

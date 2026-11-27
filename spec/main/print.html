@@ -195,6 +195,19 @@ the book says explicitly that a behavior is not specified.</p>
 overview at the top of a page, and every note, which is set as a block
 quote that begins <strong>Note.</strong> A note explains where a rule comes from or how
 another definition of Rexx differs; it never adds to or changes a rule.</p>
+<h2 id="language-level"><a class="header" href="#language-level">Language level</a></h2>
+<p>A language level names the features an interpreter implements, as a decimal
+number such as 6.06. An interpreter has one level, the same for every program
+it runs. <a href="instructions/parse.html#r-instr.parse.version">PARSE VERSION</a>,
+<a href="classes/rexxinfo.html#r-class.rexxinfo.version"><code>.RexxInfo~languageLevel</code></a> and <a href="native/header.html#r-native.header.versions">the native
+interface</a> report it, and a compiled image records
+the level its program needs (<a href="environment/invocation.html#r-env.invocation.rexxc.required-level">the required-level
+rule</a>).</p>
+<blockquote>
+<p><strong>Note.</strong> interrexx implements level 6.06, and ooRexx level 6.07. <a href="deviations.html#179-language-level-606">Deviation
+179</a> lists what differs, and #804
+tracks implementing 6.07.</p>
+</blockquote>
 <h2 id="terms"><a class="header" href="#terms">Terms</a></h2>
 <p><strong>ooRexx.</strong> The open-source C++ implementation of Object Rexx, version 5.
 interrexx is written to run ooRexx programs, and the book's examples are also
@@ -12317,7 +12330,7 @@ options
 <pre><code>PARSE [UPPER | LOWER] [CASELESS] source [template_list]
 </code></pre>
 <p class="references">ANSI: 6.3.2.71, 8.3.17; rexxref: Keyword Instructions &gt; PARSE</p>
-<p class="deviations">Deviations: D77</p>
+<p class="deviations">Deviations: D77, D179</p>
 <p>PARSE takes a string from a source, cuts it up as a template says, and
 assigns the pieces to variables. This page specifies what the instruction
 adds to the parsing itself: the sources it can read, the keywords that choose
@@ -12563,10 +12576,12 @@ NOVALUE Y.4 [NOTHING_HERE][]
 </code></pre>
 <div class="rule" id="r-instr.parse.version"><a href="instructions/parse.html#r-instr.parse.version">[instr.parse.version]</a></div>
 <p>PARSE VERSION reads a string of five words. The first is one word that names
-the interpreter and its version, the second is the language level as a
-decimal number, and the last three are a date: the day as a whole number, the
-month as a three-letter name and the year as four digits. The values of the
-words are not specified, and neither is the date.</p>
+the interpreter and its version, the second is the <a href="instructions/../introduction.html#language-level">language
+level</a> as a decimal number, and the last
+three are a date: the day as a whole number, the month as a three-letter
+name and the year as four digits. The language level is the one <a href="instructions/parse.html#r-instr.parse.version.deviation.179">Deviation
+179</a> gives. The value of the first word
+is not specified, and neither is the date.</p>
 <pre><code class="language-rexx">parse version v
 say words(v)
 parse version what level day month year
@@ -12645,6 +12660,15 @@ exit
 ns: say 'nostring' condition('d')
 </code></pre>
 <pre><code class="language-output">parsed [T.][]
+</code></pre>
+<div class="rule" id="r-instr.parse.version.deviation.179"><a href="instructions/parse.html#r-instr.parse.version.deviation.179">[instr.parse.version.deviation.179]</a></div>
+<p>The language level that PARSE VERSION reads is <code>6.06</code>, the level interrexx
+implements (<a href="instructions/../deviations.html">Deviation 179</a>). ooRexx, at level 6.07, reads
+<code>6.07</code>.</p>
+<pre><code class="language-rexx">parse version . level .
+say level
+</code></pre>
+<pre><code class="language-output">6.06
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="procedure"><a class="header" href="#procedure">PROCEDURE</a></h1>
 <pre><code>PROCEDURE [EXPOSE [name | (name)]...]
@@ -75121,7 +75145,7 @@ say c~code c~stackFrames~items f~type (f~name == .context~package~name)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="rexxinfo"><a class="header" href="#rexxinfo">RexxInfo</a></h1>
 <p class="references">rexxref: Builtin Classes &gt; Utility Classes &gt; RexxInfo Class; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; architecture; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; caseSensitiveFiles; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; date; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; debug; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; digits; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; directorySeparator; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; endofline; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; executable; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; form; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; fuzz; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; internalDigits; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; internalMaxNumber; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; internalMinNumber; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; languageLevel; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; libraryPath; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; majorVersion; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; maxArraySize; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; maxExponent; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; maxPathLength; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; minExponent; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; modification; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; name; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; package; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; pathSeparator; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; platform; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; release; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; revision; Builtin Classes &gt; Utility Classes &gt; RexxInfo Class &gt; version</p>
-<p class="deviations">Deviations: D63</p>
+<p class="deviations">Deviations: D63, D179</p>
 <p><code>.REXXINFO</code> is an object that describes the interpreter that runs the program
 and the system it runs on: its version, its numeric limits and defaults, and
 the separators and paths of the host. Its class is <code>RexxInfo</code>, which a program
@@ -75255,13 +75279,16 @@ say substr('abc', r~internalMaxNumber)'|'
 <div class="rule" id="r-class.rexxinfo.version"><a href="classes/rexxinfo.html#r-class.rexxinfo.version">[class.rexxinfo.version]</a></div>
 <p><code>name</code>, <code>version</code>, <code>majorVersion</code>, <code>release</code>, <code>modification</code>,
 <code>languageLevel</code>, <code>date</code>, <code>platform</code> and <code>revision</code> describe the interpreter.
-Their values are not specified; the book gives their forms and what each
-says of the others. <code>version</code> is <code>majorVersion</code>, <code>release</code> and
+<code>languageLevel</code> is the level <a href="classes/rexxinfo.html#r-class.rexxinfo.version.deviation.179">Deviation
+179</a> gives. The values of the others
+are not specified; the book gives their forms and what each says of the
+others. <code>version</code> is <code>majorVersion</code>, <code>release</code> and
 <code>modification</code> as three whole numbers joined by points. <code>name</code> is the string
 that <a href="classes/../instructions/parse.html#r-instr.parse.version">PARSE VERSION</a> reads, so that <code>languageLevel</code> is
-its second word and <code>date</code> its last three, written as a day, a three-letter
-month and a year; <code>platform</code> is a string without blanks, and <code>revision</code>
-a string whose form is not specified either.</p>
+its second word (the <a href="classes/../introduction.html#language-level">language level</a>) and
+<code>date</code> its last three, written as a day, a three-letter month and a year.
+<code>platform</code> is a string without blanks, and <code>revision</code> is a string of
+unspecified form.</p>
 <pre><code class="language-rexx">r = .rexxinfo
 parse version id level d m y
 say (r~name == id level d m y) (r~languageLevel == level) (r~date == d m y)
@@ -75345,6 +75372,14 @@ bad: say arg(1) '=&gt;' condition('o')~code
 <pre><code class="language-output">.rexxinfo~copy:.object =&gt; 93.970
 .rexxinfo~copy =&gt; 93.970
 .rexxinfo~send(.array~of("copy", .object)) =&gt; 93.970
+</code></pre>
+<div class="rule" id="r-class.rexxinfo.version.deviation.179"><a href="classes/rexxinfo.html#r-class.rexxinfo.version.deviation.179">[class.rexxinfo.version.deviation.179]</a></div>
+<p><code>languageLevel</code> is <code>6.06</code>, the level interrexx implements, and so is the
+second word of <code>name</code> (<a href="classes/../deviations.html">Deviation 179</a>). ooRexx, at level
+6.07, answers <code>6.07</code> for both.</p>
+<pre><code class="language-rexx">say .rexxinfo~languageLevel .rexxinfo~name~word(2)
+</code></pre>
+<pre><code class="language-output">6.06 6.06
 </code></pre>
 <blockquote>
 <p><strong>Note.</strong> <a href="classes/../deviations.html">Deviation 96</a> changes the banners of interrexx,
@@ -102081,8 +102116,9 @@ hexadecimal digits each for the release's three parts, <code>0x00xxyyzz</code>:
 <code>REXX_CURRENT_INTERPRETER_VERSION</code>, the value the instance's
 <code>InterpreterVersion</code> answers, is this interpreter's. A package entry's
 required version is compared with it, as <a href="native/loading.html#r-native.loading.version">the version
-rule</a> says. A language level has the same form,
-<code>0x0000mmnn</code> for level <code>m.nn</code>: <code>REXX_LANGUAGE_6_&lt;nn&gt;</code> names one, and
+rule</a> says. A <a href="native/../introduction.html#language-level">language
+level</a> has the same form, <code>0x0000mmnn</code>
+for level <code>m.nn</code>: <code>REXX_LANGUAGE_6_&lt;nn&gt;</code> names one, and
 <code>REXX_CURRENT_LANGUAGE_LEVEL</code> is the one the instance's <code>LanguageLevel</code>
 answers. The values are:</p>
 <ul>

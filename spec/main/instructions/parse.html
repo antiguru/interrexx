@@ -177,7 +177,7 @@
 <pre><code>PARSE [UPPER | LOWER] [CASELESS] source [template_list]
 </code></pre>
 <p class="references">ANSI: 6.3.2.71, 8.3.17; rexxref: Keyword Instructions &gt; PARSE</p>
-<p class="deviations">Deviations: D77</p>
+<p class="deviations">Deviations: D77, D179</p>
 <p>PARSE takes a string from a source, cuts it up as a template says, and
 assigns the pieces to variables. This page specifies what the instruction
 adds to the parsing itself: the sources it can read, the keywords that choose
@@ -423,10 +423,12 @@ NOVALUE Y.4 [NOTHING_HERE][]
 </code></pre>
 <div class="rule" id="r-instr.parse.version"><a href="#r-instr.parse.version">[instr.parse.version]</a></div>
 <p>PARSE VERSION reads a string of five words. The first is one word that names
-the interpreter and its version, the second is the language level as a
-decimal number, and the last three are a date: the day as a whole number, the
-month as a three-letter name and the year as four digits. The values of the
-words are not specified, and neither is the date.</p>
+the interpreter and its version, the second is the <a href="../introduction.html#language-level">language
+level</a> as a decimal number, and the last
+three are a date: the day as a whole number, the month as a three-letter
+name and the year as four digits. The language level is the one <a href="#r-instr.parse.version.deviation.179">Deviation
+179</a> gives. The value of the first word
+is not specified, and neither is the date.</p>
 <pre><code class="language-rexx">parse version v
 say words(v)
 parse version what level day month year
@@ -505,6 +507,15 @@ exit
 ns: say 'nostring' condition('d')
 </code></pre>
 <pre><code class="language-output">parsed [T.][]
+</code></pre>
+<div class="rule" id="r-instr.parse.version.deviation.179"><a href="#r-instr.parse.version.deviation.179">[instr.parse.version.deviation.179]</a></div>
+<p>The language level that PARSE VERSION reads is <code>6.06</code>, the level interrexx
+implements (<a href="../deviations.html">Deviation 179</a>). ooRexx, at level 6.07, reads
+<code>6.07</code>.</p>
+<pre><code class="language-rexx">parse version . level .
+say level
+</code></pre>
+<pre><code class="language-output">6.06
 </code></pre>
 
                     </main>
