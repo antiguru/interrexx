@@ -17410,6 +17410,86 @@ e:
 ROUTINE INNER
 ROUTINE OUTER
 </code></pre>
+<div class="rule" id="r-instr.trace.delivery.thread"><a href="instructions/trace.html#r-instr.trace.delivery.thread">[instr.trace.delivery.thread]</a></div>
+<p>Delivering a line takes no thread number (#1049). <code>.CONTEXT~THREAD</code> in the
+destination answers the thread of the activity that wrote the line, and so
+does the destination's context when another activity reads its <code>THREAD</code>. The
+activities of the program are numbered as they would be if no line had been
+delivered. In the second example the destination keeps its <code>.CONTEXT</code> and
+waits, and a started activity reads that context's <code>THREAD</code> meanwhile.</p>
+<pre><code class="language-rexx">.local~seen = .array~new
+.traceoutput~destination(.sink~new)
+trace r
+x = 1
+trace off
+o = .w~new
+say 'started' o~start('t')~result
+trace r
+z = 3
+trace off
+say 'again' o~start('t')~result
+.traceoutput~destination(.output)
+do l over .local~seen
+  say l
+end
+::class w
+::method t
+  trace r
+  y = 2
+  trace off
+  return .context~thread
+::class sink
+::method lineout
+  use arg v
+  if pos('*-*', v~traceline) &gt; 0 then
+    .local~seen~append('line' v~thread 'destination' .context~thread)
+  return 0
+</code></pre>
+<pre><code class="language-output">started 2
+again 2
+line 1 destination 1
+line 1 destination 1
+line 2 destination 2
+line 2 destination 2
+line 1 destination 1
+line 1 destination 1
+line 2 destination 2
+line 2 destination 2
+</code></pre>
+<pre><code class="language-rexx">.environment~go = 0
+.traceoutput~destination(.sink~new)
+r = .reader~new~start('read')
+trace r
+x = 1
+trace off
+.traceoutput~destination(.output)
+say 'reader' r~result
+say 'next' .w~new~start('t')~result
+::class reader
+::method read
+  do while .environment~go = 0
+    call SysSleep 0.01
+  end
+  t = .local~ctx~thread
+  .environment~go = 2
+  return t
+::class w
+::method t
+  return .context~thread
+::class sink
+::method lineout
+  if .environment~go = 0 then do
+    .local~ctx = .context
+    .environment~go = 1
+    do while .environment~go = 1
+      call SysSleep 0.01
+    end
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">reader 1
+next 2
+</code></pre>
 <div class="rule" id="r-instr.trace.delivery.wait"><a href="instructions/trace.html#r-instr.trace.delivery.wait">[instr.trace.delivery.wait]</a></div>
 <p>An activity that waits while a line of its own is delivered is not out of the
 program: a store that another activity makes to a variable a traced <code>GUARD WHEN</code>
@@ -24672,8 +24752,10 @@ and <code>PROGRAM</code> its name. <code>POSITION</code> is the number of the li
 clause that raised the condition starts, in that code, and a NOTREADY that the
 interpreter raised has none. <code>PROPAGATED</code> is <code>1</code> when the condition left the
 level that raised it and <code>0</code> otherwise, as
-<a href="conditions/information.html#r-cond.information.propagated">the propagated rule</a> specifies. <code>STACKFRAMES</code>
-and <code>TRACEBACK</code> are lists with one item for each active level of Rexx code at
+<a href="conditions/information.html#r-cond.information.propagated">the propagated rule</a> specifies, which leaves
+it unspecified for a condition that a built-in function or method, or a method
+of the class library, raised itself.
+<code>STACKFRAMES</code> and <code>TRACEBACK</code> are lists with one item for each active level of Rexx code at
 that time, the main program's included. Whether a built-in method has a level
 is not specified (<a href="conditions/../classes/stackframe.html#r-class.stackframe.builtin">the built-in rule</a>), and the text
 of a traceback line is not specified. <code>ADDITIONAL</code> is present for a SYNTAX, NOMETHOD, NOSTRING or
@@ -24805,7 +24887,9 @@ between the level that sent the message and the level that raised the
 condition is not specified either, so the number of items of <code>STACKFRAMES</code> and
 <code>TRACEBACK</code> is not specified where library levels are among them, nor where a
 built-in method may have a level (<a href="conditions/../classes/stackframe.html#r-class.stackframe.builtin">the built-in
-rule</a>). The code
+rule</a>). Whether a condition that such a level
+raised is <code>PROPAGATED</code> is not specified, as <a href="conditions/information.html#r-cond.information.propagated">the propagated
+rule</a> says. The code
 and subcode of an error that a library method raises are specified, as the
 page of the class says; its text is not, as <a href="conditions/information.html#r-cond.information.object">the object
 rule</a> says for every message.</p>
@@ -25053,7 +25137,21 @@ caller goes on
 condition left the level that raised it, which is the case for a SYNTAX that
 reached a caller from a <code>::ROUTINE</code>, from a method or from an internal
 routine, and after a RAISE with PROPAGATE. It is <code>0</code> for a condition that the
-level which raised it answers, a SYNTAX or a user condition alike.</p>
+level which raised it answers, a SYNTAX or a user condition alike. What
+decides is the level where the condition was raised. Whether it is <code>1</code> for a
+condition that a built-in function or method, or a method of the class
+library, raised itself is not specified, as whether such code has levels, and
+how many, is not (<a href="conditions/../classes/stackframe.html#r-class.stackframe.builtin">the built-in rule</a>, <a href="conditions/information.html#r-cond.information.library">the
+library rule</a>): the value would otherwise say
+which of them a build writes in Rexx. A NOTREADY that a stream builtin or a
+method of a stream raises is such a condition. A condition raised in code of
+the program keeps this rule when a built-in function or method, or a method
+of the class library, carries it on to the trap: one that a comparator of
+<code>sortWith</code>, a <code>compareTo</code> that <code>sort</code> sends or a <code>makeString</code> that a builtin
+requests raises, by a clause or by a RAISE with PROPAGATE, has left the level
+that raised it, and the trap sees <code>1</code>. An error that an operator of an
+expression raises over its operands is raised at the level of the clause that
+holds the expression, so a trap of that level sees <code>0</code>.</p>
 <pre><code class="language-rexx">signal on syntax name t
 call r
 t: say 'routine' condition('o')~propagated
@@ -25073,6 +25171,25 @@ exit
 <pre><code class="language-output">routine 1
 method 1
 same level 0
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name t
+.array~of(2, 1)~sortWith(.c~new)
+t: say 'comparator' condition('o')~propagated
+signal on syntax name u
+n = length(.s~new)
+u: say 'makeString' condition('o')~propagated
+exit
+::class c
+::method compare
+  x = 1 % 0
+::class s
+::method makeString
+  signal on syntax name h
+  x = 1 % 0
+h: raise propagate
+</code></pre>
+<pre><code class="language-output">comparator 1
+makeString 1
 </code></pre>
 <div class="rule" id="r-cond.information.propagated.internal"><a href="conditions/information.html#r-cond.information.propagated.internal">[cond.information.propagated.internal]</a></div>
 <p>An internal routine that switched the trap off passes the condition on in the
@@ -26493,7 +26610,9 @@ ANY NOTREADY 12
 <p>NOTREADY is raised in the code that made the stream call, and goes no further.
 A trap in the caller of a routine does not answer a NOTREADY that a stream
 call in the routine raised, as <a href="conditions/information.html#r-cond.information.propagate.only">the propagation
-rule</a> says, and the routine's own traps do.</p>
+rule</a> says, and the routine's own traps do.
+Whether its <code>PROPAGATED</code> entry is <code>1</code> is not specified, as <a href="conditions/information.html#r-cond.information.propagated">the propagated
+rule</a> says.</p>
 <pre><code class="language-rexx">f = 'spec-notready-scope.tmp'
 call sysfiledelete f
 call lineout f, 'only line'
@@ -74512,7 +74631,10 @@ built-in method that runs code of the program. Its presence, how many such
 levels there are, their position, <code>type</code>, <code>line</code> and trace line are unspecified
 wherever levels are listed or shown: in the array of <code>stackFrames</code>, in the
 <code>STACKFRAMES</code> and <code>TRACEBACK</code> entries of a condition, in the traceback of the
-report of an error and in the output of tracing. A level of Rexx code, of a
+report of an error and in the output of tracing, and so is whether a condition
+that a built-in function or method, or a method of the class library, raised
+itself is <code>PROPAGATED</code> (<a href="classes/../conditions/information.html#r-cond.information.propagated">the propagated rule</a>).
+A level of Rexx code, of a
 program or of the class library, is always there, so the level of a method that
 a built-in method ran is the first of its own <code>stackFrames</code>, and the main part
 of the program is the last.</p>
@@ -110900,7 +111022,9 @@ dimension. An item that is not a string is replaced by
 the string that its <code>request</code> with the argument <code>STRING</code> answers. When that
 answer is not a string, the item is replaced by the answer of its <code>STRING</code>
 method, as with an insert of <a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.args">SysGetMessage</a>. So
-<code>.nil</code> is <code>The NIL object</code>, and an array that holds <code>1</code> is <code>1</code>. A place for
+<code>.nil</code> is <code>The NIL object</code>, and an array that holds <code>1</code> is <code>1</code>. The items are
+converted in order, and a conversion that raises ends the call: no later item
+is converted. A place for
 which the array has no item gives the null string, and so does every place
 when the array is empty. An array whose size is more than nine raises <code>SYNTAX 40.1</code>, even when fewer than ten of its places hold an item, and one of size
 nine does not. The size is the array's own, so an override of <code>SIZE</code> in a
@@ -110929,6 +111053,7 @@ call try "SysFormatMessage('[&amp;1]', .array~of(.array~of(1)))"
 call try "SysFormatMessage('[&amp;1]', .array~new(9))"
 call try "SysFormatMessage('[&amp;1]', .array~new(10))"
 call try "SysFormatMessage('[&amp;1]', .array~new(2, 2)~~put('m', 1, 1))"
+call try "SysFormatMessage('[&amp;1]', .array~of(.c6zql~new, .c6zqr~new, .c6zql~new))"
 exit
 try:
   signal on syntax name e
@@ -110939,6 +111064,13 @@ e: say condition('o')~code
 ::class c6zqs
 ::method string
   return 'S'
+::class c6zql
+::method string
+  say 'converted'
+  return 'L'
+::class c6zqr
+::method string
+  raise syntax 93.900 array('r')
 ::class c6zqu
 ::method makearray
   return .array~of('u1', 'u2')
@@ -110975,6 +111107,8 @@ e: say condition('o')~code
 []
 40.1
 98.913
+converted
+93.900
 </code></pre>
 <h2 id="the-answer-7"><a class="header" href="#the-answer-7">The answer</a></h2>
 <div class="rule" id="r-util.sysformatmessage.answer"><a href="rexxutil/sysformatmessage.html#r-util.sysformatmessage.answer">[util.sysformatmessage.answer]</a></div>
@@ -111272,7 +111406,8 @@ a fallback. An object that is not a string is replaced by the string that its
 the object is replaced by the answer of its <code>STRING</code> method. So <code>.object~new</code>,
 whose <code>STRING</code> answers <code>an Object</code>, raises <code>SYNTAX 88.905</code> as <code>num</code> and is put
 in as <code>an Object</code> as an insert, and an object whose only method is a <code>STRING</code>
-that answers <code>2</code> names message <code>2</code>.</p>
+that answers <code>2</code> names message <code>2</code>. The inserts are converted in order, and a
+conversion that raises ends the call: no later insert is converted.</p>
 <pre><code class="language-rexx">call try "SysGetMessage()"
 call try "SysGetMessage(,'rexx.cat')"
 call try "SysGetMessage(0)"
@@ -111295,6 +111430,7 @@ call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('1e2', 
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage(.mutablebuffer~new(100), .mutablebuffer~new('rexx.cat'), 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('100.00000000000000000001', , 'a', 'b', 'c')"
 call try "SysGetMessage('1.0000000000000000001')"
+call try "SysGetMessage(5, 'rexx.cat', .c6zql~new, .c6zqr~new, .c6zql~new)"
 exit
 try:
   signal on syntax name e
@@ -111305,6 +111441,13 @@ e: say condition('o')~code
 ::class c6zqs
 ::method string
   return '2'
+::class c6zql
+::method string
+  say 'converted'
+  return 'L'
+::class c6zqr
+::method string
+  raise syntax 93.900 array('r')
 </code></pre>
 <pre><code class="language-output">88.901
 88.901
@@ -111328,6 +111471,8 @@ e: say condition('o')~code
 1
 1
 88.905
+converted
+93.900
 </code></pre>
 <h2 id="the-catalog"><a class="header" href="#the-catalog">The catalog</a></h2>
 <div class="rule" id="r-util.sysgetmessage.catalog"><a href="rexxutil/sysgetmessage.html#r-util.sysgetmessage.catalog">[util.sysgetmessage.catalog]</a></div>

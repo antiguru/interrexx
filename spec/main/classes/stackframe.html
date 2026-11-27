@@ -292,7 +292,10 @@ built-in method that runs code of the program. Its presence, how many such
 levels there are, their position, <code>type</code>, <code>line</code> and trace line are unspecified
 wherever levels are listed or shown: in the array of <code>stackFrames</code>, in the
 <code>STACKFRAMES</code> and <code>TRACEBACK</code> entries of a condition, in the traceback of the
-report of an error and in the output of tracing. A level of Rexx code, of a
+report of an error and in the output of tracing, and so is whether a condition
+that a built-in function or method, or a method of the class library, raised
+itself is <code>PROPAGATED</code> (<a href="../conditions/information.html#r-cond.information.propagated">the propagated rule</a>).
+A level of Rexx code, of a
 program or of the class library, is always there, so the level of a method that
 a built-in method ran is the first of its own <code>stackFrames</code>, and the main part
 of the program is the last.</p>

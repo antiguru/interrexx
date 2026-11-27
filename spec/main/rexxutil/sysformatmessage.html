@@ -254,7 +254,9 @@ dimension. An item that is not a string is replaced by
 the string that its <code>request</code> with the argument <code>STRING</code> answers. When that
 answer is not a string, the item is replaced by the answer of its <code>STRING</code>
 method, as with an insert of <a href="sysgetmessage.html#r-util.sysgetmessage.args">SysGetMessage</a>. So
-<code>.nil</code> is <code>The NIL object</code>, and an array that holds <code>1</code> is <code>1</code>. A place for
+<code>.nil</code> is <code>The NIL object</code>, and an array that holds <code>1</code> is <code>1</code>. The items are
+converted in order, and a conversion that raises ends the call: no later item
+is converted. A place for
 which the array has no item gives the null string, and so does every place
 when the array is empty. An array whose size is more than nine raises <code>SYNTAX 40.1</code>, even when fewer than ten of its places hold an item, and one of size
 nine does not. The size is the array's own, so an override of <code>SIZE</code> in a
@@ -283,6 +285,7 @@ call try "SysFormatMessage('[&amp;1]', .array~of(.array~of(1)))"
 call try "SysFormatMessage('[&amp;1]', .array~new(9))"
 call try "SysFormatMessage('[&amp;1]', .array~new(10))"
 call try "SysFormatMessage('[&amp;1]', .array~new(2, 2)~~put('m', 1, 1))"
+call try "SysFormatMessage('[&amp;1]', .array~of(.c6zql~new, .c6zqr~new, .c6zql~new))"
 exit
 try:
   signal on syntax name e
@@ -293,6 +296,13 @@ e: say condition('o')~code
 ::class c6zqs
 ::method string
   return 'S'
+::class c6zql
+::method string
+  say 'converted'
+  return 'L'
+::class c6zqr
+::method string
+  raise syntax 93.900 array('r')
 ::class c6zqu
 ::method makearray
   return .array~of('u1', 'u2')
@@ -329,6 +339,8 @@ e: say condition('o')~code
 []
 40.1
 98.913
+converted
+93.900
 </code></pre>
 <h2 id="the-answer"><a class="header" href="#the-answer">The answer</a></h2>
 <div class="rule" id="r-util.sysformatmessage.answer"><a href="#r-util.sysformatmessage.answer">[util.sysformatmessage.answer]</a></div>

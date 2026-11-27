@@ -212,7 +212,8 @@ a fallback. An object that is not a string is replaced by the string that its
 the object is replaced by the answer of its <code>STRING</code> method. So <code>.object~new</code>,
 whose <code>STRING</code> answers <code>an Object</code>, raises <code>SYNTAX 88.905</code> as <code>num</code> and is put
 in as <code>an Object</code> as an insert, and an object whose only method is a <code>STRING</code>
-that answers <code>2</code> names message <code>2</code>.</p>
+that answers <code>2</code> names message <code>2</code>. The inserts are converted in order, and a
+conversion that raises ends the call: no later insert is converted.</p>
 <pre><code class="language-rexx">call try "SysGetMessage()"
 call try "SysGetMessage(,'rexx.cat')"
 call try "SysGetMessage(0)"
@@ -235,6 +236,7 @@ call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('1e2', 
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage(.mutablebuffer~new(100), .mutablebuffer~new('rexx.cat'), 'a', 'b', 'c')"
 call try "SysGetMessage(100, 'rexx.cat', 'a', 'b', 'c') == SysGetMessage('100.00000000000000000001', , 'a', 'b', 'c')"
 call try "SysGetMessage('1.0000000000000000001')"
+call try "SysGetMessage(5, 'rexx.cat', .c6zql~new, .c6zqr~new, .c6zql~new)"
 exit
 try:
   signal on syntax name e
@@ -245,6 +247,13 @@ e: say condition('o')~code
 ::class c6zqs
 ::method string
   return '2'
+::class c6zql
+::method string
+  say 'converted'
+  return 'L'
+::class c6zqr
+::method string
+  raise syntax 93.900 array('r')
 </code></pre>
 <pre><code class="language-output">88.901
 88.901
@@ -268,6 +277,8 @@ e: say condition('o')~code
 1
 1
 88.905
+converted
+93.900
 </code></pre>
 <h2 id="the-catalog"><a class="header" href="#the-catalog">The catalog</a></h2>
 <div class="rule" id="r-util.sysgetmessage.catalog"><a href="#r-util.sysgetmessage.catalog">[util.sysgetmessage.catalog]</a></div>

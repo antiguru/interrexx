@@ -282,7 +282,9 @@ ANY NOTREADY 12
 <p>NOTREADY is raised in the code that made the stream call, and goes no further.
 A trap in the caller of a routine does not answer a NOTREADY that a stream
 call in the routine raised, as <a href="information.html#r-cond.information.propagate.only">the propagation
-rule</a> says, and the routine's own traps do.</p>
+rule</a> says, and the routine's own traps do.
+Whether its <code>PROPAGATED</code> entry is <code>1</code> is not specified, as <a href="information.html#r-cond.information.propagated">the propagated
+rule</a> says.</p>
 <pre><code class="language-rexx">f = 'spec-notready-scope.tmp'
 call sysfiledelete f
 call lineout f, 'only line'
