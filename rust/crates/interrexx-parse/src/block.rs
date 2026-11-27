@@ -567,7 +567,10 @@ impl<'a> Block<'a> {
     /// The CATCH or FINALLY at `index` joins the block it ends
     /// (`r[instr.finally.form]`, `r[instr.finally.errors]`).
     fn add_handler(&mut self, index: usize, byte: usize) -> Result<(), ParseError> {
-        let finally = matches!(self.instructions[index].kind, InstructionKind::Finally { .. });
+        let finally = matches!(
+            self.instructions[index].kind,
+            InstructionKind::Finally { .. }
+        );
         match self.top().kind {
             Control::Catch => {
                 self.pop();
@@ -613,7 +616,12 @@ impl<'a> Block<'a> {
     /// 99.952 for the FINALLY at `finally`, of the block opened at `owner`,
     /// where a FORWARD without CONTINUE stands in that block before it,
     /// naming the line of the last such FORWARD (`r[instr.finally.forward]`).
-    fn forward_in_block(&self, owner: usize, finally: usize, byte: usize) -> Result<(), ParseError> {
+    fn forward_in_block(
+        &self,
+        owner: usize,
+        finally: usize,
+        byte: usize,
+    ) -> Result<(), ParseError> {
         let forward = self.instructions[owner + 1..finally]
             .iter()
             .rev()
@@ -645,11 +653,10 @@ impl<'a> Block<'a> {
             InstructionKind::Signal(signal) => !matches!(**signal, Signal::Trap(_)),
             InstructionKind::Raise(raise) => raise.result.is_some(),
             InstructionKind::Forward(forward) => !forward.continue_,
-            InstructionKind::Leave { name } | InstructionKind::Iterate { name } => {
-                !self.control[at + 1..]
-                    .iter()
-                    .any(|frame| self.selects(*frame, *name))
-            }
+            InstructionKind::Leave { name } | InstructionKind::Iterate { name } => !self.control
+                [at + 1..]
+                .iter()
+                .any(|frame| self.selects(*frame, *name)),
             _ => false,
         };
         if !leaves {
@@ -677,8 +684,7 @@ impl<'a> Block<'a> {
                 InstructionKind::Do(body) | InstructionKind::Loop(body) => body.label,
                 other => panic!("a DO or LOOP frame stands for a loop, not {other:?}"),
             },
-            Control::Select | Control::SelectCase => match &self.instructions[frame.index()].kind
-            {
+            Control::Select | Control::SelectCase => match &self.instructions[frame.index()].kind {
                 InstructionKind::Select { label, .. } => *label,
                 other => panic!("a SELECT frame stands for a SELECT, not {other:?}"),
             },

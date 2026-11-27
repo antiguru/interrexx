@@ -1028,7 +1028,10 @@ end
             ..
         }
     ));
-    assert_eq!(names(&program)[16..], ["LOOP", "FINALLY", "NOP", "END", "DO", "END"]);
+    assert_eq!(
+        names(&program)[16..],
+        ["LOOP", "FINALLY", "NOP", "END", "DO", "END"]
+    );
     assert_eq!(finally_block(17), Some(16));
     assert_eq!(handlers(16).and_then(|h| h.finally), Some(17));
     assert_eq!(handlers(20), None);
