@@ -681,7 +681,8 @@ pub(crate) fn set_console_cursor_visible(visible: bool) -> i64 {
 
 pub(crate) fn read_console_screen(row: i16, column: i16, requested: u32) -> Vec<u8> {
     use windows_sys::Win32::System::Console::{
-        COORD, GetStdHandle, ReadConsoleOutputCharacterW, STD_OUTPUT_HANDLE,
+        CHAR_INFO, COMMON_LVB_TRAILING_BYTE, COORD, GetStdHandle, ReadConsoleOutputW, SMALL_RECT,
+        STD_OUTPUT_HANDLE,
     };
 
     let Some(info) = console_info() else {
@@ -691,36 +692,62 @@ pub(crate) fn read_console_screen(row: i16, column: i16, requested: u32) -> Vec<
     if !(0..height).contains(&row) || !(0..width).contains(&column) {
         return Vec::new();
     }
-    let available =
-        u32::from(width as u16) * u32::from((height - row) as u16) - u32::from(column as u16);
-    let length = available.min(requested);
-    // Read only actual characters, in chunks so a large reported screen
-    // buffer does not cause one huge preallocation.
+    let (Ok(cells_per_row), Ok(rows_left), Ok(first_column)) = (
+        u32::try_from(width),
+        u32::try_from(height - row),
+        u32::try_from(column),
+    ) else {
+        return Vec::new();
+    };
+    let mut cells_left = (cells_per_row * rows_left - first_column).min(requested);
+    // The read counts cells, not characters: a full-width character fills two
+    // cells, the second marked as its trailing byte, and is taken once. It is
+    // read one row at a time, so no call needs more than one row's buffer, but
+    // the result holds the whole region asked for: a read with no length over
+    // a large screen buffer is as large as that buffer.
     let mut wide = Vec::new();
-    let mut buffer = [0; 4096];
-    while (wide.len() as u32) < length {
-        let offset = u32::from(column as u16) + wide.len() as u32;
-        let width = u32::from(width as u16);
-        let coord = COORD {
-            X: (offset % width) as i16,
-            Y: row + (offset / width) as i16,
+    let mut cells = Vec::new();
+    let (mut y, mut x) = (row, column);
+    while cells_left > 0 && y < height {
+        let Ok(row_cells) = u32::try_from(width - x) else {
+            break;
         };
-        let count = (length - wide.len() as u32).min(buffer.len() as u32);
-        let mut read = 0;
-        // SAFETY: buffer covers count writable units, and read is a live u32.
+        let count = row_cells.min(cells_left);
+        let (Ok(count_x), Ok(last)) = (i16::try_from(count), i16::try_from(count - 1)) else {
+            break;
+        };
+        cells.clear();
+        cells.resize(usize::from(count_x.unsigned_abs()), CHAR_INFO::default());
+        let mut region = SMALL_RECT {
+            Left: x,
+            Top: y,
+            Right: x + last,
+            Bottom: y,
+        };
+        // SAFETY: cells holds count CHAR_INFOs, matching the buffer size of
+        // count by 1, and region is a live, writable rectangle.
         let ok = unsafe {
-            ReadConsoleOutputCharacterW(
+            ReadConsoleOutputW(
                 GetStdHandle(STD_OUTPUT_HANDLE),
-                buffer.as_mut_ptr(),
-                count,
-                coord,
-                &mut read,
+                cells.as_mut_ptr(),
+                COORD { X: count_x, Y: 1 },
+                COORD { X: 0, Y: 0 },
+                &mut region,
             )
         };
-        if ok == 0 || read == 0 {
+        if ok == 0 {
             break;
         }
-        wide.extend_from_slice(&buffer[..read as usize]);
+        for cell in &cells {
+            if cell.Attributes & COMMON_LVB_TRAILING_BYTE != 0 {
+                continue;
+            }
+            // SAFETY: ReadConsoleOutputW fills the UnicodeChar member.
+            wide.push(unsafe { cell.Char.UnicodeChar });
+        }
+        cells_left -= count;
+        y += 1;
+        x = 0;
     }
     String::from_utf16_lossy(&wide).into_bytes()
 }
