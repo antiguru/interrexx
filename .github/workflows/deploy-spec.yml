@@ -13,14 +13,6 @@ name: "Deploy documentation"
 # tag, or to `main/` while it has none. Other documents get their own top-level
 # directory beside these.
 on:
-# `<doc>/main/` for every push to main, `<doc>/<tag>/` for every `v*` tag. Each
-# deploy replaces only its own directories (keep_files), so earlier versions
-# stay. `spec/` also holds `versions.json`, which the book's version picker
-# reads and which lists the versions of both documents, since every deploy
-# builds both. `spec/index.html` and `api/index.html` redirect to the newest
-# tag, or to `main/` while there is none. Other documents get their own
-# top-level directory beside these.
-on:
   push:
     branches:
       - main
