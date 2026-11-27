@@ -1770,14 +1770,17 @@ impl Interp {
         // for it, except `\=`, `<>`, `><` and `\==`, which answer `.true`. So `'The NIL
         // object' == .nil` is `0`, `'a' < .nil` is `0` with no NOSTRING, and `'a' ||
         // .nil`, which is not a comparison, reads the string value.
-        if right == ObjRef::NIL && is_comparison(op) {
-            return Ok(logical(is_inequality(op)));
+        if is_comparison(op) {
+            if right == ObjRef::NIL {
+                return Ok(logical(is_inequality(op)));
+            }
+            let right = self.comparison_string_value(right)?;
+            return self.compare_values(op, left, right);
         }
         let right = self.required_string_value(right)?;
         match op {
             Operator::Concatenate | Operator::Abuttal => self.concat_values(left, right, None),
             Operator::Blank => self.concat_values(left, right, Some(b' ')),
-            op if is_comparison(op) => self.compare_values(op, left, right),
             Operator::And | Operator::Or | Operator::Xor => self.logical_values(op, left, right),
             op => Err(Loud::binary_operator(op).into()),
         }

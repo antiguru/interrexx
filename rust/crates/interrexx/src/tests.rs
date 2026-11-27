@@ -1806,12 +1806,9 @@ fn a_references_nostring_syntax_names_its_values_string() {
     );
 }
 
-/// A stem's string value is its default's `request('STRING')` in every
-/// required-string position (rexxref provide.xml, "Required String Values";
-/// collclasses.xml, Stem `request`), and where that answers none, NOSTRING
-/// names the stem with its `STRING` answer, the concatenation receiver
-/// included. The oracle raises NOSTRING for every stem
-/// (t8.7c/probes/stemnostr/s2.rex).
+/// When conversion reads the stem's default, a NOSTRING from it names the
+/// stem with its `STRING` answer. A comparison offers NOSTRING directly
+/// for the stem with the default's object rendering.
 #[test]
 fn a_stems_string_value_is_its_defaults_and_nostring_names_the_stem() {
     assert_eq!(
@@ -1834,11 +1831,12 @@ fn a_stems_string_value_is_its_defaults_and_nostring_names_the_stem() {
               ::class nstr\n::method string; return 'NSTR'\n\
               ::class kmake\n::method makestring; return 'KM'\n::method string; return 'KS'\n"
         ),
-        "s. 7 \ns. 1\ns. <7>\ns. 7\ns. 8\ns. 0\n\
-         t. one|two \nt. 7\nt. <one|two>\nt. one|two\nt. SYNTAX 41.1\nt. 0\n\
+        "s. 7 \ns. 1\ns. <7>\ns. 7\ns. 8\ns. NOSTRING 7 Stem\n\
+         t. one|two \nt. 7\nt. <one|two>\nt. one|two\nt. SYNTAX 41.1\n\
+         t. NOSTRING an Array Stem\n\
          v. NOSTRING NSTR Stem\nv. NOSTRING NSTR Stem\nv. NOSTRING NSTR Stem\n\
-         v. NOSTRING NSTR Stem\nv. NOSTRING NSTR Stem\nv. NOSTRING NSTR Stem\n\
-         k. KM \nk. 2\nk. <KM>\nk. KM\nk. SYNTAX 41.1\nk. 0\n"
+         v. NOSTRING NSTR Stem\nv. NOSTRING NSTR Stem\nv. NOSTRING a NSTR Stem\n\
+         k. KM \nk. 2\nk. <KM>\nk. KM\nk. SYNTAX 41.1\nk. NOSTRING a KMAKE Stem\n"
     );
 }
 

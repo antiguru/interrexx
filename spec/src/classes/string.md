@@ -519,6 +519,8 @@ trailing blank matters, and numbers are not compared as numbers, so `1` and
 `1.0` are not equal. The argument is required (`SYNTAX 93.903`) and a second
 raises `93.902`. The argument is converted by the [required-string
 protocol](r:conv.string.object). `.nil` compares unequal to every string.
+An instance of `Stem` itself is read as [the comparison
+rule](r:expr.comparison.stem) says.
 An object whose `string` method answers something with no string value, such
 as `.nil`, a `Directory`, an `Object` or the object itself, is compared by its
 default string value, as [the answer rule](r:conv.string.answer) gives it.

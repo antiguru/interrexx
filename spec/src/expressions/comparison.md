@@ -221,6 +221,41 @@ a >> b => 97.1
 "an O" < .o~new => 0
 ```
 
+r[expr.comparison.stem]
+When a string compares with an instance of `Stem` itself on the right, the
+comparison offers [NOSTRING](r:cond.nostring.raise) with the stem as
+`ADDITIONAL`.
+The replacement text and the condition's description are the stem's name
+or, when it has a default, the default's rendering as an object. The
+comparison sends no `REQUEST`, `MAKESTRING` or `STRING` to the default.
+
+```rexx
+s. = .named~new
+say ('x' == s.) ('object-name' == s.) ('OBJECT-NAME'~caselessEquals(s.))
+say .array~of(s.)~hasItem('x') .array~of(s.)~hasItem('object-name')
+signal on nostring name caught
+say ('x' == s.)
+exit
+caught:
+  o = condition('o')
+  say o~condition o~description o~additional~class~id
+::class named
+::method request
+  say 'REQUEST ran'
+  return 'x'
+::method string
+  say 'STRING ran'
+  return 'x'
+::method objectName
+  return 'object-name'
+```
+
+```output
+0 1 1
+0 1
+NOSTRING object-name Stem
+```
+
 r[expr.comparison.deviation.122]
 A right operand that is not a string is converted once by every comparison
 operator, [the conversion rule](r:conv.string.object) applying to that one
