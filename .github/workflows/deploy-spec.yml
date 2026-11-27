@@ -1,11 +1,14 @@
 name: "Deploy spec"
-# Builds the language specification (spec/, an mdBook) and publishes it to the
-# gh-pages branch under `spec/`, one directory per version: `spec/main/` for
-# every push to main, `spec/<tag>/` for every `v*` tag. Each deploy replaces
-# only its own directory (keep_files), so earlier versions stay. `spec/` also
-# holds `versions.json`, which the book's version picker reads, and an
-# `index.html` that redirects to the newest tag, or to `main/` while there is
-# none. Other documents get their own top-level directory beside `spec/`.
+# Builds the language specification (spec/, an mdBook) and the API
+# documentation of the workspace's libraries (rustdoc) and publishes them to
+# the gh-pages branch under `spec/` and `api/`, one directory per version:
+# `<doc>/main/` for every push to main, `<doc>/<tag>/` for every `v*` tag. Each
+# deploy replaces only its own directories (keep_files), so earlier versions
+# stay. `spec/` also holds `versions.json`, which the book's version picker
+# reads and which lists the versions of both documents, since every deploy
+# builds both. `spec/index.html` and `api/index.html` redirect to the newest
+# tag, or to `main/` while there is none. Other documents get their own
+# top-level directory beside these.
 on:
   push:
     branches:
@@ -54,7 +57,27 @@ jobs:
           fi
       - name: Build the book
         run: mdbook build spec -d "$RUNNER_TEMP/site/spec/${{ steps.version.outputs.name }}"
-      - name: Update the version list and the root redirect
+      - name: Build the API documentation
+        # Libraries only: the binaries' pages add nothing a reader of the API needs. Rustdoc
+        # writes no top-level index, so `api/<version>/index.html` redirects to the `interrexx`
+        # crate, whose sidebar lists the others.
+        working-directory: rust
+        env:
+          VERSION: ${{ steps.version.outputs.name }}
+        run: |
+          cargo doc --locked --workspace --no-deps --lib
+          api="$RUNNER_TEMP/site/api/$VERSION"
+          mkdir -p "$(dirname "$api")"
+          cp -r target/doc "$api"
+          cat > "$api/index.html" <<EOF
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>interrexx API documentation</title>
+          <meta http-equiv="refresh" content="0; url=interrexx/">
+          <link rel="canonical" href="interrexx/">
+          <p><a href="interrexx/">interrexx API documentation</a></p>
+          EOF
+      - name: Update the version list and the redirects
         env:
           VERSION: ${{ steps.version.outputs.name }}
         run: |
@@ -79,13 +102,23 @@ jobs:
           <link rel="canonical" href="${latest}/">
           <p><a href="${latest}/">The interrexx Language Specification</a></p>
           EOF
-          # The site root lists the documents; the spec is the only one so far.
+          cat > "$site/api/index.html" <<EOF
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>interrexx API documentation</title>
+          <meta http-equiv="refresh" content="0; url=${latest}/">
+          <link rel="canonical" href="${latest}/">
+          <p><a href="${latest}/">interrexx API documentation</a></p>
+          EOF
+          # The site root lists the documents.
           cat > "$site/index.html" <<EOF
           <!doctype html>
           <meta charset="utf-8">
           <title>interrexx documentation</title>
-          <meta http-equiv="refresh" content="0; url=spec/">
-          <p><a href="spec/">The interrexx Language Specification</a></p>
+          <ul>
+          <li><a href="spec/">The interrexx Language Specification</a></li>
+          <li><a href="api/">interrexx API documentation</a></li>
+          </ul>
           EOF
           touch "$site/.nojekyll"
           cat "$spec/versions.json"
