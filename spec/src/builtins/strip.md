@@ -200,10 +200,6 @@ say '['strip('  a  ', 'L', )']' '['strip('  a  ', , )']' '['strip('xxaxx', , 'x'
 
 ## Deviations
 
-> **Note.** An argument whose `STRING` method answers an object that is not a
-> string falls under [Deviation 30](r:conv.string.deviation.30), as it does
-> for every builtin.
-
 r[bif.strip.deviation.4]
 interrexx does not specify whether the answer of STRIP is the same object as
 another string of equal value: as `string` itself, when nothing is stripped,

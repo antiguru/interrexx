@@ -77,10 +77,6 @@ enum Body {
     /// raise, and [`Body::Answers`] would be a claim about a method nobody
     /// asked.
     Unanswered,
-    /// **This crate answered and the oracle cannot be asked**, because the
-    /// zero-argument send this table classifies by is a known oracle crash
-    /// ([`ORACLE_CRASHING_SENDS`]). The evidence column names the crash.
-    Uncomparable,
 }
 
 impl Body {
@@ -91,7 +87,6 @@ impl Body {
             Body::Diverge => "diverge",
             Body::Unstable => "unstable",
             Body::Unanswered => "unanswered",
-            Body::Uncomparable => "uncomparable",
         }
     }
 
@@ -104,7 +99,6 @@ impl Body {
             Body::Diverge,
             Body::Unstable,
             Body::Unanswered,
-            Body::Uncomparable,
         ]
     }
 
@@ -151,22 +145,6 @@ fn regressed(was: Body, now: Body) -> bool {
         (Body::Unanswered, Body::Answers) => false,
         (Body::Unanswered, Body::Unstable) => false,
         (Body::Unanswered, Body::Unanswered) => false,
-        // `Uncomparable` is read the way `Unanswered` is: a row that was
-        // answering and stops is a row losing its evidence, and out of it
-        // nothing is a regression, because it never carried a claim about
-        // the oracle. It cannot reach `Diverge`, since a divergence needs
-        // two sides and this verdict says there is one.
-        (Body::Answers, Body::Uncomparable) => true,
-        (Body::Loud, Body::Uncomparable) => false,
-        (Body::Diverge, Body::Uncomparable) => false,
-        (Body::Unstable, Body::Uncomparable) => false,
-        (Body::Unanswered, Body::Uncomparable) => false,
-        (Body::Uncomparable, Body::Uncomparable) => false,
-        (Body::Uncomparable, Body::Diverge) => true,
-        (Body::Uncomparable, Body::Loud) => false,
-        (Body::Uncomparable, Body::Answers) => false,
-        (Body::Uncomparable, Body::Unstable) => false,
-        (Body::Uncomparable, Body::Unanswered) => false,
     }
 }
 
@@ -325,22 +303,6 @@ const SEEDED_SENDS: &[(&str, &str)] = &[
 /// records both values in full, and its test fails when either moves.
 const DEVIATING_SENDS: &[(&str, &str)] = &[("RexxInfo", "languageLevel"), ("RexxInfo", "name")];
 
-/// A class whose `class-set.txt` construction expression cannot be this
-/// table's receiver, with the expression that replaces it.
-const ORACLE_CRASHING_SENDS: &[(&str, &str)] = &[
-    // `Stem~hasItem` and `~index` with no argument, which
-    // `corpus/oracle-crashes.txt` already carries: both dereference a missing
-    // argument, and both are a SIGSEGV whenever the stem holds a tail.
-    ("Stem", "hasItem"),
-    ("Stem", "index"),
-    ("String", "<<"),
-    ("String", "<<="),
-    ("String", ">>"),
-    ("String", ">>="),
-    ("String", "\\<<"),
-    ("String", "\\>>"),
-];
-
 /// Rows whose answer is a path naming the interpreter that ran, so neither
 /// side's rendering can match the other's: the probe prints the answer's
 /// class and whether the file it names exists.
@@ -353,6 +315,8 @@ const BUILD_VALUED: &[(&str, &str, &str)] = &[
     ("RexxInfo", "name", "v~word(1) v~word(2) v~words"),
 ];
 
+/// A class whose `class-set.txt` construction expression cannot be this
+/// table's receiver, with the expression that replaces it.
 const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
     (
         "DateTime",
@@ -690,25 +654,6 @@ fn check_overrides(classes: &[ClassRow], structural: &mut Vec<Structural>) {
     }
 }
 
-/// Every `(class, method)` pair [`ORACLE_CRASHING_SENDS`] names is a row this
-/// table classifies.
-fn check_crashing_sends(rows: &[MethodRow], structural: &mut Vec<Structural>) {
-    let named: BTreeSet<(&str, &str)> = rows
-        .iter()
-        .map(|row| (row.class.as_str(), row.method.as_str()))
-        .collect();
-    for (class, method) in ORACLE_CRASHING_SENDS {
-        if !named.contains(&(*class, *method)) {
-            structural.push(Structural {
-                subject: format!("ORACLE_CRASHING_SENDS entry {class}~{method}"),
-                detail: "names a row class-methods.txt does not carry, so it exempts nothing \
-                         while reading as though the oracle could not be asked about it"
-                    .to_string(),
-            });
-        }
-    }
-}
-
 /// Every instance receiver this table sends to is the one gate table C's
 /// committed probe constructs, or an override. A class in
 /// [`RECEIVER_OVERRIDES`] is skipped rather than reconciled: this table sends
@@ -916,7 +861,7 @@ fn every_row_shard_has_a_test() {
 }
 
 /// What no one shard can check: the table's structure, over the whole row set.
-/// The overrides, the crashing sends and the receivers are sound, and the
+/// The overrides and the receivers are sound, and the
 /// committed file is its header and one line per documented row, in the
 /// documented order, so a shard that finds each of its own rows as committed
 /// has found the whole table.
@@ -936,7 +881,6 @@ fn the_committed_table_describes_the_whole_row_set() {
         .map(|row| (row.class.clone(), row.arm.clone()))
         .collect();
     check_overrides(&classes, &mut structural);
-    check_crashing_sends(&rows, &mut structural);
     check_receivers_match_table_c(&corpus, &classes, &arms, &mut structural);
     check_row_set(&rows, &committed, &mut structural);
     assert_no_structural_failures(&structural);
@@ -1072,7 +1016,6 @@ fn run_table(shard: Option<usize>) {
         .collect();
     if refreshing {
         check_overrides(&classes, &mut structural);
-        check_crashing_sends(&rows, &mut structural);
         check_receivers_match_table_c(&corpus, &classes, &arms, &mut structural);
     }
 
@@ -1126,20 +1069,6 @@ fn run_table(shard: Option<usize>) {
                     verdict: Body::Loud,
                     evidence: refused_construct(&crate_side.outcome.stderr)
                         .unwrap_or_else(|| NO_EVIDENCE.to_string()),
-                    detail: None,
-                },
-            );
-            continue;
-        }
-        if ORACLE_CRASHING_SENDS
-            .iter()
-            .any(|(class, method)| *class == row.class && *method == row.method)
-        {
-            measured.insert(
-                row.key(),
-                Measured {
-                    verdict: Body::Uncomparable,
-                    evidence: "the oracle segfaults on this send".to_string(),
                     detail: None,
                 },
             );
@@ -1367,26 +1296,13 @@ fn run_table(shard: Option<usize>) {
         let (Some(cell), Some(was)) = (measured.get(&row.key()), committed.get(&row.key())) else {
             continue;
         };
-        // **A row the oracle now crashes on is not a row that stopped.**
-        // `ORACLE_CRASHING_SENDS` names a property of the oracle, and a
-        // receiver override can move a pair onto that list without anything
-        // in this tree changing: the `Stem` receiver holds a
-        // tail, and `hasItem`/`index` with no argument segfault the oracle
-        // only when one does, so both rows went `answers -> uncomparable`
-        // with their bodies untouched. The pair has to be on the list for
-        // this to apply, so a row losing its evidence for any other reason is
-        // still the regression the rule above catches.
-        let crashes = ORACLE_CRASHING_SENDS
-            .iter()
-            .any(|(class, method)| *class == row.class && *method == row.method);
         let seeded = SEEDED_SENDS
             .iter()
             .any(|(class, method)| *class == row.class && *method == row.method);
         let deviating = DEVIATING_SENDS
             .iter()
             .any(|(class, method)| *class == row.class && *method == row.method);
-        if !(crashes && cell.verdict == Body::Uncomparable)
-            && !(seeded && cell.verdict == Body::Unstable)
+        if !(seeded && cell.verdict == Body::Unstable)
             && !(deviating && cell.verdict == Body::Diverge)
             && regressed(was.verdict, cell.verdict)
         {
@@ -1500,13 +1416,6 @@ fn a_stem_of_several_tails_answers_as_the_oracle_does_up_to_order() {
     let mut differ = Vec::new();
     for (index, row) in rows.iter().enumerate() {
         if row.class != "Stem" || row.arm != "instance" {
-            continue;
-        }
-        // The oracle crashes on these sends whenever the stem holds a tail.
-        if ORACLE_CRASHING_SENDS
-            .iter()
-            .any(|(class, method)| *class == row.class && *method == row.method)
-        {
             continue;
         }
         if committed.get(&row.key()).map(|cell| cell.verdict) != Some(Body::Answers) {

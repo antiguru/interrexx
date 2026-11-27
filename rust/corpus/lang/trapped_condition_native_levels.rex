@@ -4,7 +4,6 @@
 -- which a raise its boundary made is as well.
 call t1
 call t2
-call t3
 call t4
 call t5
 call t6
@@ -18,11 +17,6 @@ syntax: call show; return
 t2: procedure
   signal on syntax
   call SysSleep 'abc'
-  return
-syntax: call show; return
-t3: procedure
-  signal on syntax
-  x = filespec('N')
   return
 syntax: call show; return
 t4: procedure

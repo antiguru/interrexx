@@ -56,10 +56,10 @@ fn the_registered_environments_resolve_to_their_shells() {
     assert!(handler_for(b"nosuchhandler").is_none());
 }
 
-/// `corpus/oracle-crashes.txt` entry 44: the oracle dies on `cd ~` with
-/// `HOME` unset. Here the shell answers it, as the oracle hands over a bare
-/// `cd` or `cd ~/x` with `HOME` unset, and the directory stays. The rc is
-/// the shell's own and is not asserted.
+/// `cd ~` with `HOME` unset goes to the shell, as a bare `cd` or `cd ~/x`
+/// with `HOME` unset does, and the directory stays. The oracle answers the
+/// same (`corpus/oracle-crashes.txt` entry 44, dropped). The rc is the
+/// shell's own and is not asserted.
 #[test]
 fn cd_home_with_home_unset_goes_to_the_shell() {
     let source = b"here = directory()\n\

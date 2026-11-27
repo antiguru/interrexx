@@ -635,7 +635,8 @@ pub(super) fn strip_arguments(
 }
 
 /// The argument of `EQUALS` or `CASELESSEQUALS`, through the required-string
-/// protocol. An explicit `.nil` argument compares unequal.
+/// protocol, or `None` for `.nil`, which no string equals. A `STRING` answer
+/// with no string value reads as `r[conv.string.answer]` says.
 pub(super) fn equals_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],

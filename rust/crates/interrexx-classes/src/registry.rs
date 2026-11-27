@@ -251,6 +251,14 @@ impl ClassRegistry {
         self.by_name.iter().map(|(name, id)| (name.as_str(), *id))
     }
 
+    /// Every class this registry answers [`Self::system_lookup`] for, as
+    /// (uppercased name, identity).
+    pub fn system_registered(&self) -> impl Iterator<Item = (&str, ObjRef)> {
+        self.by_system_name
+            .iter()
+            .map(|(name, id)| (name.as_str(), *id))
+    }
+
     /// `~class`, for a class object: the class its own behaviour belongs to
     /// -- [`ClassGraph::owning_class`], **not**
     /// [`ClassGraph::metaclass`].
@@ -734,6 +742,16 @@ impl ClassRegistry {
     /// Whether the class is Rexx-defined; see [`ClassGraph::is_rexx_defined`].
     pub fn is_rexx_defined(&self, class: ObjRef) -> bool {
         self.graph.is_rexx_defined(class)
+    }
+
+    /// See [`ClassGraph::set_primitive_instances`].
+    pub fn set_primitive_instances(&mut self, class: ObjRef) {
+        self.graph.set_primitive_instances(class);
+    }
+
+    /// See [`ClassGraph::is_primitive_behaviour`].
+    pub fn is_primitive_behaviour(&self, handle: BehaviourHandle) -> bool {
+        self.graph.is_primitive_behaviour(handle)
     }
 
     /// The Rexx-defined marking; see [`ClassGraph::set_rexx_defined`].

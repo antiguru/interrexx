@@ -68,9 +68,8 @@ fn an_untrapped_error_inside_the_sort_is_reported() {
 /// elements run `STRING` methods: one that drops the variable and allocates
 /// leaves the routine working on the stem it resolved. Each case runs
 /// normally and collecting at every allocation, and the two must agree. The
-/// oracle's answer depends on when it collects (`corpus/oracle-crashes.txt`
-/// entry 47), so no differential can cover these, and the case file is this
-/// crate's own answer.
+/// case file is this crate's own answer; the oracle answers every case alike
+/// (`corpus/oracle-crashes.txt` entry 47, dropped).
 #[test]
 fn a_stem_named_by_its_variable_outlives_the_variable() {
     let mut cases = 0;
@@ -192,12 +191,11 @@ fn a_dump_keeps_the_values_of_variables_a_string_method_drops() {
 }
 
 /// **`SysDumpVariables` over a variable whose `STRING` method raises
-/// reports the raise**, after the lines already written, where the oracle
-/// crashes even under `SIGNAL ON SYNTAX` (`corpus/oracle-crashes.txt` entry
-/// 38). No differential can run it, so this is the crate's own answer: the
-/// method's 93.900 trapped as any raise from a routine is. The line for `A`
-/// is written first where the variable order puts it first, as the oracle's
-/// order did before it crashed.
+/// reports the raise**, after the lines already written: the method's 93.900
+/// trapped as any raise from a routine is. The line for `A` is written first
+/// where the variable order puts it first; that order is not specified
+/// (r[util.sysdumpvariables.line]), and the oracle writes it first
+/// (`corpus/oracle-crashes.txt` entry 38, dropped).
 #[test]
 fn a_string_method_raising_inside_the_dump_is_trapped() {
     let source = b"signal on syntax\n\

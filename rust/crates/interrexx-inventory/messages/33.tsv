@@ -6,3 +6,4 @@
 33	902	Invalid expression result following VALUE keyword of SIGNAL instruction.
 33	903	Invalid expression result following VALUE keyword of TRACE instruction.
 33	904	Invalid expression result following SYNTAX keyword of RAISE instruction.
+33	905	Invalid expression result following SYNTAX keyword of THROW instruction.

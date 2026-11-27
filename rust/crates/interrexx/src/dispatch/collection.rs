@@ -331,9 +331,7 @@ pub(super) fn is_queue(interp: &mut Interp, receiver: ObjRef) -> bool {
     let Some(class) = interp.class_of_value(receiver) else {
         return false;
     };
-    let Some(queue) = interp.classes().lookup("Queue") else {
-        return false;
-    };
+    let queue = interp.object_model().queue;
     interp.classes().is_a(class, queue)
 }
 

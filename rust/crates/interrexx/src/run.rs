@@ -41,12 +41,12 @@ pub(crate) use indent::{all_indents, static_indent};
 // The `Raised` constructors for the conditions the instruction loop raises.
 pub(crate) mod raised;
 use raised::{
-    raise_syntax_condition, raised_available_not_logical, raised_digit_led, raised_dot_led,
-    raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
+    names_no_error, raise_syntax_condition, raised_available_not_logical, raised_digit_led,
+    raised_dot_led, raised_for_count_not_whole, raised_guard_not_logical, raised_iterate_no_loop,
     raised_iterate_no_match, raised_iterate_wrong_kind, raised_leave_no_loop,
     raised_leave_no_match, raised_naming_the_operand, raised_repetition_count_not_whole,
     raised_select_no_when, raised_symbol_expected, raised_until_not_logical,
-    raised_when_case_not_logical, raised_while_not_logical, syntax_code,
+    raised_when_case_not_logical, raised_while_not_logical,
 };
 pub(crate) use raised::{
     raised_for_code, raised_from_settings, raised_if_not_logical, raised_when_not_logical,
@@ -3653,7 +3653,9 @@ impl Interp {
     /// Raises the
     /// condition again from the level that is failing now, so
     /// `POSITION`, the program and the report's `line <n>` are that level's,
-    /// while every level already left keeps its traceback line.
+    /// while every level already left keeps its traceback line. A native
+    /// level that named its package for the major line
+    /// ([`FailureSite::Packaged`]) is one of those levels and names nothing.
     pub(crate) fn reraise_failure_levels(&mut self) {
         self.activity.failure_origin = None;
         self.activity.failure_propagated = true;
@@ -3664,7 +3666,11 @@ impl Interp {
             .iter_mut()
             .chain(self.activity.failure_site.as_mut())
         {
-            if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
+            if let FailureSite::Packaged { text, .. } = site {
+                *site = FailureSite::Rendered {
+                    text: std::mem::take(text),
+                };
+            } else if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
                 let mut text = Vec::new();
                 site.push_trace_line(&mut text);
                 *site = FailureSite::Rendered { text };

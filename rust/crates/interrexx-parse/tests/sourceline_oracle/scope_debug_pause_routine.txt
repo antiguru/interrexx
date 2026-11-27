@@ -1,7 +1,7 @@
 count 12
-/* A routine called from a line typed at a debug pause traces and pauses
-   under its own TRACE ?R; the pause belongs to the activation running the
-   typed line. */
+/* A routine called from a line typed at a debug pause runs untraced: its own
+   TRACE ?R shows none of its clauses and takes no stop in it, and the next
+   stop is the caller's (Deviation 182, r[env.debugging.deviation.182]). */
 trace ?r
 x = 1
 say 'main'

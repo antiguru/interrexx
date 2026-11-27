@@ -270,9 +270,11 @@ from `makeArray`, and takes it as `.nil` if it came from a `request` method of
 the source's own ([the answer rule](r:class.method.new.request-answer)). An
 instance of a subclass of `List` is sent `request` as well ([Deviation
 118](r:class.method.deviation.118)). When it answers `.nil` the source is sent
-`request` with the argument `STRING`: an answer that is a string is the one-line
-source, and for any other answer its `objectName` is the line, with no
-`MAKESTRING` or `string` message sent to it; `.nil` from both raises `SYNTAX
+`request` with the argument `STRING`: an answer that is a string, a number, an
+instance of a subclass of `String` or a `MutableBuffer` is the one-line source,
+and so is an array, whose items joined by a newline make that line, as [the
+answer rule](r:conv.string.answer) reads them; any other answer counts as
+`.nil`, with no message sent to it, and `.nil` from both raises `SYNTAX
 93.961`. A string that is an instance of `String` itself and an array that is an
 instance of `Array` itself are used directly, without a message. The `request`
 of `Object` sends `makeArray` for the argument `ARRAY` and `makeString` for
@@ -344,10 +346,10 @@ makearray
 .method~new("n", .arrsub~of("return 3"))~source[1] => return 33
 request ARRAY
 request STRING
-.method~new("n", .src~new(.nil, .loud~new))~source[1] => a LOUD
+.method~new("n", .src~new(.nil, .loud~new))~source[1] => 93.961
 request ARRAY
 request STRING
-.method~new("n", .src~new(.nil, .named~new))~source[1] => return 4
+.method~new("n", .src~new(.nil, .named~new))~source[1] => 93.961
 request ARRAY
 request STRING
 .method~new("n", .src~new(.nil, 12))~source[1] => 12
