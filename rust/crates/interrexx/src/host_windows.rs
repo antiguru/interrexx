@@ -493,8 +493,11 @@ pub(crate) fn encode_code_page(
     }
     let length = i32::try_from(wide.len()).map_err(|_| ERROR_INVALID_PARAMETER)?;
     let mut used = 0;
-    // The UTF code pages require both substitution pointers to be null.
-    let (replacement, used_pointer) = if matches!(page, CP_UTF7 | CP_UTF8) {
+    // The UTF code pages require both substitution pointers to be null. A
+    // pseudo code page can stand for one of them (the system's ANSI or OEM
+    // code page is 65001 when Windows uses UTF-8 for its locale), so the test
+    // is made on the page it resolves to.
+    let (replacement, used_pointer) = if matches!(resolved_code_page(page), CP_UTF7 | CP_UTF8) {
         (null(), null_mut())
     } else {
         (
@@ -544,6 +547,49 @@ pub(crate) fn encode_code_page(
     Ok((bytes, used != 0))
 }
 
+/// The code page `page` stands for: the pseudo code pages `CP_ACP`,
+/// `CP_OEMCP`, `CP_MACCP` and `CP_THREAD_ACP` resolve to the page Windows uses
+/// for them, and any other page is itself.
+fn resolved_code_page(page: u32) -> u32 {
+    use windows_sys::Win32::Globalization::{
+        CP_ACP, CP_MACCP, CP_OEMCP, CP_THREAD_ACP, CPINFOEXW, GetACP, GetCPInfoExW, GetOEMCP,
+    };
+
+    match page {
+        // SAFETY: both functions take no arguments and only read system state.
+        CP_ACP => unsafe { GetACP() },
+        // SAFETY: as above.
+        CP_OEMCP => unsafe { GetOEMCP() },
+        CP_MACCP | CP_THREAD_ACP => {
+            let mut info = CPINFOEXW::default();
+            // SAFETY: info is a live, writable CPINFOEXW.
+            if unsafe { GetCPInfoExW(page, 0, &mut info) } != 0 {
+                info.CodePage
+            } else {
+                page
+            }
+        }
+        page => page,
+    }
+}
+
+/// Whether two profile names (sections or keys) are the same name: the
+/// profile API matches them without regard to case.
+pub(crate) fn profile_name_eq(left: &[u16], right: &[u16]) -> bool {
+    use windows_sys::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
+
+    let (Ok(left_length), Ok(right_length)) =
+        (i32::try_from(left.len()), i32::try_from(right.len()))
+    else {
+        return false;
+    };
+    // SAFETY: both slices are readable for the lengths passed.
+    unsafe {
+        CompareStringOrdinal(left.as_ptr(), left_length, right.as_ptr(), right_length, 1)
+            == CSTR_EQUAL
+    }
+}
+
 pub(crate) fn read_profile(
     file: &[u16],
     section: Option<&[u16]>,
@@ -572,7 +618,10 @@ pub(crate) fn read_profile(
             buffer.truncate(count);
             return Some(buffer);
         }
-        if buffer.len() >= 32_768 {
+        // A profile read has no size limit of its own; this one stops at
+        // 16M units (32 MiB), far above any real profile file, rather than
+        // growing without bound.
+        if buffer.len() >= 1 << 24 {
             return None;
         }
         buffer.resize(buffer.len() * 2, 0);

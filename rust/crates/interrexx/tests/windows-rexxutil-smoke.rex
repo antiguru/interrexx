@@ -209,4 +209,16 @@ if SysIni(iniFile, 'interrexx', 'ALL:', keys) \== '' then exit 125
 if keys~items <> 1 | keys[1] \== 'test' then exit 126
 if SysIni(iniFile, 'interrexx', 'test', 'DELETE:') \== '' then exit 127
 if SysIni(iniFile, 'interrexx', 'test') \== 'ERROR:' then exit 128
+if SysIni(iniFile, 'ALL:', 'sections.', '') \== '' then exit 169
+/* Deleting a section's last key leaves its header; the section can still be deleted. */
+if SysIni(iniFile, 'INTERREXX', 'DELETE:') \== '' then exit 170
+if SysIni(iniFile, 'ALL:', 'sections.') \== 'ERROR:' | sections.0 <> 0 then exit 171
+if SysIni(iniFile, 'interrexx', 'DELETE:') \== 'ERROR:' then exit 172
+/* A missing key is reported before the file name is converted. */
+signal on syntax name missingKeyBadFile
+call SysIni 'caf' || 'E9'x || '.ini', 'interrexx'
+exit 173
+missingKeyBadFile:
+if condition('O')~code <> 88.901 then exit 174
+signal off syntax
 if SysFileDelete(iniFile) <> 0 then exit 129
