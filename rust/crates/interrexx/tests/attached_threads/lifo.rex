@@ -3,8 +3,9 @@
    order in which they finish.
    spec: native.threads.attach.deviation.178 */
 t = .ticks~new
-call AtSend t, 'LIFOA'
+/* Start B's waiting worker before A can suspend the main program. */
 call AtSendWhenStarted t, 'LIFOB'
+call AtSend t, 'LIFOA'
 do while AtDone() < 2
   call SysSleep 0.05
 end
