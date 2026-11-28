@@ -197,7 +197,7 @@ interrexx-oracle = { path = "../interrexx-oracle" }
 # Path-only dev-dependencies on workspace crates carry no version: cargo drops them
 # when packaging, which keeps the interrexx-capi cycle and unpublished crates out.
 # `librexx.so` and `librexxapi.so`, which `tests/classic_api.rs` compiles the ooTest native
-# libraries against. Test-only: the `rexx` executable compiles their export modules itself.
+# libraries against. The CLI loads the interpreter library at run time.
 interrexx-capi = { path = "../interrexx-capi" }
 interrexx-capi-rxapi = { path = "../interrexx-capi-rxapi" }
 

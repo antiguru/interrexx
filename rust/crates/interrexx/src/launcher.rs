@@ -1,6 +1,14 @@
 //! The `rexx` and `rexxc` command lines' library half: option scanning, the
 //! program search, and the texts the launchers print themselves.
 
+mod cli;
+
+pub use cli::run_cli;
+
+/// The Cargo build unit that produced the interpreter and its launcher.
+#[doc(hidden)]
+pub const CLI_BUILD_ID: [u8; 8] = *include_bytes!(concat!(env!("OUT_DIR"), "/cli-build"));
+
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 

@@ -104,6 +104,15 @@ specified, not the message text or the items of `ADDITIONAL`. See `docs/design/t
 
 ## Running ooRexx and interrexx
 
+Build the CLI and its companion libraries together from `rust/`:
+
+```sh
+cargo build --locked -p interrexx -p interrexx-capi -p interrexx-capi-rxapi --lib --bin rexx
+```
+
+Keep the executable and libraries in the same directory, or the sibling `bin/` and
+`lib/` directories of a Unix installation.
+
 Run both interpreters only under a memory cap; a runaway program takes the machine with it.
 
 ```sh

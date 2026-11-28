@@ -89,7 +89,7 @@ jobs:
       - name: Release build
         working-directory: rust
         # rexx, and the rxapi it starts for the API service, as the BSF4ooRexx job builds them.
-        run: cargo build --locked --release -p interrexx -p interrexx-rxapi
+        run: cargo build --locked --release -p interrexx -p interrexx-capi -p interrexx-rxapi
       - name: ooSQLite examples
         run: scripts/run-oosqlite.sh
       - uses: actions/upload-artifact@v7

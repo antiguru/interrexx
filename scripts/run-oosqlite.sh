@@ -97,7 +97,7 @@ fi
 
 oo=$sources/ooSQLite
 examples=$oo/examples
-[ -x "$release/rexx" ] || die "no release rexx in $release: cargo build --release -p interrexx"
+[ -x "$release/rexx" ] || die "no release rexx in $release: cargo build --release -p interrexx -p interrexx-capi"
 [ -x "$release/rxapi" ] ||
     die "no rxapi beside the release rexx in $release: cargo build --release -p interrexx-rxapi"
 [ -x "$oracle/bin/rexx" ] || die "no oracle in $oracle: scripts/setup-third-party.sh"

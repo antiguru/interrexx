@@ -1,6 +1,4 @@
-//! The `rexx` executable exports the C API it compiles in, so an extension it loads binds to its
-//! interpreter rather than to a second copy in `librexx.so.4`; so does a test binary that compiles
-//! it in to run the interpreter in its own process. The build date `PARSE VERSION`
+//! Unix test binaries that embed the interpreter export the C API. The build date `PARSE VERSION`
 //! carries is stamped here, from `SOURCE_DATE_EPOCH` when set; it is the date the build script
 //! last ran.
 
@@ -12,8 +10,11 @@
 #[path = "build_date.rs"]
 mod build_date;
 
+mod cli_build;
+use std::path::Path;
+
 fn main() {
-    // Only Unix executables use the Unix loader's exported-symbol flags.
+    // In-process tests that embed the interpreter export the C API.
     if std::env::var("CARGO_CFG_TARGET_FAMILY").as_deref() == Ok("unix") {
         // Apple's linker spells the export with the C symbol prefix, and an exported symbol is also
         // kept from dead stripping.
@@ -22,7 +23,6 @@ fn main() {
         } else {
             "-Wl,--export-dynamic-symbol=Rexx*"
         };
-        println!("cargo:rustc-link-arg-bin=rexx={export}");
         println!("cargo:rustc-link-arg-tests={export}");
     }
     println!("cargo:rerun-if-changed=build.rs");
@@ -45,4 +45,16 @@ fn main() {
         "cargo:rustc-env=INTERREXX_BUILD_DATE={}",
         build_date::format(seconds)
     );
+
+    // The launcher and C API interpreter share this build-script output.
+    let out = std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR");
+    let out = Path::new(&out);
+    let unit = out
+        .parent()
+        .and_then(Path::file_name)
+        .expect("Cargo names the build unit");
+    let crate_dir = std::env::var_os("CARGO_MANIFEST_DIR").expect("Cargo names the crate");
+    let id = cli_build::fingerprint(Path::new(&crate_dir), unit, seconds);
+    std::fs::write(out.join("cli-build"), id.to_le_bytes()).expect("write the CLI build ID");
+    println!("cargo:rustc-env=INTERREXX_CLI_BUILD={id}");
 }

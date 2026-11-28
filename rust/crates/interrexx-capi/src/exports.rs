@@ -569,3 +569,35 @@ const _: () = {
 pub extern "system" fn RexxSetProcessMessages(_turn_on: i32) -> i32 {
     1
 }
+
+/// Private CLI build identity, checked from the file before loading it.
+#[used]
+#[unsafe(no_mangle)]
+#[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__rx_build"))]
+#[cfg_attr(windows, unsafe(link_section = ".rxbld"))]
+#[cfg_attr(
+    all(unix, not(target_vendor = "apple")),
+    unsafe(link_section = ".rexx_build")
+)]
+pub static interrexx_cli_build_v1: [u8; 8] = interrexx::launcher::CLI_BUILD_ID;
+
+/// Private CLI entry point.
+///
+/// # Safety
+/// `arguments` points to `length` readable bytes from the executable's
+/// command line. Each argument ends with a NUL and its bytes use the host's
+/// `OsString` encoding. The storage stays live for this call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn interrexx_main_v1(arguments: *const u8, length: usize) -> u8 {
+    // SAFETY: the executable owns the bytes for the duration of the call.
+    let arguments = unsafe { std::slice::from_raw_parts(arguments, length) };
+    let args = arguments
+        .strip_suffix(b"\0")
+        .map_or_else(Vec::new, |arguments| {
+            arguments
+                .split(|byte| *byte == 0)
+                .map(<[u8]>::to_vec)
+                .collect()
+        });
+    std::panic::catch_unwind(|| interrexx::launcher::run_cli(&args)).unwrap_or(101)
+}
