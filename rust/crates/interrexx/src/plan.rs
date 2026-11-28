@@ -643,6 +643,7 @@ impl Plan {
             | InstructionKind::Then
             | InstructionKind::Else { .. }
             | InstructionKind::Otherwise
+            | InstructionKind::Finally { .. }
             | InstructionKind::Leave { .. }
             | InstructionKind::Iterate { .. }
             | InstructionKind::End { .. }

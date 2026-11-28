@@ -115,12 +115,13 @@ method => command METHOD
 ```
 
 r[instr.index.parts]
-The words THEN, ELSE, WHEN, OTHERWISE and END are not instructions: they are
-parts of IF, SELECT and DO, and the pages of those instructions say where each
-may stand. A clause that begins with one of them where its construct does not
-expect it is not a command either. It raises a `SYNTAX` error: `8.1` for
-THEN, `8.2` for ELSE, `9.1` for WHEN, `9.2` for OTHERWISE and `10.1` for END,
-except an END right after a THEN or an ELSE, which [the IF
+The words THEN, ELSE, WHEN, OTHERWISE, CATCH, FINALLY and END are not
+instructions: they are parts of IF, SELECT, DO and LOOP, and the pages of those
+instructions and [FINALLY](finally.md) say where each may stand. A clause that
+begins with one of them where its construct does not expect it is not a command
+either. It raises a `SYNTAX` error: `8.1` for THEN, `8.2` for ELSE, `9.1` for
+WHEN, `9.2` for OTHERWISE, `10.8` for CATCH, `10.12` for FINALLY and `10.1` for
+END, except an END right after a THEN or an ELSE, which [the IF
 rules](r:instr.if.syntax) give.
 In a program file the error is found when the program is read, as [the
 expression rules](r:expr.index.syntax) say, and the program writes nothing.
@@ -130,6 +131,8 @@ call try 'then'
 call try 'else'
 call try 'when 1'
 call try 'otherwise'
+call try 'catch syntax'
+call try 'finally'
 call try 'end'
 exit
 try:
@@ -146,5 +149,7 @@ then => 8.1
 else => 8.2
 when 1 => 9.1
 otherwise => 9.2
+catch syntax => 10.8
+finally => 10.12
 end => 10.1
 ```

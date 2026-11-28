@@ -78,6 +78,7 @@ const KW_TRACE: usize = 32;
 const KW_USE: usize = 33;
 const KW_WHEN: usize = 34;
 const KW_CATCH: usize = 35;
+const KW_FINALLY: usize = 36;
 
 // Positions in the `CONDITIONS` table. `CALL ON` accepts a strict subset of
 // what `SIGNAL ON` does, so both lists are spelled out at their use sites.
@@ -590,9 +591,9 @@ impl<'a> Inst<'a> {
                 self.next_real();
                 self.if_instruction(cursor, PendingThen::When, block)
             }
-            // `ELSE` and `OTHERWISE` parse nothing at all. Both take their
-            // location from the keyword token and let block translation trim
-            // whatever shares the line.
+            // `ELSE`, `OTHERWISE` and `FINALLY` parse nothing at all. Each
+            // takes its location from the keyword token and lets block
+            // translation trim whatever shares the line.
             KW_ELSE => {
                 self.next_real();
                 Ok(self.finish_split(
@@ -607,6 +608,15 @@ impl<'a> Inst<'a> {
                 Ok(self.finish_split(
                     cursor,
                     InstructionKind::Otherwise,
+                    keyword_end,
+                    Remainder::Instruction,
+                ))
+            }
+            KW_FINALLY => {
+                self.next_real();
+                Ok(self.finish_split(
+                    cursor,
+                    InstructionKind::Finally { block: None },
                     keyword_end,
                     Remainder::Instruction,
                 ))
@@ -1882,6 +1892,7 @@ fn select_node(label: Option<SymbolId>, case: Option<ExprId>) -> InstructionKind
         whens: Vec::new(),
         otherwise: None,
         end: None,
+        handlers: None,
     }
 }
 

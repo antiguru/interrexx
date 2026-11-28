@@ -51,7 +51,7 @@ fn keyword_tables_keep_the_cpp_table_order() {
     let mut symbols = SymbolTable::default();
     let keywords = Keywords::new(&mut symbols);
 
-    assert_eq!(keywords.instructions.len(), 36);
+    assert_eq!(keywords.instructions.len(), 37);
     assert_eq!(keywords.sub_keywords.len(), 50);
     assert_eq!(keywords.conditions.len(), 12);
     assert_eq!(keywords.parse_options.len(), 10);
@@ -74,6 +74,10 @@ fn keyword_tables_keep_the_cpp_table_order() {
     assert_eq!(
         keywords.instructions.index_of(symbols.intern("catch")),
         Some(35)
+    );
+    assert_eq!(
+        keywords.instructions.index_of(symbols.intern("finally")),
+        Some(36)
     );
     // `ANNOTATE` heads the directive table but is not an instruction.
     assert_eq!(

@@ -14,8 +14,8 @@ use crate::{ProgramSource, SourceKind, scan};
 use super::{
     COND_ANY, COND_ERROR, COND_FAILURE, COND_HALT, COND_LOSTDIGITS, COND_NOMETHOD, COND_NOSTRING,
     COND_NOTREADY, COND_NOVALUE, COND_PROPAGATE, COND_SYNTAX, COND_USER, KW_ADDRESS, KW_ARG,
-    KW_CALL, KW_CATCH, KW_DO, KW_DROP, KW_ELSE, KW_END, KW_EXIT, KW_EXPOSE, KW_FORWARD, KW_GUARD,
-    KW_IF, KW_INTERPRET, KW_ITERATE, KW_LEAVE, KW_LOOP, KW_NOP, KW_NUMERIC, KW_OPTIONS,
+    KW_CALL, KW_CATCH, KW_DO, KW_DROP, KW_ELSE, KW_END, KW_EXIT, KW_EXPOSE, KW_FINALLY, KW_FORWARD,
+    KW_GUARD, KW_IF, KW_INTERPRET, KW_ITERATE, KW_LEAVE, KW_LOOP, KW_NOP, KW_NUMERIC, KW_OPTIONS,
     KW_OTHERWISE, KW_PARSE, KW_PROCEDURE, KW_PULL, KW_PUSH, KW_QUEUE, KW_RAISE, KW_REPLY,
     KW_RETURN, KW_SAY, KW_SELECT, KW_SIGNAL, KW_THEN, KW_TRACE, KW_USE, KW_WHEN, POPT_ARG,
     POPT_CASELESS, POPT_LINEIN, POPT_LOWER, POPT_PULL, POPT_SOURCE, POPT_UPPER, POPT_VALUE,
@@ -151,8 +151,8 @@ fn keyword_indices_still_name_their_own_spellings() {
     let keywords = Keywords::new(&mut symbols);
     assert_eq!(
         keywords.instructions.len(),
-        36,
-        "the keyword instruction table is not 36 entries"
+        37,
+        "the keyword instruction table is not 37 entries"
     );
     for (index, spelling) in [
         (KW_ADDRESS, "ADDRESS"),
@@ -191,6 +191,7 @@ fn keyword_indices_still_name_their_own_spellings() {
         (KW_USE, "USE"),
         (KW_WHEN, "WHEN"),
         (KW_CATCH, "CATCH"),
+        (KW_FINALLY, "FINALLY"),
     ] {
         assert_eq!(
             keywords.instructions.index_of(symbols.intern(spelling)),
@@ -1802,6 +1803,7 @@ const KEYWORD_CLAUSES: &[(&str, &str)] = &[
     ("END", "do 1\nend"),
     ("EXIT", "exit"),
     ("EXPOSE", "expose a"),
+    ("FINALLY", "do; finally; end"),
     ("FORWARD", "forward"),
     ("GUARD", "guard on"),
     ("IF", "if 1 then nop"),
@@ -1834,7 +1836,7 @@ const KEYWORD_CLAUSES: &[(&str, &str)] = &[
 fn every_keyword_reaches_its_instruction_node() {
     // The length assertion is the load-bearing half: it fails when a keyword is
     // added to the table and nobody wrote a clause for it.
-    assert_eq!(KEYWORD_CLAUSES.len(), 36, "a keyword lost its clause");
+    assert_eq!(KEYWORD_CLAUSES.len(), 37, "a keyword lost its clause");
     let mut symbols = SymbolTable::default();
     let keywords = Keywords::new(&mut symbols);
     assert_eq!(keywords.instructions.len(), KEYWORD_CLAUSES.len());
@@ -1850,7 +1852,7 @@ fn every_keyword_reaches_its_instruction_node() {
     let mut listed: Vec<&str> = KEYWORD_CLAUSES.iter().map(|(k, _)| *k).collect();
     listed.sort_unstable();
     listed.dedup();
-    assert_eq!(listed.len(), 36, "a keyword is named twice");
+    assert_eq!(listed.len(), 37, "a keyword is named twice");
     for keyword in &listed {
         assert!(
             keywords

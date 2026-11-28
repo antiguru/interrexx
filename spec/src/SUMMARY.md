@@ -33,6 +33,7 @@
   - [DROP](instructions/drop.md)
   - [EXIT](instructions/exit.md)
   - [EXPOSE](instructions/expose.md)
+  - [FINALLY](instructions/finally.md)
   - [FORWARD](instructions/forward.md)
   - [GUARD](instructions/guard.md)
   - [IF](instructions/if.md)
