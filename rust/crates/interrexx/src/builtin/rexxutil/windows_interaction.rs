@@ -22,7 +22,7 @@ use crate::{Failure, Interp, host};
 
 enum Reply {
     Status(u32),
-    Key(Vec<u8>, bool),
+    Key(host::ConsoleKey),
 }
 
 pub(crate) struct Pending {
@@ -73,11 +73,11 @@ pub(crate) fn next_poll(interp: &Interp) -> ParkReason {
 fn finish(interp: &mut Interp, reply: Reply) -> ObjRef {
     match reply {
         Reply::Status(status) => answer(interp, i64::from(status)),
-        Reply::Key(bytes, echo) => {
-            if echo {
-                interp.write_out(&bytes);
+        Reply::Key((byte, echo)) => {
+            if !echo.is_empty() {
+                interp.write_out(&echo);
             }
-            interp.text_built(bytes)
+            interp.text_built(byte.into_iter().collect())
         }
     }
 }
@@ -155,8 +155,11 @@ pub(crate) fn get_key(
     interp.hand_over_output();
     wait(
         interp,
-        |_| Reply::Key(Vec::new(), false),
-        move |stopped| Reply::Key(host::console_key(stopped), echo),
+        |_| Reply::Key((None, Vec::new())),
+        move |stopped| {
+            let (byte, text) = host::console_key(stopped);
+            Reply::Key((byte, if echo { text } else { Vec::new() }))
+        },
     )
 }
 

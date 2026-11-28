@@ -110,7 +110,13 @@ jobs:
             echo RexxUtil console fixture failed at check %ERRORLEVEL%
             exit /b 1
           )
-          echo RexxUtil console input, cursor, screen, and dialog cancellation passed.
+          for %%p in (1252 437) do (
+            target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-sysgetkey-bytes.rex" %%p || exit /b 1
+          )
+          target\debug\rexxutil-console.exe "%CD%\target\debug\rexx.exe" "%CD%\crates\interrexx\tests\windows-sysgetkey-utf8.rex" 65001 || exit /b 1
+          rustc --edition=2024 --test crates\interrexx\src\host_windows\console_input.rs -o target\debug\console-input-tests.exe || exit /b 1
+          target\debug\console-input-tests.exe || exit /b 1
+          echo RexxUtil console and key byte checks passed.
 
       - uses: actions/upload-artifact@v7
         with:

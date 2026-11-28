@@ -876,40 +876,73 @@ pub(crate) fn set_default_printer(name: &str) -> u32 {
     0
 }
 
-pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> Vec<u8> {
-    use std::sync::atomic::Ordering;
+/// A byte returned by SysGetKey and the character to echo, if any.
+pub(crate) type ConsoleKey = (Option<u8>, Vec<u8>);
+
+#[path = "host_windows/console_input.rs"]
+mod console_input;
+
+pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey {
+    use console_input::ConsoleInput;
+    use std::sync::{LazyLock, Mutex, TryLockError, atomic::Ordering};
     use windows_sys::Win32::{
         Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
         System::{
             Console::{
-                GetConsoleMode, GetStdHandle, INPUT_RECORD, KEY_EVENT, ReadConsoleInputW,
-                STD_INPUT_HANDLE,
+                GetConsoleCP, GetConsoleMode, GetStdHandle, INPUT_RECORD, KEY_EVENT,
+                PeekConsoleInputW, ReadConsoleInputW, STD_INPUT_HANDLE,
             },
-            Threading::WaitForSingleObject,
+            Threading::{Sleep, WaitForSingleObject},
         },
     };
 
+    // Greenthread waits can use different workers. Keep incomplete UTF-16
+    // characters and unread bytes with the serialized console input.
+    static INPUT: LazyLock<Mutex<ConsoleInput>> = LazyLock::new(Mutex::default);
+    static READER: Mutex<()> = Mutex::new(());
     let mut mode = 0;
     // SAFETY: GetStdHandle supplies a borrowed standard handle; it is validated
     // by GetConsoleMode and the pointer to mode is live and writable.
     let handle = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
     if unsafe { GetConsoleMode(handle, &mut mode) } == 0 {
-        return Vec::new();
+        return (None, Vec::new());
     }
-    let mut units = Vec::with_capacity(2);
     while !stopped.load(Ordering::Relaxed) {
+        if let Some(byte) = INPUT.lock().expect("console input lock").bytes.pop_front() {
+            return (Some(byte), Vec::new());
+        }
         // SAFETY: the console handle was validated above and is not owned here.
         match unsafe { WaitForSingleObject(handle, 30) } {
             WAIT_TIMEOUT => continue,
             WAIT_OBJECT_0 => {}
             _ => break,
         }
-        // Cancellation can arrive while the console handle is being waited on.
+        // Console I/O never holds the shared state lock. Other workers can
+        // cancel even if an independent console reader drains the input.
+        let _reader = match READER.try_lock() {
+            Ok(reader) => reader,
+            Err(TryLockError::WouldBlock) => {
+                // SAFETY: this worker waits briefly without blocking a Rexx activity.
+                unsafe { Sleep(1) };
+                continue;
+            }
+            Err(TryLockError::Poisoned(_)) => break,
+        };
         if stopped.load(Ordering::Relaxed) {
             break;
         }
+        if let Some(byte) = INPUT.lock().expect("console input lock").bytes.pop_front() {
+            return (Some(byte), Vec::new());
+        }
         let mut event = INPUT_RECORD::default();
         let mut count = 0;
+        // SAFETY: both outputs point into distinct live stack locals.
+        if unsafe { PeekConsoleInputW(handle, &mut event, 1, &mut count) } == 0 {
+            break;
+        }
+        if count == 0 {
+            continue;
+        }
         // SAFETY: both outputs point into distinct live stack locals.
         if unsafe { ReadConsoleInputW(handle, &mut event, 1, &mut count) } == 0 || count == 0 {
             break;
@@ -919,17 +952,73 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> Vec<u8> {
         }
         // SAFETY: KEY_EVENT identifies the initialized union member.
         let key = unsafe { event.Event.KeyEvent };
-        // SAFETY: this event was read using ReadConsoleInputW.
-        let unit = unsafe { key.uChar.UnicodeChar };
-        if key.bKeyDown == 0 || unit == 0 {
+        if key.bKeyDown == 0 {
             continue;
         }
-        units.push(unit);
-        if units.len() == 2 || !(0xd800..=0xdbff).contains(&unit) {
-            return String::from_utf16_lossy(&units).into_bytes();
+        // SAFETY: this event was read using ReadConsoleInputW.
+        let unit = unsafe { key.uChar.UnicodeChar };
+        let mut input = INPUT.lock().expect("console input lock");
+        if unit == 0 {
+            if let Some([prefix, scan]) = extended_console_key(&key) {
+                input.high_surrogate = None;
+                input.bytes.push_back(scan);
+                return (Some(prefix), Vec::new());
+            }
+            continue;
+        }
+        if let Some((units, length)) = input.character(unit) {
+            let units = &units[..length];
+            // SAFETY: GetConsoleCP takes no pointers and reports this console's input code page.
+            let page = unsafe { GetConsoleCP() };
+            let Ok((bytes, _)) = encode_code_page(page, 0, units, None) else {
+                continue;
+            };
+            let mut bytes = bytes.into_iter();
+            let head = bytes.next();
+            input.bytes.extend(bytes);
+            return (head, String::from_utf16_lossy(units).into_bytes());
         }
     }
-    Vec::new()
+    (None, Vec::new())
+}
+
+fn extended_console_key(
+    key: &windows_sys::Win32::System::Console::KEY_EVENT_RECORD,
+) -> Option<[u8; 2]> {
+    use windows_sys::Win32::{
+        System::Console::{
+            ENHANCED_KEY, LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, RIGHT_ALT_PRESSED,
+            RIGHT_CTRL_PRESSED, SHIFT_PRESSED,
+        },
+        UI::Input::KeyboardAndMouse::{
+            VK_DELETE, VK_DOWN, VK_F1, VK_F10, VK_F11, VK_F12, VK_INSERT, VK_PRIOR,
+        },
+    };
+
+    let modifiers = SHIFT_PRESSED
+        | LEFT_CTRL_PRESSED
+        | RIGHT_CTRL_PRESSED
+        | LEFT_ALT_PRESSED
+        | RIGHT_ALT_PRESSED;
+    if key.dwControlKeyState & modifiers != 0 {
+        return None;
+    }
+    let scan = match key.wVirtualKeyCode {
+        VK_F11 => 0x85,
+        VK_F12 => 0x86,
+        VK_F1..=VK_F10 | VK_PRIOR..=VK_DOWN | VK_INSERT | VK_DELETE => {
+            u8::try_from(key.wVirtualScanCode)
+                .ok()
+                .filter(|scan| *scan != 0)?
+        }
+        _ => return None,
+    };
+    let prefix = if key.dwControlKeyState & ENHANCED_KEY == 0 {
+        0
+    } else {
+        0xe0
+    };
+    Some([prefix, scan])
 }
 
 pub(crate) fn wait_named_pipe(
