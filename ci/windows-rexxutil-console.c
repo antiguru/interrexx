@@ -47,25 +47,37 @@ int wmain(int argc, wchar_t **argv)
             return 22;
         }
 
-        /* Enhanced Up, F1, an accented letter, and ASCII sentinels. */
-        INPUT_RECORD records[7] = {key, key, key, key, key, key, key};
-        records[0].Event.KeyEvent.wVirtualKeyCode = VK_UP;
-        records[0].Event.KeyEvent.wVirtualScanCode = 0x48;
-        records[0].Event.KeyEvent.uChar.UnicodeChar = 0;
-        records[0].Event.KeyEvent.dwControlKeyState = ENHANCED_KEY;
-        records[1].Event.KeyEvent.wVirtualKeyCode = VK_F1;
-        records[1].Event.KeyEvent.wVirtualScanCode = 0x3b;
-        records[1].Event.KeyEvent.uChar.UnicodeChar = 0;
-        records[2].Event.KeyEvent.wVirtualKeyCode = 'E';
-        records[2].Event.KeyEvent.wVirtualScanCode = 0x12;
-        records[2].Event.KeyEvent.uChar.UnicodeChar = L'\u00e9';
-        for (int i = 3; i < 7; ++i) {
-            records[i].Event.KeyEvent.wVirtualKeyCode = (WORD)('A' + i - 3);
-            records[i].Event.KeyEvent.uChar.UnicodeChar = (wchar_t)('A' + i - 3);
-        }
-        if (!WriteConsoleInputW(input, records, _countof(records), &written) ||
-            written != _countof(records)) {
-            return 23;
+        if (page == CP_UTF8) {
+            INPUT_RECORD pair[2] = {key, key};
+            pair[0].Event.KeyEvent.wVirtualKeyCode = VK_PACKET;
+            pair[1].Event.KeyEvent.wVirtualKeyCode = VK_PACKET;
+            pair[0].Event.KeyEvent.uChar.UnicodeChar = 0xd83d;
+            pair[1].Event.KeyEvent.uChar.UnicodeChar = 0xde00;
+            if (!WriteConsoleInputW(input, pair, _countof(pair), &written) ||
+                written != _countof(pair)) {
+                return 23;
+            }
+        } else {
+            /* Enhanced Up, F1, an accented letter, and ASCII sentinels. */
+            INPUT_RECORD records[7] = {key, key, key, key, key, key, key};
+            records[0].Event.KeyEvent.wVirtualKeyCode = VK_UP;
+            records[0].Event.KeyEvent.wVirtualScanCode = 0x48;
+            records[0].Event.KeyEvent.uChar.UnicodeChar = 0;
+            records[0].Event.KeyEvent.dwControlKeyState = ENHANCED_KEY;
+            records[1].Event.KeyEvent.wVirtualKeyCode = VK_F1;
+            records[1].Event.KeyEvent.wVirtualScanCode = 0x3b;
+            records[1].Event.KeyEvent.uChar.UnicodeChar = 0;
+            records[2].Event.KeyEvent.wVirtualKeyCode = 'E';
+            records[2].Event.KeyEvent.wVirtualScanCode = 0x12;
+            records[2].Event.KeyEvent.uChar.UnicodeChar = L'\u00e9';
+            for (int i = 3; i < 7; ++i) {
+                records[i].Event.KeyEvent.wVirtualKeyCode = (WORD)('A' + i - 3);
+                records[i].Event.KeyEvent.uChar.UnicodeChar = (wchar_t)('A' + i - 3);
+            }
+            if (!WriteConsoleInputW(input, records, _countof(records), &written) ||
+                written != _countof(records)) {
+                return 23;
+            }
         }
     }
 

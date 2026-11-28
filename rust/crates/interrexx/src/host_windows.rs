@@ -879,9 +879,30 @@ pub(crate) fn set_default_printer(name: &str) -> u32 {
 /// A byte returned by SysGetKey and the character to echo, if any.
 pub(crate) type ConsoleKey = (Option<u8>, Vec<u8>);
 
+#[derive(Default)]
+struct ConsoleInput {
+    bytes: std::collections::VecDeque<u8>,
+    high_surrogate: Option<u16>,
+}
+
+impl ConsoleInput {
+    fn character(&mut self, unit: u16) -> Option<([u16; 2], usize)> {
+        if (0xd800..=0xdbff).contains(&unit) {
+            self.high_surrogate = Some(unit);
+            return None;
+        }
+        let high = self.high_surrogate.take();
+        if (0xdc00..=0xdfff).contains(&unit)
+            && let Some(high) = high
+        {
+            return Some(([high, unit], 2));
+        }
+        Some(([unit, 0], 1))
+    }
+}
+
 pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey {
-    use std::collections::VecDeque;
-    use std::sync::{Mutex, atomic::Ordering};
+    use std::sync::{LazyLock, Mutex, atomic::Ordering};
     use windows_sys::Win32::{
         Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
         System::{
@@ -893,9 +914,9 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
         },
     };
 
-    // The console is a process resource. Serialize readers and keep the scan
-    // code or remaining bytes ahead of the next input event.
-    static REMAINDER: Mutex<VecDeque<u8>> = Mutex::new(VecDeque::new());
+    // Greenthread waits can use different workers. Keep incomplete UTF-16
+    // characters and unread bytes with the serialized console input.
+    static INPUT: LazyLock<Mutex<ConsoleInput>> = LazyLock::new(Mutex::default);
     let mut mode = 0;
     // SAFETY: GetStdHandle supplies a borrowed standard handle; it is validated
     // by GetConsoleMode and the pointer to mode is live and writable.
@@ -903,13 +924,12 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
     if unsafe { GetConsoleMode(handle, &mut mode) } == 0 {
         return (None, Vec::new());
     }
-    let mut units = Vec::with_capacity(2);
     loop {
-        let mut remaining = REMAINDER.lock().expect("console input lock");
+        let mut input = INPUT.lock().expect("console input lock");
         if stopped.load(Ordering::Relaxed) {
             break;
         }
-        if let Some(byte) = remaining.pop_front() {
+        if let Some(byte) = input.bytes.pop_front() {
             return (Some(byte), Vec::new());
         }
         // SAFETY: the console handle was validated above and is not owned here.
@@ -940,22 +960,23 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
         let unit = unsafe { key.uChar.UnicodeChar };
         if unit == 0 {
             if let Some([prefix, scan]) = extended_console_key(&key) {
-                remaining.push_back(scan);
+                input.high_surrogate = None;
+                input.bytes.push_back(scan);
                 return (Some(prefix), Vec::new());
             }
             continue;
         }
-        units.push(unit);
-        if units.len() == 2 || !(0xd800..=0xdbff).contains(&unit) {
+        if let Some((units, length)) = input.character(unit) {
+            let units = &units[..length];
             // SAFETY: GetConsoleCP takes no pointers and reports this console's input code page.
             let page = unsafe { GetConsoleCP() };
-            let Ok((bytes, _)) = encode_code_page(page, 0, &units, None) else {
+            let Ok((bytes, _)) = encode_code_page(page, 0, units, None) else {
                 break;
             };
             let mut bytes = bytes.into_iter();
             let head = bytes.next();
-            remaining.extend(bytes);
-            return (head, String::from_utf16_lossy(&units).into_bytes());
+            input.bytes.extend(bytes);
+            return (head, String::from_utf16_lossy(units).into_bytes());
         }
     }
     (None, Vec::new())
