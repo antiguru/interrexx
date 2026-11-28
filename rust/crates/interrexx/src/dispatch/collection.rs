@@ -240,7 +240,8 @@ fn array_of_slots(interp: &mut Interp, slots: Vec<Option<ObjRef>>) -> ObjRef {
 
 /// Whether the collection holds `wanted`, comparing it against `element`; a
 /// non-logical `==` answer is 34.901. The object itself is held without a
-/// `==` sent to it (`r[class.collection.identity]`).
+/// `==` sent to it. A bare stem or variable reference used as `wanted` only
+/// matches itself (`r[class.collection.identity]`).
 pub(super) fn same_item(
     interp: &mut Interp,
     wanted: ObjRef,
@@ -249,8 +250,15 @@ pub(super) fn same_item(
     if wanted == element {
         return Ok(true);
     }
-    let (left, right) = (wanted, element);
-    let answer = interp.apply_binary(Operator::StrictEqual, left, right)?;
+    if matches!(wanted.decode(), Decoded::Heap { .. })
+        && matches!(
+            interp.heap.get(wanted).map(|object| &object.body),
+            Some(Body::Stem { .. } | Body::VarRef(_))
+        )
+    {
+        return Ok(false);
+    }
+    let answer = interp.apply_binary(Operator::StrictEqual, wanted, element)?;
     interp.truth(answer, Raised::not_logical)
 }
 
