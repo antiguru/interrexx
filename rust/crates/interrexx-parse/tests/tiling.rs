@@ -402,6 +402,24 @@ fn the_tightness_checker_rejects_a_missing_operator() {
 }
 
 #[test]
+fn the_binary_adapter_reports_a_missing_operator_in_the_source() {
+    let source = b"x = a + b";
+    let program = parse_program(source.to_vec()).expect("the program parses");
+    let interrexx_parse::InstructionKind::Assignment { value, .. } =
+        &program.main.instructions[0].kind
+    else {
+        panic!("an assignment");
+    };
+    let expr = program.main.expr(*value);
+    let mut errors = Vec::new();
+    binary_tightness_errors(source, expr, &mut errors);
+    assert!(errors.is_empty(), "{errors:?}");
+    binary_tightness_errors(b"x = a   b", expr, &mut errors);
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(errors[0].contains("no operator byte"), "{errors:?}");
+}
+
+#[test]
 fn the_prefix_checker_rejects_an_operator_with_nothing_in_front() {
     let mut errors = Vec::new();
     prefix_span_errors(0..1, 0..1, &mut errors);

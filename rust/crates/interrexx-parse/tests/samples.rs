@@ -1,28 +1,11 @@
 //! Every `.rex` file under `samples/` parses to an AST.
 
-use std::path::{Path, PathBuf};
+mod rex_files;
+
+use std::path::Path;
 
 use interrexx_parse::parse_program;
-
-/// Collects every `*.rex` file under `dir`, recursively, in a stable order.
-fn rex_files_under(dir: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(d) = stack.pop() {
-        for entry in std::fs::read_dir(&d)
-            .unwrap_or_else(|e| panic!("cannot read directory {}: {e}", d.display()))
-        {
-            let path = entry.expect("readable directory entry").path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().and_then(|e| e.to_str()) == Some("rex") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    files
-}
+use rex_files::rex_files_under;
 
 #[test]
 fn every_sample_rex_file_parses() {

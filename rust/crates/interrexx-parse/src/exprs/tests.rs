@@ -1,11 +1,15 @@
 //! The arena's builder and validator. Spans are byte offsets into the text in
 //! each test's comment.
 
+#[path = "../../tests/rex_files/mod.rs"]
+mod rex_files;
+
 use crate::ast::PrefixOp;
 use crate::selector::SelectorTable;
 use crate::token::{Operator, SymbolId};
 
 use super::{Bounds, CallTarget, ExprId, Exprs, Inconsistent, NodeKind};
+use rex_files::rex_files_under;
 
 /// Bounds no node of a hand-built arena reaches, for the tests that are not
 /// about them.
@@ -932,22 +936,125 @@ fn an_argument_list_view_keeps_its_omitted_positions() {
     assert_one_omitted_three(Args::slots(exprs, &ids));
 }
 
-/// Every `*.rex` file under `dir`, recursively, in a stable order.
-fn rex_files_under(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
-    let mut files = Vec::new();
-    let mut directories = vec![dir.to_path_buf()];
-    while let Some(directory) = directories.pop() {
-        for entry in std::fs::read_dir(&directory).expect("a readable corpus directory") {
-            let path = entry.expect("a readable directory entry").path();
-            if path.is_dir() {
-                directories.push(path);
-            } else if path.extension().is_some_and(|extension| extension == "rex") {
-                files.push(path);
-            }
-        }
+#[test]
+fn narrow_accessors_agree_with_the_full_view() {
+    use std::collections::BTreeSet;
+
+    use super::{Args, Branches, ExprRef, ExprView, Target};
+
+    #[derive(Debug, PartialEq, Eq)]
+    enum BranchIds {
+        Prefix(ExprId),
+        Binary(ExprId, ExprId),
+        Items(Vec<Option<ExprId>>),
+        Message(ExprId, Vec<Option<ExprId>>),
+        Other,
     }
-    files.sort();
-    files
+
+    let program = crate::parse_program(
+        br#"result = "bytes"
+result = 1
+result = name
+result = stem.
+result = stem.tail
+result = .nil
+result = ns:class
+result = -name
+result = a + b
+result = f(1,,3)
+result = 'f'(1,,3)
+result = ns:f(1,,3)
+result = target~m(1,,3)
+result = target~m:scope(1,,3)
+result = (1,,3)
+call f >name
+if left,right then nop
+"#
+        .to_vec(),
+    )
+    .expect("the program parses");
+    let exprs = &program.main.exprs;
+    let item_ids = |args: Args<'_>| args.iter().map(|item| item.map(ExprRef::id)).collect();
+    let mut seen = BTreeSet::new();
+    for (index, node) in exprs.nodes.iter().enumerate() {
+        let kind = node.kind();
+        if matches!(kind, NodeKind::Omitted) {
+            // Omitted positions are visible through Args, compared below.
+            seen.insert("Omitted");
+            continue;
+        }
+        let expr = exprs.get(ExprId::from_index(index));
+        let view = expr.kind();
+        let variant = match view {
+            ExprView::Call {
+                target: Target::Literal(_),
+                ..
+            } => "Literal call",
+            ExprView::Message {
+                super_class: Some(_),
+                ..
+            } => "Scoped message",
+            _ => tag(kind),
+        };
+        seen.insert(variant);
+        let (variable, call_target, branches) = match view {
+            ExprView::Variable(id) => (Some(id), None, BranchIds::Other),
+            ExprView::Call { target, args } => {
+                (None, Some(target), BranchIds::Items(item_ids(args)))
+            }
+            ExprView::Prefix { operand, .. } => (None, None, BranchIds::Prefix(operand.id())),
+            ExprView::Binary { left, right, .. } => {
+                (None, None, BranchIds::Binary(left.id(), right.id()))
+            }
+            ExprView::QualifiedCall { args, .. } | ExprView::List(args) => {
+                (None, None, BranchIds::Items(item_ids(args)))
+            }
+            ExprView::Message { target, args, .. } => {
+                (None, None, BranchIds::Message(target.id(), item_ids(args)))
+            }
+            ExprView::Literal(_)
+            | ExprView::Constant(_)
+            | ExprView::Stem(_)
+            | ExprView::Compound(_)
+            | ExprView::DotVariable(_)
+            | ExprView::ClassResolver { .. }
+            | ExprView::Logical(_)
+            | ExprView::VariableReference { .. } => (None, None, BranchIds::Other),
+        };
+        let narrow_branches = match expr.branches() {
+            Branches::Prefix(operand) => BranchIds::Prefix(operand.id()),
+            Branches::Binary(left, right) => BranchIds::Binary(left.id(), right.id()),
+            Branches::Items(args) => BranchIds::Items(item_ids(args)),
+            Branches::Message { target, args } => BranchIds::Message(target.id(), item_ids(args)),
+            Branches::Other => BranchIds::Other,
+        };
+        assert_eq!(expr.variable(), variable, "{variant} at {expr:?}");
+        assert_eq!(expr.call_target(), call_target, "{variant} at {expr:?}");
+        assert_eq!(narrow_branches, branches, "{variant} at {expr:?}");
+    }
+    assert_eq!(
+        seen,
+        BTreeSet::from([
+            "Binary",
+            "Call",
+            "ClassResolver",
+            "Compound",
+            "Constant",
+            "DotVariable",
+            "List",
+            "Literal",
+            "Literal call",
+            "Logical",
+            "Message",
+            "Omitted",
+            "Prefix",
+            "QualifiedCall",
+            "Scoped message",
+            "Stem",
+            "Variable",
+            "VariableReference",
+        ])
+    );
 }
 
 /// Checks every body of `program` and each `::CONSTANT` value, answering
