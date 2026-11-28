@@ -176,12 +176,13 @@ do; nop; finally; forward continue to (.nil); end => ok
 ```
 
 r[instr.finally.forward]
-A FORWARD without CONTINUE must not stand in a block that has a FINALLY, in its
-instructions, in its CATCH clauses or in a block nested in either. The FINALLY
-of such a block raises `SYNTAX 99.952` where it stands, naming the line of the
-last such FORWARD before it. The FINALLY is reached before any instruction of
-its own clause, so this error comes before a `99.951` in that clause. A FORWARD
-before the block, or one with CONTINUE, is no fault.
+A FORWARD without CONTINUE is refused when a block with a FINALLY holds it,
+whether as one of its own instructions, in one of its CATCH clauses, or inside
+a block nested in either. The FINALLY of such a block raises `SYNTAX 99.952`
+where it stands, naming the line of the last such FORWARD before it. The
+FINALLY is reached before any instruction of its own clause, so this error
+comes before a `99.951` in that clause. A FORWARD before the block, or one with
+CONTINUE, is no fault.
 
 ```rexx
 call try 'do; forward to (.nil); finally; nop; end'

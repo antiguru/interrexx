@@ -1276,6 +1276,8 @@ translation	99.951	5	do\n nop\nfinally\n do i = 1 to 2\n  if i = 2 then return\n
 translation	99.951	7	do\n nop\nfinally\n do\n  nop\n catch syntax\n  exit\n end\nend
 translation	99.951	4	do\nfinally\n if 1 then nop\n else return\nend
 translation	99.951	4	do\nfinally\n select\n  return\n end\nend
+translation	99.951	4	loop\nfinally\n select\n  when 1 then leave\n end\nend
+translation	99.951	4	loop\nfinally\n select\n  when 1 then iterate\n end\nend
 translation	99.951	4	do\n nop\nfinally\n return\nx: nop\nend
 translation	99.951	4	do\n nop\nfinally\n return\n
 translation	99.951	3	do\nfinally\n x = 1; leave\nend
