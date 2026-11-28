@@ -285,23 +285,41 @@ pub struct CField {
     pub ty: CSpelling,
 }
 
-/// Defines a `repr(C)` struct the header declares and, beside it, its fields as
-/// the header declares them ([`CField`]): each field's C name is its Rust name
-/// unless `=> "name"` follows the type, and its C type is spelled from the Rust
-/// type's tokens unless `as "type"` gives it.
+/// The documentation and fields of a struct declared in the C headers.
+pub struct CLayout {
+    /// The struct's Rust documentation, one line per item.
+    pub docs: &'static [&'static str],
+    /// The fields in C declaration order.
+    pub fields: &'static [CField],
+}
+
+/// Defines a `repr(C)` struct and captures its documentation and fields in
+/// [`CLayout`]. Each field's C name is its Rust name unless `=> "name"`
+/// follows the type, and its C type is spelled from the Rust type's tokens
+/// unless `as "type"` gives it.
 macro_rules! c_struct {
     (
+        $(#[doc = $doc:literal])+
+        #[repr(C)]
         $(#[$meta:meta])*
         pub struct $Name:ident {
             $( pub $field:ident : $ty:ty $(=> $c_name:literal)? $(as $c_type:literal)? ),* $(,)?
         }
     ) => {
+        $(#[doc = $doc])+
+        #[repr(C)]
         $(#[$meta])*
         pub struct $Name {
             $( pub $field: $ty, )*
         }
 
         impl $Name {
+            /// The documentation and fields used by the C header generator.
+            pub const C_LAYOUT: CLayout = CLayout {
+                docs: &[$($doc),+],
+                fields: Self::C_FIELDS,
+            };
+
             /// Each field as the header declares it, in order.
             pub const C_FIELDS: &'static [CField] = &[$(CField {
                 name: c_struct!(@name $field $($c_name)?),
@@ -316,7 +334,7 @@ macro_rules! c_struct {
 }
 
 c_struct! {
-    /// `RXSTRING`.
+    /// A counted byte string with a writable buffer. See r[native.header.rxstring].
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXSTRING {
@@ -326,7 +344,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `CONSTRXSTRING`.
+    /// A counted byte string with a read-only buffer. See r[native.header.rxstring].
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct CONSTRXSTRING {
@@ -336,7 +354,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXSYSEXIT`.
+    /// A classic system exit registration name and the exit code it serves.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXSYSEXIT {
@@ -346,7 +364,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RexxContextExit`.
+    /// A system exit callback and the exit code it serves.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RexxContextExit {
@@ -405,7 +423,7 @@ pub type RXHLT_FLAGS = ExitFlags;
 pub type RXTRC_FLAGS = ExitFlags;
 
 c_struct! {
-    /// `RXFNCCAL_PARM`.
+    /// The function name, arguments, and return buffer of a classic function exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXFNCCAL_PARM {
@@ -421,8 +439,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM`, which share
-    /// one shape.
+    /// The function name, argument objects, and result object of an object function exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXOFNCCAL_PARM {
@@ -435,7 +452,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXCMDHST_PARM`.
+    /// The command environment, command text, and result of a command exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXCMDHST_PARM {
@@ -450,7 +467,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXMSQPSH_PARM`.
+    /// The line and insertion mode of a queue push exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXMSQPSH_PARM {
@@ -460,7 +477,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXSIOSAY_PARM` and `RXSIOTRC_PARM`.
+    /// The text passed to a SAY or trace output exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXSIOSAY_PARM {
@@ -469,8 +486,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXVALCALL_PARM`; `RXVARNOVALUE_PARM` is its last
-    /// two members.
+    /// The selector, variable name, and value of a VALUE exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXVALCALL_PARM {
@@ -481,7 +497,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RXVARNOVALUE_PARM`.
+    /// The variable name and replacement value of a NOVALUE exit.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RXVARNOVALUE_PARM {
@@ -554,7 +570,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `SHVBLOCK`.
+    /// One variable-pool operation, with a link to the next request.
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct SHVBLOCK {
@@ -581,7 +597,7 @@ c_typedefs! {
 }
 
 c_struct! {
-    /// `RexxQueueTime`.
+    /// The timestamp returned by the extended queue pull. See r[native.header.queue-time].
     #[repr(C)]
     #[derive(Clone, Copy, Debug, Default)]
     pub struct RexxQueueTime {
@@ -599,7 +615,8 @@ c_struct! {
 }
 
 c_struct! {
-    /// `REXXDATETIME`.
+    /// The Unix timestamp returned by the classic queue pull.
+    /// See r[native.header.queue-time].
     #[repr(C)]
     #[derive(Clone, Copy, Debug, Default)]
     pub struct REXXDATETIME {
@@ -620,7 +637,7 @@ c_struct! {
 c_struct! {
     /// `RexxConditionData`: a condition's code, return code, message, error
     /// text, line and program, with the texts as strings. No function of the
-    /// interface takes or fills one.
+    /// interface takes or fills one. See r[native.calls.condition-data].
     #[repr(C)]
     #[derive(Clone, Copy, Debug)]
     pub struct RexxConditionData {
@@ -634,7 +651,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RexxCondition`.
+    /// The condition fields written by `DecodeConditionInfo`, with text in object handles.
     #[repr(C)]
     pub struct RexxCondition {
         pub code: wholenumber_t,
@@ -755,7 +772,8 @@ value_union! {
 }
 
 c_struct! {
-    /// `ValueDescriptor`.
+    /// The type code, flags, and stored value of a native argument or result.
+    /// See r[native.header.descriptors].
     #[repr(C)]
     pub struct ValueDescriptor {
         pub value: ValueUnion,
@@ -880,7 +898,7 @@ pub type RexxPackageLoader = PackageHook;
 pub type RexxPackageUnloader = PackageHook;
 
 c_struct! {
-    /// `RexxRoutineEntry`.
+    /// A row of a native package routine table. See r[native.header.tables].
     #[repr(C)]
     #[derive(Debug)]
     pub struct RexxRoutineEntry {
@@ -894,7 +912,7 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RexxMethodEntry`.
+    /// A row of a native package method table. See r[native.header.tables].
     #[repr(C)]
     #[derive(Debug)]
     pub struct RexxMethodEntry {
@@ -908,7 +926,8 @@ c_struct! {
 }
 
 c_struct! {
-    /// `RexxPackageEntry`.
+    /// The descriptor a native library returns from `RexxGetPackage`.
+    /// See r[native.header.package].
     #[repr(C)]
     #[derive(Debug)]
     pub struct RexxPackageEntry {

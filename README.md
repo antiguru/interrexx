@@ -6,6 +6,9 @@ It keeps ooRexx's dynamic object model and replaces the execution model: a regis
 
 This is an independent project, not affiliated with the Rexx Language Association or the ooRexx project.
 
+For installation, command examples and differences to check when moving from
+ooRexx, see the [user guide](docs/user-guide.md).
+
 ## Building
 
 ```sh
@@ -33,9 +36,10 @@ The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubco
 
 The regular tests on a fresh clone need the ooTest and ooRexx language reference checkouts.
 Fetch both at their pinned revisions from the repository root with
-`scripts/setup-third-party.sh --standalone`. This setup needs `svn` and skips the ooRexx
-submodule and build. The preflight checks the input files and looks for `svn`, `cc`,
-`c++`, and `g++` on `PATH`. Some Linux tests also need `/usr/bin/time` and a non-root user.
+`scripts/setup-third-party.sh --standalone`. Setup reuses existing checkouts at their current
+revisions. It needs `svn` and skips the ooRexx submodule and build. The preflight checks the
+input files and looks for `svn`, `cc`, `c++`, and `g++` on `PATH`. Some Linux tests also
+need `/usr/bin/time` and a non-root user.
 Run the tests under the memory cap described in [Developing interrexx](docs/developing.md#running-oorexx-and-interrexx).
 
 ```sh

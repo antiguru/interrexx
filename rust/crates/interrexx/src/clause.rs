@@ -559,7 +559,7 @@ thread_local! {
     static COUNTDOWN_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
-#[cfg(all(test, feature = "jit"))]
+#[cfg(test)]
 pub(crate) fn countdown_visits() -> usize {
     COUNTDOWN_VISITS.with(std::cell::Cell::get)
 }

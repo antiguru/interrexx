@@ -23,20 +23,20 @@ use crate::constants::{
 };
 use crate::exports::{Declared, EXPORTS, Export, pointer_types};
 use crate::layout::{
-    API_HANDLERS, C_HANDLERS, C_POINTER_TYPEDEFS, C_TYPEDEFS, CField, CMember, CONSTRXSTRING,
-    CSpelling, CallContextInterface, CxxMethod, EXIT_FLAG_BITS, ExitContextInterface,
-    FORWARDED_RESPELLED, HANDLES, IORedirectorInterface, MethodContextInterface, REXXDATETIME,
-    RXCMDHST_PARM, RXFNCCAL_PARM, RXHLTTST_PARM, RXMSQNAM_PARM, RXMSQPLL_PARM, RXMSQPSH_PARM,
-    RXMSQSIZ_PARM, RXOFNCCAL_PARM, RXSIODTR_PARM, RXSIOSAY_PARM, RXSIOTRD_PARM, RXSTRING,
-    RXSYSEXIT, RXTRCTST_PARM, RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_, RexxCondition,
-    RexxConditionData, RexxContextEnvironment, RexxContextExit, RexxExitContext_,
-    RexxIORedirectorContext_, RexxInstance_, RexxInstanceInterface, RexxLibraryPackage,
-    RexxMethodContext_, RexxMethodEntry, RexxOption, RexxPackageEntry, RexxQueueTime,
-    RexxRedirectingEnvironment, RexxRegisteredEnvironment, RexxRoutineEntry, RexxThreadContext_,
-    RexxThreadInterface, SHVBLOCK, THREAD_ALIASES, THREAD_INSTANCE_FIELDS,
-    THREAD_INSTANCE_FORWARDS, THREAD_ONLY, THREAD_RESPELLED, THREAD_UNNAMED,
-    THREAD_VALUE_ACCESSORS, VALUE_ASSIGNMENTS, VALUE_CONVERSIONS, ValueDescriptor, ValueUnion,
-    c_type,
+    API_HANDLERS, C_HANDLERS, C_POINTER_TYPEDEFS, C_TYPEDEFS, CField, CLayout, CMember,
+    CONSTRXSTRING, CSpelling, CallContextInterface, CxxMethod, EXIT_FLAG_BITS,
+    ExitContextInterface, FORWARDED_RESPELLED, HANDLES, IORedirectorInterface,
+    MethodContextInterface, REXXDATETIME, RXCMDHST_PARM, RXFNCCAL_PARM, RXHLTTST_PARM,
+    RXMSQNAM_PARM, RXMSQPLL_PARM, RXMSQPSH_PARM, RXMSQSIZ_PARM, RXOFNCCAL_PARM, RXSIODTR_PARM,
+    RXSIOSAY_PARM, RXSIOTRD_PARM, RXSTRING, RXSYSEXIT, RXTRCTST_PARM, RXVALCALL_PARM,
+    RXVARNOVALUE_PARM, RexxCallContext_, RexxCondition, RexxConditionData, RexxContextEnvironment,
+    RexxContextExit, RexxExitContext_, RexxIORedirectorContext_, RexxInstance_,
+    RexxInstanceInterface, RexxLibraryPackage, RexxMethodContext_, RexxMethodEntry, RexxOption,
+    RexxPackageEntry, RexxQueueTime, RexxRedirectingEnvironment, RexxRegisteredEnvironment,
+    RexxRoutineEntry, RexxThreadContext_, RexxThreadInterface, SHVBLOCK, THREAD_ALIASES,
+    THREAD_INSTANCE_FIELDS, THREAD_INSTANCE_FORWARDS, THREAD_ONLY, THREAD_RESPELLED,
+    THREAD_UNNAMED, THREAD_VALUE_ACCESSORS, VALUE_ASSIGNMENTS, VALUE_CONVERSIONS, ValueDescriptor,
+    ValueUnion, c_type,
 };
 use crate::values::rows;
 use std::fmt::Write as _;
@@ -84,7 +84,7 @@ pub const PLATFORMS: &[Platform] = &[
         structs: &[Struct {
             name: "REXXDATETIME",
             tag: Tag::Named("_REXXDATETIME"),
-            fields: REXXDATETIME::C_FIELDS,
+            layout: REXXDATETIME::C_LAYOUT,
             retype: &[],
             assignments: &[],
             conversions: &[],
@@ -125,8 +125,8 @@ pub struct Struct {
     pub name: &'static str,
     /// How it is introduced.
     pub tag: Tag,
-    /// Its fields.
-    pub fields: &'static [CField],
+    /// The documentation and fields from the Rust definition.
+    pub layout: CLayout,
     /// Rust type tokens to read as other tokens, for a header struct that
     /// shares a Rust struct with another but names its own flag word.
     pub retype: &'static [(&'static str, &'static str)],
@@ -140,11 +140,11 @@ pub struct Struct {
 }
 
 /// A struct with a tag of its name preceded by an underscore.
-const fn named(name: &'static str, tag: &'static str, fields: &'static [CField]) -> Struct {
+const fn named(name: &'static str, tag: &'static str, layout: CLayout) -> Struct {
     Struct {
         name,
         tag: Tag::Named(tag),
-        fields,
+        layout,
         retype: &[],
         assignments: &[],
         conversions: &[],
@@ -152,11 +152,11 @@ const fn named(name: &'static str, tag: &'static str, fields: &'static [CField])
 }
 
 /// A struct with no tag.
-const fn anonymous(name: &'static str, fields: &'static [CField]) -> Struct {
+const fn anonymous(name: &'static str, layout: CLayout) -> Struct {
     Struct {
         name,
         tag: Tag::Anonymous,
-        fields,
+        layout,
         retype: &[],
         assignments: &[],
         conversions: &[],
@@ -165,56 +165,56 @@ const fn anonymous(name: &'static str, fields: &'static [CField]) -> Struct {
 
 /// The classic API's data structs, in `rexx.h`.
 const CLASSIC_STRUCTS: &[Struct] = &[
-    named("RXSTRING", "_RXSTRING", RXSTRING::C_FIELDS),
-    named("CONSTRXSTRING", "_CONSTRXSTRING", CONSTRXSTRING::C_FIELDS),
-    named("RXSYSEXIT", "_RXSYSEXIT", RXSYSEXIT::C_FIELDS),
-    named("SHVBLOCK", "_SHVBLOCK", SHVBLOCK::C_FIELDS),
-    named("RexxQueueTime", "_RexxQueueTime", RexxQueueTime::C_FIELDS),
+    named("RXSTRING", "_RXSTRING", RXSTRING::C_LAYOUT),
+    named("CONSTRXSTRING", "_CONSTRXSTRING", CONSTRXSTRING::C_LAYOUT),
+    named("RXSYSEXIT", "_RXSYSEXIT", RXSYSEXIT::C_LAYOUT),
+    named("SHVBLOCK", "_SHVBLOCK", SHVBLOCK::C_LAYOUT),
+    named("RexxQueueTime", "_RexxQueueTime", RexxQueueTime::C_LAYOUT),
     named(
         "RexxConditionData",
         "_RexxConditionData",
-        RexxConditionData::C_FIELDS,
+        RexxConditionData::C_LAYOUT,
     ),
 ];
 
 /// The exit parameter blocks that have a Rust struct, in `rexx.h`, after the
 /// flag structs.
 const EXIT_STRUCTS: &[Struct] = &[
-    named("RXFNCCAL_PARM", "_RXFNCCAL_PARM", RXFNCCAL_PARM::C_FIELDS),
+    named("RXFNCCAL_PARM", "_RXFNCCAL_PARM", RXFNCCAL_PARM::C_LAYOUT),
     named(
         "RXOFNCCAL_PARM",
         "_RXOFNCCAL_PARM",
-        RXOFNCCAL_PARM::C_FIELDS,
+        RXOFNCCAL_PARM::C_LAYOUT,
     ),
     Struct {
         name: "RXEXFCAL_PARM",
         tag: Tag::Named("_RXEXFCAL_PARM"),
-        fields: RXOFNCCAL_PARM::C_FIELDS,
+        layout: RXOFNCCAL_PARM::C_LAYOUT,
         retype: &[("RXOFNC_FLAGS", "RXEXF_FLAGS")],
         assignments: &[],
         conversions: &[],
     },
-    named("RXCMDHST_PARM", "_RXCMDHST_PARM", RXCMDHST_PARM::C_FIELDS),
-    named("RXMSQPSH_PARM", "_RXMSQPSH_PARM", RXMSQPSH_PARM::C_FIELDS),
-    named("RXSIOSAY_PARM", "_RXSIOSAY_PARM", RXSIOSAY_PARM::C_FIELDS),
-    named("RXSIOTRC_PARM", "_RXSIOTRC_PARM", RXSIOSAY_PARM::C_FIELDS),
+    named("RXCMDHST_PARM", "_RXCMDHST_PARM", RXCMDHST_PARM::C_LAYOUT),
+    named("RXMSQPSH_PARM", "_RXMSQPSH_PARM", RXMSQPSH_PARM::C_LAYOUT),
+    named("RXSIOSAY_PARM", "_RXSIOSAY_PARM", RXSIOSAY_PARM::C_LAYOUT),
+    named("RXSIOTRC_PARM", "_RXSIOTRC_PARM", RXSIOSAY_PARM::C_LAYOUT),
     named(
         "RXVARNOVALUE_PARM",
         "_RXVARNOVALUE_PARM",
-        RXVARNOVALUE_PARM::C_FIELDS,
+        RXVARNOVALUE_PARM::C_LAYOUT,
     ),
     named(
         "RXVALCALL_PARM",
         "_RXVALCALL_PARM",
-        RXVALCALL_PARM::C_FIELDS,
+        RXVALCALL_PARM::C_LAYOUT,
     ),
-    named("RXMSQPLL_PARM", "_RXMSQPLL_PARM", RXMSQPLL_PARM::C_FIELDS),
-    named("RXMSQSIZ_PARM", "_RXMSQSIZ_PARM", RXMSQSIZ_PARM::C_FIELDS),
-    named("RXMSQNAM_PARM", "_RXMSQNAM_PARM", RXMSQNAM_PARM::C_FIELDS),
-    named("RXSIOTRD_PARM", "_RXSIOTRD_PARM", RXSIOTRD_PARM::C_FIELDS),
-    named("RXSIODTR_PARM", "_RXSIODTR_PARM", RXSIODTR_PARM::C_FIELDS),
-    named("RXHLTTST_PARM", "_RXHLTTST_PARM", RXHLTTST_PARM::C_FIELDS),
-    named("RXTRCTST_PARM", "_RXTRCTST_PARM", RXTRCTST_PARM::C_FIELDS),
+    named("RXMSQPLL_PARM", "_RXMSQPLL_PARM", RXMSQPLL_PARM::C_LAYOUT),
+    named("RXMSQSIZ_PARM", "_RXMSQSIZ_PARM", RXMSQSIZ_PARM::C_LAYOUT),
+    named("RXMSQNAM_PARM", "_RXMSQNAM_PARM", RXMSQNAM_PARM::C_LAYOUT),
+    named("RXSIOTRD_PARM", "_RXSIOTRD_PARM", RXSIOTRD_PARM::C_LAYOUT),
+    named("RXSIODTR_PARM", "_RXSIODTR_PARM", RXSIODTR_PARM::C_LAYOUT),
+    named("RXHLTTST_PARM", "_RXHLTTST_PARM", RXHLTTST_PARM::C_LAYOUT),
+    named("RXTRCTST_PARM", "_RXTRCTST_PARM", RXTRCTST_PARM::C_LAYOUT),
 ];
 
 /// The object-oriented API's data structs, in `oorexxapi.h`.
@@ -222,43 +222,43 @@ const API_STRUCTS: &[Struct] = &[
     Struct {
         name: "ValueDescriptor",
         tag: Tag::Named("_ValueDescriptor"),
-        fields: ValueDescriptor::C_FIELDS,
+        layout: ValueDescriptor::C_LAYOUT,
         retype: &[],
         assignments: VALUE_ASSIGNMENTS,
         conversions: VALUE_CONVERSIONS,
     },
-    anonymous("RexxCondition", RexxCondition::C_FIELDS),
+    anonymous("RexxCondition", RexxCondition::C_LAYOUT),
     named(
         "RexxContextExit",
         "_RexxContextExit",
-        RexxContextExit::C_FIELDS,
+        RexxContextExit::C_LAYOUT,
     ),
     named(
         "RexxRoutineEntry",
         "_RexxRoutineEntry",
-        RexxRoutineEntry::C_FIELDS,
+        RexxRoutineEntry::C_LAYOUT,
     ),
     named(
         "RexxMethodEntry",
         "_RexxMethodEntry",
-        RexxMethodEntry::C_FIELDS,
+        RexxMethodEntry::C_LAYOUT,
     ),
     named(
         "RexxPackageEntry",
         "_RexxPackageEntry",
-        RexxPackageEntry::C_FIELDS,
+        RexxPackageEntry::C_LAYOUT,
     ),
-    anonymous("RexxContextEnvironment", RexxContextEnvironment::C_FIELDS),
+    anonymous("RexxContextEnvironment", RexxContextEnvironment::C_LAYOUT),
     anonymous(
         "RexxRedirectingEnvironment",
-        RexxRedirectingEnvironment::C_FIELDS,
+        RexxRedirectingEnvironment::C_LAYOUT,
     ),
     anonymous(
         "RexxRegisteredEnvironment",
-        RexxRegisteredEnvironment::C_FIELDS,
+        RexxRegisteredEnvironment::C_LAYOUT,
     ),
-    anonymous("RexxLibraryPackage", RexxLibraryPackage::C_FIELDS),
-    anonymous("RexxOption", RexxOption::C_FIELDS),
+    anonymous("RexxLibraryPackage", RexxLibraryPackage::C_LAYOUT),
+    anonymous("RexxOption", RexxOption::C_LAYOUT),
 ];
 
 /// The context structs, by their Rust name (the C struct tag), in
@@ -728,6 +728,24 @@ fn operators(out: &mut String, conversions: &[(&str, &str)], assignments: &[(&st
     out.push_str("#endif\n");
 }
 
+/// Writes the Rust description as a Doxygen block before the definition.
+fn c_doc(out: &mut String, lines: &[&str]) {
+    out.push_str("/**\n");
+    for line in lines {
+        assert!(
+            !line.contains("*/"),
+            "C documentation closes its own comment"
+        );
+        let line = line.strip_prefix(' ').unwrap_or(line).trim_end();
+        if line.is_empty() {
+            out.push_str(" *\n");
+        } else {
+            writeln!(out, " * {line}").unwrap();
+        }
+    }
+    out.push_str(" */\n");
+}
+
 /// Every struct of `list`: the typedefs of the tagged ones first, then each
 /// definition in order.
 fn structs(list: &[Struct]) -> String {
@@ -739,16 +757,17 @@ fn structs(list: &[Struct]) -> String {
     }
     for s in list {
         out.push('\n');
+        c_doc(&mut out, s.layout.docs);
         match s.tag {
             Tag::Named(tag) => {
                 writeln!(out, "struct {tag} {{").unwrap();
-                fields(&mut out, s.fields, s.retype, "    ");
+                fields(&mut out, s.layout.fields, s.retype, "    ");
                 operators(&mut out, s.conversions, s.assignments);
                 out.push_str("};\n");
             }
             Tag::Anonymous => {
                 out.push_str("typedef struct {\n");
-                fields(&mut out, s.fields, s.retype, "    ");
+                fields(&mut out, s.layout.fields, s.retype, "    ");
                 writeln!(out, "}} {};", s.name).unwrap();
             }
         }

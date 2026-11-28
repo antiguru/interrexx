@@ -34,6 +34,10 @@ typedef pthread_t thread_id_t;
 
 typedef struct _REXXDATETIME REXXDATETIME;
 
+/**
+ * The Unix timestamp returned by the classic queue pull.
+ * See r[native.header.queue-time].
+ */
 struct _REXXDATETIME {
     uint16_t hours;
     uint16_t minutes;

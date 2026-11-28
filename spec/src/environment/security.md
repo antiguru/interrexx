@@ -7,14 +7,13 @@ deviations: [179]
 
 # Security manager
 
-A program can run code that it does not trust, and a security manager is the
-way to keep that code inside bounds. The manager is an object of the
-program's own. The interpreter asks it before the untrusted code does any of
-a short list of things: calls a routine that lives outside the code, runs a
-command, loads a file of Rexx code, reads a name from `.local` or
-`.environment`, names a stream, or sends a message to a protected method. The
-manager can let the action go on, can do it in its place, or can raise an
-error.
+A security manager handles selected requests from the code a program runs.
+The manager is an object of the program's own. The interpreter asks it
+before the governed code calls a routine outside the code, runs a command,
+loads a file of Rexx code, reads a name from `.local` or `.environment`,
+names a stream, or sends a message to a protected method. The manager can
+let the action go on, do it in the code's place, or raise an error. Use
+operating-system isolation to run code you do not trust.
 
 The class pages own the methods that set a manager, and they own the rules of
 each checkpoint that are tied to a class: [`setSecurityManager` of

@@ -569,6 +569,143 @@ impl Activity {
         self.rerun_pending
     }
 
+    /// Whether the activity allows a leaf method to skip activation entry.
+    /// Name every field so new activity state is reviewed against the shortcut.
+    #[inline]
+    pub(crate) fn leaf_method_is_quiet(&self) -> bool {
+        let Self {
+            pending_traps,
+            guard_waits,
+            splits_owed,
+            deferred_level,
+            routing_trace,
+            rerun_pending,
+            // State the shortcut does not consult.
+            builtin_answered_nothing: _,
+            value_buffer: _,
+            running: _,
+            trace_cache: _,
+            reading_debug_input: _,
+            suspended: _,
+            spare_activations: _,
+            spare_exposed: _,
+            native_handles: _,
+            native_spares: _,
+            internal_levels: _,
+            internal_depth: _,
+            method_levels: _,
+            thread: _,
+            attached: _,
+            clause_state: _,
+            flat_loops: _,
+            flat_top: _,
+            loop_objects: _,
+            frames: _,
+            call_tails: _,
+            parked_calls: _,
+            parked_keeps: _,
+            parked_levels: _,
+            replied_level: _,
+            native_tails: _,
+            flat_spares: _,
+            pending_additional: _,
+            native_frames_owed: _,
+            pending_result: _,
+            pending_description: _,
+            pending_rc: _,
+            reraised_object: _,
+            traceback_object: _,
+            reraise_leaving: _,
+            #[cfg(unix)]
+                rxunixsys_errno: _,
+            #[cfg(any(unix, windows))]
+                rxsock_errno: _,
+            #[cfg(any(unix, windows))]
+                socket_wait: _,
+            propagate_absorb: _,
+            rerun_indent: _,
+            rerun_failure_indent: _,
+            activation_indent: _,
+            failure_site: _,
+            failure_sites: _,
+            failure_frame: _,
+            failure_frames: _,
+            native_reraise: _,
+            native_reported_on_return: _,
+            input_dispatch: _,
+            api_bases: _,
+            input_dispatch_trapped: _,
+            input_dispatch_syntax: _,
+            failure_origin: _,
+            failure_propagated: _,
+            failure_reraised: _,
+            clause_line_override: _,
+            fragment_depth: _,
+            debug_stop_owed: _,
+            fragments: _,
+            fragment_clause: _,
+            delivering: _,
+            delivers_for: _,
+            delivery_clauses: _,
+            depth_base: _,
+            guarded_slices: _,
+            depth: _,
+            max_depth: _,
+            stack_entry: _,
+            stack_first: _,
+            stack_deepest: _,
+            procedure_permitted: _,
+            region_procedure_permitted: _,
+            call_context: _,
+            last_name: _,
+            random_source: _,
+            requires_installing: _,
+            pin_depth: _,
+            driver_pins: _,
+            native_park: _,
+            #[cfg(windows)]
+                windows_util_wait: _,
+            native_call: _,
+            blocked: _,
+            resuming: _,
+            first: _,
+            root_then: _,
+            drive_floor: _,
+            sliced: _,
+            root_end: _,
+            delivery_failure: _,
+            number: _,
+            spawner: _,
+            failed_sends: _,
+            guarded_send: _,
+            retraced: _,
+            lock_to_lender: _,
+            kept_place: _,
+            running_methods: _,
+            guard_exec: _,
+            guard_posted: _,
+            when_parked: _,
+            asleep: _,
+            woken_by_halt: _,
+            queue_wait: _,
+            scoped_guard: _,
+            semaphore_wait: _,
+            parked_block: _,
+            parked_socket: _,
+            waiting_traced: _,
+            #[cfg(feature = "pinning")]
+                pins: _,
+            #[cfg(feature = "sharing")]
+                sharing_tag: _,
+        } = self;
+        pending_traps.is_empty()
+            && guard_waits.is_empty()
+            && *splits_owed == 0
+            && deferred_level.is_none()
+            && !*routing_trace
+            && !*rerun_pending
+    }
+
     /// Sets [`Activity::rerun_indent`], answering the one it replaces.
     pub(crate) fn replace_rerun_indent(&mut self, indent: Option<usize>) -> Option<usize> {
         let old = std::mem::replace(&mut self.rerun_indent, indent);

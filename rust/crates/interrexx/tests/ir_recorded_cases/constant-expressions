@@ -12,14 +12,16 @@ rc> 0
 out> 3
 out> 2
 
-# the same under `trace i`, which echoes the expression's own evaluation
+# `trace i` echoes each expression's evaluation. Use one constant per class
+# so the oracle opens a separate invocation for each expression.
 
 program
 say .k~c
-say .k~d
+say .m~d
 ::options trace i
 ::class k
 ::constant c (1 + 2)
+::class m
 ::constant d (('a', , 'b')~items)
 ----
 rc> 0
@@ -33,7 +35,7 @@ err>        >O>   "+" => "3"
 err>        >>>   "3"
 err>        <I<
 err>        >I>
-err>      6 *-* ::constant d (('a', , 'b')~items)
+err>      7 *-* ::constant d (('a', , 'b')~items)
 err>        >L>   "a"
 err>        >A>   "a"
 err>        >L>   "b"
@@ -46,7 +48,7 @@ err>      1 *-* say .k~c
 err>        >E>   .K => "The K class"
 err>        >M>   "C" => "3"
 err>        >>>   "3"
-err>      2 *-* say .k~d
-err>        >E>   .K => "The K class"
+err>      2 *-* say .m~d
+err>        >E>   .M => "The M class"
 err>        >M>   "D" => "2"
 err>        >>>   "2"
