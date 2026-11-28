@@ -817,25 +817,7 @@ impl Interp {
             // One of these is reported under its own routine line, whether the
             // argument marshalling or the body raised: `filespec('D')` and
             // `SysSleep('abc')` both carry it.
-            let values = &args[from..];
-            match name {
-                InternalName::Upper => {
-                    let upper = row.name.to_ascii_uppercase();
-                    self.blame_internal_routine(row, upper.as_bytes(), values, failure, executable);
-                }
-                InternalName::Row => {
-                    self.blame_internal_routine(
-                        row,
-                        row.name.as_bytes(),
-                        values,
-                        failure,
-                        executable,
-                    );
-                }
-                InternalName::Called(name) => {
-                    self.blame_internal_routine(row, name, values, failure, executable);
-                }
-            }
+            self.blame_internal_routine(row, name, &args[from..], failure, executable);
         }
         let value = outcome?;
         Ok(match self.activity.native_park {

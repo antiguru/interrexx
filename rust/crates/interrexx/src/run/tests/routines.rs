@@ -121,6 +121,24 @@ pub(super) fn routine_program(source: &[u8]) -> crate::Outcome {
     )
 }
 
+// spec: dir.routine.external.traceback
+#[test]
+fn a_named_rexx_package_binding_has_a_compiled_routine_frame() {
+    let outcome = routine_program(
+        b"say pf('N', 'dir/leaf')\ncall pf 'X', 'a'\n\
+          ::routine pf external 'LIBRARY REXX Filespec'\n",
+    );
+    assert_eq!(outcome.stdout, b"leaf\n");
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert_eq!(outcome.exit_code, 216, "{stderr}");
+    assert_eq!(
+        stderr.lines().next(),
+        Some("       *-* Compiled routine \"PF\"."),
+        "{stderr}"
+    );
+    assert!(stderr.contains("Error 40.904:"), "{stderr}");
+}
+
 /// The whole resolution order in one program, and the order is what each
 /// line is for rather than the dispatch: every name below resolves to
 /// **something** on this crate, so a wrong order is a wrong answer and

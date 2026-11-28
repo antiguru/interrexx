@@ -16,7 +16,7 @@ use crate::activity::DeferredLevel;
 use crate::error::{FailureSite, Raised};
 use crate::method_rows::MethodRows;
 use crate::plan::{BodyKey, Package, ProgramId};
-use crate::run::{MAX_ACTIVATION_DEPTH, Started};
+use crate::run::{InternalName, MAX_ACTIVATION_DEPTH, Started};
 use crate::scheduler::Scheduler;
 use crate::{Failure, Interp, Loud};
 
@@ -4964,14 +4964,14 @@ impl Interp {
         self.blame_native_level(Raised::compiled_method_line(name, scope), level);
     }
 
-    /// The same for a routine of an internal package, whose traceback line
-    /// names the routine alone and upcased -- measured, `filespec('D')` is
-    /// reported for `Filespec` as `"FILESPEC"`. `given` is the `Routine` the
-    /// call ran, `.nil` for the one standing for the row.
+    /// The same for a routine of an internal package. A call through a named
+    /// binding uses the call's name and a compiled routine line. A direct call
+    /// names the row in capitals, and `Routine~call` uses the row's table spelling.
+    /// `given` is the `Routine` the call ran, `.nil` for the one standing for the row.
     pub(crate) fn blame_internal_routine(
         &mut self,
         row: &'static crate::internal_routines::InternalRoutine,
-        name: &[u8],
+        name: InternalName<'_>,
         arguments: &[Option<ObjRef>],
         failure: &Failure,
         given: ObjRef,
@@ -4979,13 +4979,26 @@ impl Interp {
         if self.activity.failure_site.is_some() {
             return;
         }
+        let upper;
+        let name_bytes = match name {
+            InternalName::Upper => {
+                upper = row.name.to_ascii_uppercase();
+                upper.as_bytes()
+            }
+            InternalName::Row => row.name.as_bytes(),
+            InternalName::Called(name) => name,
+        };
+        let trace_line = match name {
+            InternalName::Called(_) => Raised::external_routine_line(name_bytes),
+            _ => Raised::compiled_routine_line(name_bytes),
+        };
         let executable = match given {
             ObjRef::NIL => self.internal_routine_object(crate::internal_routines::index_of(row)),
             given => given,
         };
         let level = NativeLevel {
             method: false,
-            name,
+            name: name_bytes,
             target: ObjRef::NIL,
             arguments,
             executable: Some(executable),
@@ -4995,7 +5008,7 @@ impl Interp {
                 reported_on_return: false,
             }),
         };
-        self.blame_native_level(Raised::compiled_routine_line(name), level);
+        self.blame_native_level(trace_line, level);
     }
 
     /// The same for a routine of a loaded library, whose level carries the
