@@ -120,6 +120,49 @@ SYNTAX
 SYNTAX
 ```
 
+r[bif.beep.native-order]
+The `Beep` routine of the REXX package checks the frequency's conversion and
+range before checking the duration. A range error reports the supplied value,
+including any surrounding blanks in a string.
+
+```rexx
+call try "pb(1)"
+call try "pb(5,)"
+call try "pb(32768, 'x')"
+call try "pb(' 7 ', 0)"
+call try "pb(40, ' -1 ')"
+call try "pb(4, .duration~new)"
+call try "pb(40,)"
+call try "pb(40, 'x')"
+exit
+try:
+  signal on syntax name failed
+  interpret 'answer =' arg(1)
+  say 'accepted'
+  return
+failed:
+  o = condition('o')
+  if o~code = 88.907 then say o~code '[' || o~additional[4] || ']'
+  else say o~code
+  return
+::routine pb external 'LIBRARY REXX Beep'
+::class duration
+::method request
+  say 'duration touched'
+  return '0'
+```
+
+```output
+88.907 [1]
+88.907 [5]
+88.907 [32768]
+88.907 [ 7 ]
+88.907 [ -1 ]
+88.907 [4]
+88.901
+88.903
+```
+
 ## The result
 
 r[bif.beep.answer]
@@ -250,7 +293,7 @@ say 'done'
 88.903
 88.903
 88.903
-88.903
+88.907
 88.903
 88.903
 88.903

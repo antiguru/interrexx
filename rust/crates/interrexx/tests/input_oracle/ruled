@@ -193,7 +193,7 @@ out> beep(40, 'x') -> 88.903
 out> beep(1e20) -> 88.903
 out> beep() -> 88.901
 out> beep(40) -> 88.901
-out> beep(1, 'x') -> 88.903
+out> beep(1, 'x') -> 88.907
 out> beep(1, 1) -> 88.907
 out> beep(40, 70000) -> 88.907
 out> beep('4E1', 0) -> 
