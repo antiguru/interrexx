@@ -62,6 +62,8 @@ pub(crate) struct Native {
     /// helpers clear it when they take the clause, and set it when an op
     /// hands the clause back.
     pub(crate) opened: u64,
+    /// The op after a parked call, or u32::MAX to enter at the pass boundary.
+    pub(crate) resume_at: u64,
 }
 
 impl Native {
@@ -81,6 +83,7 @@ impl Native {
             passes: 0,
             jump_to: 0,
             opened: 0,
+            resume_at: u64::from(u32::MAX),
         }
     }
 }
@@ -164,6 +167,7 @@ pub(crate) const INTERMEDIATES: i32 = at(offset_of!(Native, intermediates));
 pub(crate) const PASSES: i32 = at(offset_of!(Native, passes));
 pub(crate) const JUMP_TO: i32 = at(offset_of!(Native, jump_to));
 pub(crate) const OPENED: i32 = at(offset_of!(Native, opened));
+pub(crate) const RESUME_AT: i32 = at(offset_of!(Native, resume_at));
 
 /// A variable slot's size, and where its two words are.
 pub(crate) const SLOT_SIZE: i64 =

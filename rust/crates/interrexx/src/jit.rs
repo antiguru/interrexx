@@ -169,6 +169,8 @@ pub(crate) enum Step {
     Store { pc: u32, slot: u32, src: u16 },
     /// The op at `pc`, through the host.
     Op { pc: u32 },
+    /// A call or send through the host, with a continuation at `pc + 1`.
+    Invoke { pc: u32 },
     /// A value echo op at `pc`: through the host while the block says `TRACE`
     /// shows intermediates (`Native::intermediates`), skipped otherwise, as
     /// the op's own gate would.
@@ -558,6 +560,7 @@ pub(crate) struct Compiled {
     module: Option<JITModule>,
     entry: Entry,
     registers: u16,
+    resumes: Box<[u32]>,
 }
 
 impl Drop for Compiled {
@@ -572,13 +575,26 @@ impl Drop for Compiled {
 }
 
 impl Compiled {
+    pub(crate) fn can_resume(&self, at: u32) -> bool {
+        self.resumes.contains(&at)
+    }
+
     /// Runs passes against `registers` until a helper answers [`STOP`].
-    pub(crate) fn run(&self, registers: RegFrame<'_>, host: &mut dyn Host) -> u32 {
+    pub(crate) fn run(
+        &self,
+        registers: RegFrame<'_>,
+        host: &mut dyn Host,
+        resume: Option<u32>,
+        passes: u64,
+    ) -> (u32, u64) {
         assert!(
             registers.len() >= self.registers,
             "a compiled pass run against a frame smaller than the one it was compiled for"
         );
+        debug_assert!(resume.is_none_or(|at| self.can_resume(at)));
         let mut native = Native::new(registers.as_ptr().cast());
+        native.resume_at = u64::from(resume.unwrap_or(u32::MAX));
+        native.passes = passes;
         host.leave(&mut native);
         let mut ctx = Ctx {
             native,
@@ -592,7 +608,7 @@ impl Compiled {
         // Every exit is a helper's answer, so `enter` has already written
         // the block back; this is the same call made idempotent.
         ctx.host.enter(&mut ctx.native);
-        answer
+        (answer, ctx.native.passes)
     }
 }
 
@@ -816,6 +832,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
             Step::Open { .. }
             | Step::Close { .. }
             | Step::Op { .. }
+            | Step::Invoke { .. }
             | Step::Trace { .. }
             | Step::ParseGuard { .. }
             | Step::Jump { .. }
@@ -898,6 +915,14 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         s.returns.push(AbiParam::new(types::I32));
         s
     };
+    let resumes: Box<[u32]> = pass
+        .steps
+        .iter()
+        .filter_map(|step| match *step {
+            Step::Invoke { pc } => Some(pc + 1),
+            _ => None,
+        })
+        .collect();
     {
         let mut b = FunctionBuilder::new(&mut context.func, &mut builder_context);
         let bare = b.import_signature(helper_signature(false));
@@ -926,6 +951,26 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         let registers = b.ins().load(pointer, Emit::flags(), ctx, layout::REGISTERS);
         let no = b.ins().iconst(types::I64, 0);
         b.def_var(fast, no);
+        let mut resume_blocks = HashMap::new();
+        if !resumes.is_empty() {
+            let resume = b
+                .ins()
+                .load(types::I64, Emit::flags(), ctx, layout::RESUME_AT);
+            let fresh = b
+                .ins()
+                .icmp_imm_u(IntCC::Equal, resume, i64::from(u32::MAX));
+            let dispatch = b.create_block();
+            b.ins().brif(fresh, head, &[], dispatch, &[]);
+            b.switch_to_block(dispatch);
+            for &at in &resumes {
+                let block = b.create_block();
+                resume_blocks.insert(at, block);
+                let next = b.create_block();
+                let here = b.ins().icmp_imm_u(IntCC::Equal, resume, i64::from(at));
+                b.ins().brif(here, block, &[], next, &[]);
+                b.switch_to_block(next);
+            }
+        }
         b.ins().jump(head, &[]);
 
         let mut e = Emit {
@@ -1070,6 +1115,12 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
                     dst,
                 } => compare(&mut e, Slow::Host { clause_pc, pc }, op, lhs, rhs, dst),
                 Step::Op { pc } => e.slow_op(clause_pc, pc),
+                Step::Invoke { pc } => {
+                    e.slow_op(clause_pc, pc);
+                    let after = resume_blocks[&(pc + 1)];
+                    e.b.ins().jump(after, &[]);
+                    e.b.switch_to_block(after);
+                }
                 Step::ParseGuard { pc } => {
                     let tracing = e.load_native(types::I64, layout::PARSE_TRACED);
                     let slow = e.b.create_block();
@@ -1217,6 +1268,7 @@ pub(crate) fn compile(pass: &Pass) -> Option<Compiled> {
         module: Some(module),
         entry,
         registers: pass.registers,
+        resumes,
     })
 }
 
