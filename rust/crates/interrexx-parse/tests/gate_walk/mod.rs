@@ -14,6 +14,10 @@
 
 use std::path::{Path, PathBuf};
 
+#[path = "../rex_files/mod.rs"]
+mod rex_files;
+pub use rex_files::rex_files_under;
+
 use interrexx_parse::{
     Args, CodeBody, ConstantValue, Directive, DirectiveKind, ExprRef, ExprView, Instruction, Node,
     Program,
@@ -156,26 +160,6 @@ pub const DECLARATION_ERRORS: &[(u16, u16)] = &[
     (99, 942),
     (99, 945),
 ];
-
-/// Every `*.rex` file under `dir`, recursively, in a stable order.
-pub fn rex_files_under(dir: &Path) -> Vec<PathBuf> {
-    let mut files = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-    while let Some(d) = stack.pop() {
-        for entry in std::fs::read_dir(&d)
-            .unwrap_or_else(|e| panic!("cannot read directory {}: {e}", d.display()))
-        {
-            let path = entry.expect("readable directory entry").path();
-            if path.is_dir() {
-                stack.push(path);
-            } else if path.extension().and_then(|e| e.to_str()) == Some("rex") {
-                files.push(path);
-            }
-        }
-    }
-    files.sort();
-    files
-}
 
 /// The corpus directory, `rust/corpus/lang/`.
 pub fn corpus_dir() -> PathBuf {
