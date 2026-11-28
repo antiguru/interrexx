@@ -218,7 +218,8 @@ pipe or the Windows system error code. `SysGetKey` answers one byte
 at a time using the console input code page, with optional character echo.
 An unmodified extended navigation or function key answers a prefix byte
 (`00`x or `E0`x) followed by its key code on the next call.
-For example, an enhanced Up key answers `E0`x then `48`x.
+For example, an enhanced Up key answers `E0`x then `48`x. Modified navigation
+and function keys without a character are skipped.
 A keyboard, pipe or
 message-box wait parks its calling Rexx activity. Halting the activity
 waiting for a message box closes that dialog.

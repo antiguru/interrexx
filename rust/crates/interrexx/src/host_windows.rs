@@ -879,44 +879,27 @@ pub(crate) fn set_default_printer(name: &str) -> u32 {
 /// A byte returned by SysGetKey and the character to echo, if any.
 pub(crate) type ConsoleKey = (Option<u8>, Vec<u8>);
 
-#[derive(Default)]
-struct ConsoleInput {
-    bytes: std::collections::VecDeque<u8>,
-    high_surrogate: Option<u16>,
-}
-
-impl ConsoleInput {
-    fn character(&mut self, unit: u16) -> Option<([u16; 2], usize)> {
-        if (0xd800..=0xdbff).contains(&unit) {
-            self.high_surrogate = Some(unit);
-            return None;
-        }
-        let high = self.high_surrogate.take();
-        if (0xdc00..=0xdfff).contains(&unit)
-            && let Some(high) = high
-        {
-            return Some(([high, unit], 2));
-        }
-        Some(([unit, 0], 1))
-    }
-}
+#[path = "host_windows/console_input.rs"]
+mod console_input;
 
 pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey {
-    use std::sync::{LazyLock, Mutex, atomic::Ordering};
+    use console_input::ConsoleInput;
+    use std::sync::{LazyLock, Mutex, TryLockError, atomic::Ordering};
     use windows_sys::Win32::{
         Foundation::{WAIT_OBJECT_0, WAIT_TIMEOUT},
         System::{
             Console::{
                 GetConsoleCP, GetConsoleMode, GetStdHandle, INPUT_RECORD, KEY_EVENT,
-                ReadConsoleInputW, STD_INPUT_HANDLE,
+                PeekConsoleInputW, ReadConsoleInputW, STD_INPUT_HANDLE,
             },
-            Threading::WaitForSingleObject,
+            Threading::{Sleep, WaitForSingleObject},
         },
     };
 
     // Greenthread waits can use different workers. Keep incomplete UTF-16
     // characters and unread bytes with the serialized console input.
     static INPUT: LazyLock<Mutex<ConsoleInput>> = LazyLock::new(Mutex::default);
+    static READER: Mutex<()> = Mutex::new(());
     let mut mode = 0;
     // SAFETY: GetStdHandle supplies a borrowed standard handle; it is validated
     // by GetConsoleMode and the pointer to mode is live and writable.
@@ -924,12 +907,8 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
     if unsafe { GetConsoleMode(handle, &mut mode) } == 0 {
         return (None, Vec::new());
     }
-    loop {
-        let mut input = INPUT.lock().expect("console input lock");
-        if stopped.load(Ordering::Relaxed) {
-            break;
-        }
-        if let Some(byte) = input.bytes.pop_front() {
+    while !stopped.load(Ordering::Relaxed) {
+        if let Some(byte) = INPUT.lock().expect("console input lock").bytes.pop_front() {
             return (Some(byte), Vec::new());
         }
         // SAFETY: the console handle was validated above and is not owned here.
@@ -938,12 +917,32 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
             WAIT_OBJECT_0 => {}
             _ => break,
         }
-        // Cancellation can arrive while the console handle is being waited on.
+        // Console I/O never holds the shared state lock. Other workers can
+        // cancel even if an independent console reader drains the input.
+        let _reader = match READER.try_lock() {
+            Ok(reader) => reader,
+            Err(TryLockError::WouldBlock) => {
+                // SAFETY: this worker waits briefly without blocking a Rexx activity.
+                unsafe { Sleep(1) };
+                continue;
+            }
+            Err(TryLockError::Poisoned(_)) => break,
+        };
         if stopped.load(Ordering::Relaxed) {
             break;
         }
+        if let Some(byte) = INPUT.lock().expect("console input lock").bytes.pop_front() {
+            return (Some(byte), Vec::new());
+        }
         let mut event = INPUT_RECORD::default();
         let mut count = 0;
+        // SAFETY: both outputs point into distinct live stack locals.
+        if unsafe { PeekConsoleInputW(handle, &mut event, 1, &mut count) } == 0 {
+            break;
+        }
+        if count == 0 {
+            continue;
+        }
         // SAFETY: both outputs point into distinct live stack locals.
         if unsafe { ReadConsoleInputW(handle, &mut event, 1, &mut count) } == 0 || count == 0 {
             break;
@@ -958,6 +957,7 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
         }
         // SAFETY: this event was read using ReadConsoleInputW.
         let unit = unsafe { key.uChar.UnicodeChar };
+        let mut input = INPUT.lock().expect("console input lock");
         if unit == 0 {
             if let Some([prefix, scan]) = extended_console_key(&key) {
                 input.high_surrogate = None;
@@ -971,7 +971,7 @@ pub(crate) fn console_key(stopped: &std::sync::atomic::AtomicBool) -> ConsoleKey
             // SAFETY: GetConsoleCP takes no pointers and reports this console's input code page.
             let page = unsafe { GetConsoleCP() };
             let Ok((bytes, _)) = encode_code_page(page, 0, units, None) else {
-                break;
+                continue;
             };
             let mut bytes = bytes.into_iter();
             let head = bytes.next();
@@ -986,12 +986,23 @@ fn extended_console_key(
     key: &windows_sys::Win32::System::Console::KEY_EVENT_RECORD,
 ) -> Option<[u8; 2]> {
     use windows_sys::Win32::{
-        System::Console::ENHANCED_KEY,
+        System::Console::{
+            ENHANCED_KEY, LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, RIGHT_ALT_PRESSED,
+            RIGHT_CTRL_PRESSED, SHIFT_PRESSED,
+        },
         UI::Input::KeyboardAndMouse::{
             VK_DELETE, VK_DOWN, VK_F1, VK_F10, VK_F11, VK_F12, VK_INSERT, VK_PRIOR,
         },
     };
 
+    let modifiers = SHIFT_PRESSED
+        | LEFT_CTRL_PRESSED
+        | RIGHT_CTRL_PRESSED
+        | LEFT_ALT_PRESSED
+        | RIGHT_ALT_PRESSED;
+    if key.dwControlKeyState & modifiers != 0 {
+        return None;
+    }
     let scan = match key.wVirtualKeyCode {
         VK_F11 => 0x85,
         VK_F12 => 0x86,
