@@ -22049,6 +22049,10 @@ e: say arg(1) '=&gt;' condition('o')~code
 ::routine r external "library spec_no_such_lib_xyz" =&gt; 98.903
 ::frob =&gt; 99.916
 </code></pre>
+<div class="rule" id="r-dir.routine.external.traceback"><a href="directives/routine.html#r-dir.routine.external.traceback">[dir.routine.external.traceback]</a></div>
+<p>When a call by name to a routine declared with <code>EXTERNAL "LIBRARY REXX ..."</code>
+raises an error in that routine, the error report's traceback names the
+binding as a compiled routine.</p>
 <h2 id="deviations-22"><a class="header" href="#deviations-22">Deviations</a></h2>
 <div class="rule" id="r-dir.routine.deviation.143"><a href="directives/routine.html#r-dir.routine.deviation.143">[dir.routine.deviation.143]</a></div>
 <p>A REGISTERED declaration whose library loads, and whose entry is not a
