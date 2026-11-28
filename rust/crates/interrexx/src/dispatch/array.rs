@@ -60,7 +60,10 @@ impl Interp {
     /// `None` for anything else, a `Queue` and a `CircularQueue`, which keep
     /// their items in an array of their own, included. Nothing is sent to
     /// `value`.
-    pub(crate) fn single_dimensional_slots(&mut self, value: ObjRef) -> Option<Vec<Option<ObjRef>>> {
+    pub(crate) fn single_dimensional_slots(
+        &mut self,
+        value: ObjRef,
+    ) -> Option<Vec<Option<ObjRef>>> {
         let plain_array = self.object_model().array;
         let is_array = self.array_body(value).is_some()
             || self

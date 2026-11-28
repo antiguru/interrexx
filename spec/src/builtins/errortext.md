@@ -243,6 +243,44 @@ None of `REQUEST`, `MAKEARRAY` and `STRING` is sent to `values`, so what it
 answers to them does not matter. `values` is checked whether or not the code
 has a message, and `n` is checked as the rules above say.
 
+```rexx
+refused = .array~of(.nil, .list~new, .queue~new, .directory~new, .stem~new, -
+  .mutablebuffer~new('x'), .zq~new, .array~new(2, 2))
+do v over refused
+  call try '40.912', v
+end
+call try 40, .nil
+call try '60.1', .nil
+exit
+try:
+  signal on syntax name bad
+  say errortext(arg(1), arg(2)) \== ''
+  return
+bad: say condition('o')~code
+  return
+::class zq
+::method string
+  say 'STRING sent'
+  return 'zq'
+::method makearray
+  say 'MAKEARRAY sent'
+  return .array~of(1)
+```
+
+```output
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+40.912
+```
+
+r[bif.errortext.values.fill]
 The array has a size, which counts positions with no item: an array that had an
 item removed, or one made with room for more than it holds, is as large as it
 was. Let that size be `k`. The first `k` places of the message, counted from its
@@ -253,20 +291,8 @@ past its size. Every place after those `k` stays as written, `&i`. A string has
 size 1. What was put in a place is not read for places again, so an item `&2`
 appears as it is. An error code with no message answers the null string whatever
 `values` holds, and a message with no places, such as that of an error number,
-comes back unchanged.
-
-An item is put in as its string value when it is a string or a number, as its
-contents when it is a `MutableBuffer`, and otherwise as the name that an error
-message gives an object, which is its `OBJECTNAME` ([the name
-rule](r:class.object.objectname)): `an Array` or `The NIL object`, unless its
-class has an `OBJECTNAME` of its own. No `STRING` method is sent to it.
-
-For the condition object `c` of a trapped `SYNTAX` error, `ERRORTEXT(c~code,
-c~additional)` is the `MESSAGE` entry of `c`.
-
-The first example uses the message of `40.912`, which has three places, and
-leaves its wording alone: it looks for the values and counts the places that
-are left.
+comes back unchanged. The example uses the message of `40.912`, which has three places, and leaves its
+wording alone: it looks for the values and counts the places that are left.
 
 ```rexx
 t = errortext('40.912', .array~of('AAA', 'BBB', 'CCC', 'DDD'))
@@ -296,29 +322,18 @@ say countstr('&', errortext('40.912', .array~of('&1', '&2', '&3')))
 3
 ```
 
-The second shows how the items are put in, and that nothing is sent to an
-object: the `STRING` and `MAKEARRAY` methods of the class do not run, whether
-the object is an item or the `values` themselves.
+r[bif.errortext.values.item]
+An item is put in as its string value when it is a string or a number, as its
+contents when it is a `MutableBuffer`, and otherwise as the name that an error
+message gives an object, which is its `OBJECTNAME` ([the name
+rule](r:class.object.objectname)): `an Array` or `The NIL object`, unless its
+class has an `OBJECTNAME` of its own. No `STRING` method is sent to it.
 
 ```rexx
 t = errortext('40.912', .array~of(.zq~new, .nil, .mutablebuffer~new('MMM')))
 say (pos('a ZQ', t) > 0) (pos('The NIL object', t) > 0) (pos('MMM', t) > 0)
 t = errortext('40.912', .array~of(.array~of(1), 3.10, '4.50'))
 say (pos('an Array', t) > 0) (pos('3.10', t) > 0) (pos('4.50', t) > 0)
-refused = .array~of(.nil, .list~new, .queue~new, .directory~new, .stem~new, -
-  .mutablebuffer~new('x'), .zq~new, .array~new(2, 2))
-do v over refused
-  call try '40.912', v
-end
-call try 40, .nil
-call try '60.1', .nil
-exit
-try:
-  signal on syntax name bad
-  say errortext(arg(1), arg(2)) \== ''
-  return
-bad: say condition('o')~code
-  return
 ::class zq
 ::method string
   say 'STRING sent'
@@ -331,16 +346,21 @@ bad: say condition('o')~code
 ```output
 1 1 1
 1 1 1
-40.912
-40.912
-40.912
-40.912
-40.912
-40.912
-40.912
-40.912
-40.912
-40.912
+```
+
+r[bif.errortext.values.condition]
+For the condition object `c` of a trapped `SYNTAX` error, `ERRORTEXT(c~code,
+c~additional)` is the `MESSAGE` entry of `c`.
+
+```rexx
+signal on syntax name e
+x = substr('abc', 0)
+e: c = condition('o')
+say c~code (errortext(c~code, c~additional) == c~message)
+```
+
+```output
+40.14 1
 ```
 
 > **Note.** The ANSI draft (9.5.5) gives ERRORTEXT a second argument, `S`,
