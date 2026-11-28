@@ -2176,6 +2176,28 @@ fn a_started_activity_adopts_the_frame_arena_of_one_that_ended() {
     assert_eq!(adopted, 2);
 }
 
+/// A newly attached activity can use the frame block left by a detached
+/// one, with its registers initialized as on a fresh block.
+#[test]
+fn an_attached_activity_adopts_the_frame_arena_of_one_that_detached() {
+    use interrexx_core::ObjRef;
+
+    let mut interp = Interp::new();
+    for blocks in [0, 1] {
+        let context = interp.pending_attached_context().expect("an attachment");
+        let attached = interp.file_attached(context).expect("an attached activity");
+        interp.with_idle_activity(attached, |interp| {
+            let arena = interp.roots.activity().frames();
+            assert_eq!(arena.blocks(), blocks);
+            let frame = arena.reserve(1);
+            assert_eq!(frame.get(0), ObjRef::NIL);
+            frame.set(0, ObjRef::small_int(1).expect("one fits"));
+            arena.release(frame);
+        });
+        assert!(interp.detach_activity(context));
+    }
+}
+
 /// Three sequential `~start`s, each on an activity of its own that ends
 /// before the next starts.
 const THREE_STARTS: &str = "o = .k~new\ndo i = 1 to 3\n  say o~start('m', i)~result\nend\n\
