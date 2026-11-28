@@ -7,7 +7,7 @@ It keeps ooRexx's dynamic object model and replaces the execution model: a regis
 This is an independent project, not affiliated with the Rexx Language Association or the ooRexx project.
 
 For installation, command examples and differences to check when moving from
-ooRexx, see the [user guide](https://github.com/antiguru/interrexx/blob/main/docs/user-guide.md).
+ooRexx, see the [user guide](docs/user-guide.md).
 
 ## Building
 
