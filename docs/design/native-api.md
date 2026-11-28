@@ -213,8 +213,10 @@ Raising and throwing differ, as in ooRexx:
 * The `rexx` executable loads its companion interpreter library and calls a private,
   versioned CLI entry. A native extension's C API calls then share the CLI's process-local
   registrations and interpreter state. The launcher looks beside itself and, on Unix,
-  also supports the installed `bin/` and `lib/` layout. Cargo's unversioned library name is
-  available for development builds. In-process Rust test hosts still export their own
+  also supports the installed `bin/` and `lib/` layout. The launcher verifies the build identity
+  before loading a companion. Cargo's unversioned library name works for running the CLI.
+  On macOS, create the versioned aliases before using extensions linked against the development
+  libraries (`README.md`). In-process Rust test hosts still export their own
   C entry points for tests that invoke the interpreter directly.
 * `RexxStart` runs a program with the classic system exits, on the calling thread or as a classic
   run other threads can halt or trace. `RexxCreateInterpreter` makes an instance; several may

@@ -35,6 +35,15 @@ On macOS, use the workspace build above. Put `rexx` and `rxapi` in the installat
 `bin/` directory. Copy `librexx.dylib` and `librexxapi.dylib` into its `lib/` directory
 under the names `librexx.4.dylib` and `librexxapi.4.dylib`.
 
+For native extension development on macOS, add the install-name aliases in Cargo's
+output directory. Use `target/debug` for a debug build.
+
+```sh
+cd target/release
+ln -sf librexx.dylib librexx.4.dylib
+ln -sf librexxapi.dylib librexxapi.4.dylib
+```
+
 ### Debian package
 
 [cargo-deb](https://github.com/kornelski/cargo-deb) builds a `.deb` from the same tree:

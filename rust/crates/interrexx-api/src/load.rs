@@ -30,7 +30,7 @@ use std::sync::{Arc, Mutex};
 
 /// Runs the private CLI entry in the interpreter shipped with the launcher.
 pub fn run_cli(arguments: &[u8], build: u64) -> std::io::Result<u8> {
-    let path = cli_library_path(&std::env::current_exe()?, build)?;
+    let path = cli_library_path(&std::env::current_exe()?.canonicalize()?, build)?;
     // SAFETY: the path is absolute and names the interpreter installed with
     // the launcher. Package lookup also needs the library's public C symbols.
     #[cfg(unix)]
@@ -76,21 +76,16 @@ pub fn run_cli(arguments: &[u8], build: u64) -> std::io::Result<u8> {
 #[doc(hidden)]
 pub fn cli_library_path(executable: &Path, build: u64) -> std::io::Result<PathBuf> {
     let name = crate::library_names::host_api_libraries().librexx;
-    let beside = executable.with_file_name(name);
-    #[cfg(windows)]
-    {
-        let _ = build;
-        Ok(beside)
+    let dir = executable.parent().expect("an executable has a directory");
+    let beside = dir.join(name);
+    if companion_build(&beside) == Some(build) {
+        return Ok(beside);
     }
     #[cfg(unix)]
     {
-        if beside.try_exists()? {
-            return Ok(beside);
-        }
-        let dir = executable.parent().expect("an executable has a directory");
         if let Some(prefix) = dir.parent() {
             let installed = prefix.join("lib").join(name);
-            if installed.try_exists()? {
+            if companion_build(&installed) == Some(build) {
                 return Ok(installed);
             }
         }
@@ -99,52 +94,70 @@ pub fn cli_library_path(executable: &Path, build: u64) -> std::io::Result<PathBu
             std::env::consts::DLL_PREFIX,
             std::env::consts::DLL_SUFFIX
         );
-        let development = dir.join(&cargo_name);
-        if companion_build(&development) == Some(build) {
-            return Ok(development);
+        for candidate in [dir.join(&cargo_name), dir.join("deps").join(&cargo_name)] {
+            if companion_build(&candidate) == Some(build) {
+                return Ok(candidate);
+            }
         }
-        // Nextest archives the cdylib in the Cargo unit that built it. A
-        // reused target can also hold libraries from unrelated units.
+        // A relocated nextest executable can be in build/<package>/<unit>/out.
+        // Never walk past the profile directory of an ordinary Cargo binary.
         let cargo_build = dir
             .ancestors()
-            .find(|path| path.file_name().is_some_and(|name| name == "build"))
+            .nth(3)
+            .filter(|path| path.file_name().is_some_and(|name| name == "build"))
+            .filter(|_| dir.file_name().is_some_and(|name| name == "out"))
             .map_or_else(|| dir.join("build"), Path::to_path_buf);
-        let candidates = cargo_build.join("interrexx-capi").read_dir();
-        if let Some(path) = candidates
-            .into_iter()
-            .flatten()
-            .filter_map(Result::ok)
-            .map(|entry| entry.path().join("out").join(&cargo_name))
-            .filter(|candidate| companion_build(candidate) == Some(build))
-            .min()
-        {
-            return Ok(path);
+        let modern = cargo_build.join("interrexx-capi");
+        for (directory, legacy) in [(&modern, false), (&cargo_build, true)] {
+            let mut units: Vec<_> = directory
+                .read_dir()
+                .into_iter()
+                .flatten()
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    !legacy
+                        || entry
+                            .file_name()
+                            .to_string_lossy()
+                            .starts_with("interrexx-capi-")
+                })
+                .map(|entry| entry.path())
+                .collect();
+            units.sort();
+            for unit in units {
+                let candidate = unit.join("out").join(&cargo_name);
+                if companion_build(&candidate) == Some(build) {
+                    return Ok(candidate);
+                }
+            }
         }
-        Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            format!(
-                "no matching interpreter library beside {}",
-                executable.display()
-            ),
-        ))
     }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        format!(
+            "no matching interpreter library beside {}; rebuild the launcher and C API together",
+            executable.display()
+        ),
+    ))
 }
 
-#[cfg(unix)]
 fn companion_build(path: &Path) -> Option<u64> {
-    // SAFETY: Cargo candidates are absolute paths under the executable's
-    // build directory. Keep their symbols local until a match is selected.
-    unsafe {
-        let library = PlatformLibrary::open(
-            Some(path),
-            libloading::os::unix::RTLD_LAZY | libloading::os::unix::RTLD_LOCAL,
-        )
-        .ok()?;
-        let identity = library
-            .get::<extern "C" fn() -> u64>(b"interrexx_cli_build_v1\0")
-            .ok()?;
-        Some(identity())
-    }
+    use object::{Object, ObjectSection, read::ReadCache};
+    use std::io::BufReader;
+
+    // Read just the object metadata and the identity section. A wrong
+    // candidate never enters the process, even as a local library.
+    let cache = ReadCache::new(BufReader::new(std::fs::File::open(path).ok()?));
+    let file = object::File::parse(&cache).ok()?;
+    let section = if cfg!(windows) {
+        ".rxbld"
+    } else if cfg!(target_vendor = "apple") {
+        "__rx_build"
+    } else {
+        ".rexx_build"
+    };
+    let bytes = file.section_by_name(section)?.data().ok()?;
+    Some(u64::from_le_bytes(bytes.get(..8)?.try_into().ok()?))
 }
 
 /// The C signature of the stub the `RexxMethodN` macros generate.

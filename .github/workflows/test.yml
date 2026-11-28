@@ -722,7 +722,18 @@ jobs:
             ../ci/cli-registration.cpp "$prefix/lib/librexxapi.4.dylib" \
             -Wl,-rpath,@loader_path -o "$prefix/lib/libcli-registration.dylib"
           cd "$prefix/lib"
-          "$repo/scripts/rss-cap.sh" 8388608 "$prefix/bin/rexx" "$repo/ci/cli-registration.rex"
+          ln -s "$prefix/bin/rexx" "$RUNNER_TEMP/rexx-link"
+          "$repo/scripts/rss-cap.sh" 8388608 "$RUNNER_TEMP/rexx-link" "$repo/ci/cli-registration.rex"
+      - name: Share the Cargo CLI's state with a linked extension
+        run: |
+          repo="$(cd .. && pwd)"
+          cd target/debug
+          ln -sf librexx.dylib librexx.4.dylib
+          ln -sf librexxapi.dylib librexxapi.4.dylib
+          clang++ -dynamiclib -I "$repo/include" -I "$repo/include/platform/unix" \
+            "$repo/ci/cli-registration.cpp" ./librexxapi.4.dylib \
+            -Wl,-rpath,@loader_path -o libcli-registration.dylib
+          "$repo/scripts/rss-cap.sh" 8388608 ./rexx "$repo/ci/cli-registration.rex"
 
   # The check branch protection requires; it passes when every job above did.
   test:

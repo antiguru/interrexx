@@ -21,6 +21,9 @@ interrexx-cast.workspace = true
 # `dlopen`/`dlsym` provider for `load.rs`; `rustix` does not wrap either.
 libloading = "0.9.0"
 
+# Read the CLI companion's identity without executing its library initializers.
+object = { version = "0.38.1", default-features = false, features = ["read", "std"] }
+
 # `free`, which releases a result block a classic handler allocated in place of the buffer it
 # was handed (`load.rs`).
 libc = "0.2.186"

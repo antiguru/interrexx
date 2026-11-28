@@ -83,6 +83,14 @@ jobs:
           $script = Join-Path $env:RUNNER_TEMP 'échantillon.rex'
           'say 2 + 2' | Set-Content -Encoding ascii $script
           Check-Rexx '4' @($script)
+          $wrong = Join-Path $env:RUNNER_TEMP 'wrong-interpreter'
+          New-Item -ItemType Directory -Path $wrong | Out-Null
+          Copy-Item $rexx "$wrong/rexx.exe"
+          Copy-Item sdk/bin/rexxapi.dll "$wrong/rexx.dll"
+          $diagnostic = (& "$wrong/rexx.exe" -e 'say 2 + 2' 2>&1) -join "`n"
+          if ($LASTEXITCODE -ne 1 -or $diagnostic -notmatch 'no matching interpreter library') {
+            throw "Expected rejection of a mismatched DLL, got: $diagnostic"
+          }
 
       - uses: actions/upload-artifact@v7
         with:

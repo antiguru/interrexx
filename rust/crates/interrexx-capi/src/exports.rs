@@ -570,13 +570,16 @@ pub extern "system" fn RexxSetProcessMessages(_turn_on: i32) -> i32 {
     1
 }
 
-/// Private build identity used to select the interpreter in a Cargo target.
+/// Private CLI build identity, checked from the file before loading it.
+#[used]
 #[unsafe(no_mangle)]
-pub extern "C" fn interrexx_cli_build_v1() -> u64 {
-    interrexx::launcher::CLI_BUILD_ID
-        .parse()
-        .expect("the interpreter build ID")
-}
+#[cfg_attr(target_vendor = "apple", unsafe(link_section = "__DATA,__rx_build"))]
+#[cfg_attr(windows, unsafe(link_section = ".rxbld"))]
+#[cfg_attr(
+    all(unix, not(target_vendor = "apple")),
+    unsafe(link_section = ".rexx_build")
+)]
+pub static interrexx_cli_build_v1: [u8; 8] = interrexx::launcher::CLI_BUILD_ID;
 
 /// Private CLI entry point.
 ///
@@ -596,5 +599,5 @@ pub unsafe extern "C" fn interrexx_main_v1(arguments: *const u8, length: usize) 
                 .map(<[u8]>::to_vec)
                 .collect()
         });
-    interrexx::launcher::run_cli(&args)
+    std::panic::catch_unwind(|| interrexx::launcher::run_cli(&args)).unwrap_or(101)
 }

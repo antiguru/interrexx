@@ -10,7 +10,7 @@
 #[path = "build_date.rs"]
 mod build_date;
 
-use std::hash::{DefaultHasher, Hash, Hasher};
+mod cli_build;
 use std::path::Path;
 
 fn main() {
@@ -46,15 +46,15 @@ fn main() {
         build_date::format(seconds)
     );
 
-    // Cargo shares this build-script output between the executable and the
-    // interpreter dependency of the C API. Its unit name includes features
-    // and profile. The timestamp distinguishes builds of that same unit.
+    // The launcher and C API interpreter share this build-script output.
     let out = std::env::var_os("OUT_DIR").expect("Cargo sets OUT_DIR");
-    let unit = Path::new(&out)
+    let out = Path::new(&out);
+    let unit = out
         .parent()
         .and_then(Path::file_name)
         .expect("Cargo names the build unit");
-    let mut id = DefaultHasher::new();
-    (unit, seconds).hash(&mut id);
-    println!("cargo:rustc-env=INTERREXX_CLI_BUILD={}", id.finish());
+    let crate_dir = std::env::var_os("CARGO_MANIFEST_DIR").expect("Cargo names the crate");
+    let id = cli_build::fingerprint(Path::new(&crate_dir), unit, seconds);
+    std::fs::write(out.join("cli-build"), id.to_le_bytes()).expect("write the CLI build ID");
+    println!("cargo:rustc-env=INTERREXX_CLI_BUILD={id}");
 }

@@ -12,60 +12,77 @@ fn the_launcher_has_no_c_api_exports_of_its_own() {
 }
 
 #[cfg(target_os = "linux")]
+#[path = "../cli_build.rs"]
+mod cli_build;
+
+#[cfg(target_os = "linux")]
 #[test]
-fn a_newer_cargo_library_from_another_build_is_ignored() {
+fn cargo_layouts_ignore_the_old_library_after_a_source_edit() {
+    use std::ffi::OsStr;
     use std::fs;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::process::Command;
 
-    let launcher = Path::new(env!("CARGO_BIN_EXE_rexx"));
-    let build = env!("INTERREXX_CLI_BUILD")
-        .parse()
-        .expect("the launcher build ID");
-    let companion = interrexx_api::load::cli_library_path(launcher, build)
-        .expect("the launcher has a matching companion");
-    let bin =
-        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("cli-build-{}", std::process::id()));
-    let units = bin.join("build/interrexx-capi");
-    let expected = units.join("matched/out/librexx.so");
-    let stale = units.join("different/out/librexx.so");
-    for library in [&expected, &stale] {
-        fs::create_dir_all(library.parent().expect("the library directory"))
-            .expect("create the Cargo fixture");
+    struct Fixture(PathBuf);
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
     }
-    fs::hard_link(&companion, &expected)
-        .or_else(|_| fs::copy(&companion, &expected).map(|_| ()))
-        .expect("stage the matching library");
-    let c = bin.join("stale.c");
-    fs::write(
-        &c,
-        format!(
-            "unsigned long long interrexx_cli_build_v1(void) {{ return {}ULL; }}\n",
-            build ^ 1_u64
-        ),
-    )
-    .expect("write the stale library source");
-    assert!(
-        Command::new("cc")
-            .args(["-shared", "-fPIC"])
-            .arg(&c)
-            .arg("-o")
-            .arg(&stale)
-            .status()
-            .expect("run cc")
-            .success()
+    let fixture = Fixture(
+        Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("cli-build-{}", std::process::id())),
     );
-    fs::File::open(&stale)
-        .expect("open stale library")
-        .set_times(
-            fs::FileTimes::new().set_modified(
-                std::time::UNIX_EPOCH + std::time::Duration::from_secs(4_000_000_000),
-            ),
-        )
-        .expect("make the wrong build newer");
-    assert_eq!(
-        interrexx_api::load::cli_library_path(&bin.join("rexx"), build).expect("select a library"),
-        expected
-    );
-    fs::remove_dir_all(bin).expect("remove the fixture");
+    let root = &fixture.0;
+    let engine = root.join("workspace/crates/interrexx");
+    let source = engine.join("src/lib.rs");
+    fs::create_dir_all(source.parent().unwrap()).unwrap();
+    let unit = OsStr::new("same-cargo-unit");
+    fs::write(&source, "pub const VALUE: u8 = 1;").unwrap();
+    let old_build = cli_build::fingerprint(&engine, unit, 0);
+    fs::write(&source, "pub const VALUE: u8 = 2;").unwrap();
+    let build = cli_build::fingerprint(&engine, unit, 0);
+    assert_ne!(old_build, build);
+
+    let bin = root.join("build/checkout/target/debug");
+    let exe = bin.join("rexx");
+    let stale = bin.join("librexx.so.4");
+    let compile = |library: &Path, build: u64| {
+        fs::create_dir_all(library.parent().unwrap()).unwrap();
+        let c = root.join("marker.c");
+        let bytes = build.to_le_bytes().map(|byte| byte.to_string()).join(",");
+        fs::write(&c, format!(
+            "__attribute__((section(\".rexx_build\"))) const unsigned char interrexx_cli_build_v1[8] = {{{bytes}}};\n"
+        )).unwrap();
+        assert!(
+            Command::new("cc")
+                .args(["-shared", "-fPIC"])
+                .arg(&c)
+                .arg("-o")
+                .arg(library)
+                .status()
+                .unwrap()
+                .success()
+        );
+    };
+    compile(&stale, old_build);
+    assert!(interrexx_api::load::cli_library_path(&exe, build).is_err());
+
+    for layout in [
+        "deps/librexx.so",
+        "build/interrexx-capi-unit/out/librexx.so",
+        "build/interrexx-capi/unit/out/librexx.so",
+    ] {
+        let expected = bin.join(layout);
+        compile(&expected, build);
+        assert_eq!(
+            interrexx_api::load::cli_library_path(&exe, build).unwrap(),
+            expected
+        );
+        fs::remove_file(expected).unwrap();
+    }
+
+    let real_launcher = Path::new(env!("CARGO_BIN_EXE_rexx"));
+    let real_build = env!("INTERREXX_CLI_BUILD").parse().unwrap();
+    interrexx_api::load::cli_library_path(real_launcher, real_build)
+        .expect("Cargo's real companion carries the identity");
 }
