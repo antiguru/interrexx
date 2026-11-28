@@ -84,6 +84,7 @@ Raised	argument_not_a_number	body	crates/interrexx/src/error.rs	off-send-surface
 Raised	argument_not_a_pad	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_a_pad_or_class_name	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_a_symbol	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
+Raised	argument_not_an_array	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_an_error_code	body	crates/interrexx/src/error.rs	off-send-surface	-	-	-
 Raised	argument_not_an_instance	send	crates/interrexx/src/error.rs	agrees	yes	88.914	p~addRoutine('X', 5) over p = .context~package -- the pair with argument_not_a_class is the class name substituted, and Routine is the one this row raises
 Raised	argument_not_convertible	send	crates/interrexx/src/error.rs	agrees	yes	93.953	.Package~new('X', 'Y', 'Z') -- the third argument is a parent context and anything that is not a Method, a Routine or a Package reaches this
