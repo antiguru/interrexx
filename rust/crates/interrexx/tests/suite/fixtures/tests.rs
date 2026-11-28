@@ -464,6 +464,12 @@ fn the_crate_side_bin_holds_the_oracle_bins_class_files_and_no_other_binary() {
     // write through to cargo's binary.
     fs::copy(oracle_bin.join("rexximage"), bin.join("rexximage")).expect("an oracle binary");
     assert!(check_path(&path, &bin).is_err(), "an oracle ELF in the bin");
+    fs::remove_file(bin.join("rexximage")).expect("remove the foreign binary");
+    let name = interrexx_api::library_names::host_api_libraries().librexxapi;
+    let forwarded = bin.join(name);
+    fs::remove_file(&forwarded).expect("remove the staged forwarding library");
+    fs::copy(oracle_bin.join("rexximage"), &forwarded).expect("a foreign companion");
+    assert!(check_path(&path, &bin).is_err(), "a foreign ELF named {name}");
     fs::remove_dir_all(run.parent().expect("a parent")).expect("cannot remove the run");
 }
 

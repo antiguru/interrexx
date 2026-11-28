@@ -308,7 +308,7 @@ pub fn resolve(name: &str, path: &str) -> Option<PathBuf> {
 
 /// Whether the crate side's `path` resolves `rexx` and `rexxc` inside `bin`,
 /// and `bin` holds no ELF file but copies of this crate's `rexx` and `rexxc`
-/// and of its [`service_binaries`].
+/// and of its [`service_binaries`] and staged CLI libraries.
 pub fn check_path(path: &str, bin: &Path) -> Result<(), String> {
     use std::os::unix::fs::MetadataExt as _;
     let identity = |path: &Path| fs::metadata(path).ok().map(|meta| (meta.dev(), meta.ino()));
@@ -319,20 +319,25 @@ pub fn check_path(path: &str, bin: &Path) -> Result<(), String> {
     .into_iter()
     .chain(service_binaries())
     .collect();
+    let libraries = group_runner::launcher_libraries();
     for entry in fs::read_dir(bin).map_err(|e| format!("cannot read {}: {e}", bin.display()))? {
         let file = entry.map_err(|e| e.to_string())?.path();
-        if identity(&file).is_some()
-            && ours
+        let mut permitted = ours.iter().chain(
+            libraries
                 .iter()
+                .filter(|(_, name)| file.file_name().is_some_and(|file| file == *name))
+                .map(|(source, _)| source),
+        );
+        if identity(&file).is_some()
+            && permitted
+                .clone()
                 .any(|binary| identity(&file) == identity(binary))
         {
             continue;
         }
         let bytes = fs::read(&file).unwrap_or_default();
         if bytes.starts_with(b"\x7fELF")
-            && !ours
-                .iter()
-                .any(|binary| bytes == fs::read(binary).unwrap_or_default())
+            && !permitted.any(|binary| bytes == fs::read(binary).unwrap_or_default())
         {
             return Err(format!(
                 "{} is a binary other than this crate's",

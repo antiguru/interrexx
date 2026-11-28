@@ -782,6 +782,25 @@ pub fn run_process(
     }
 }
 
+pub fn launcher_libraries() -> &'static [(PathBuf, &'static str); 2] {
+    use std::sync::OnceLock;
+
+    static LIBRARIES: OnceLock<[(PathBuf, &'static str); 2]> = OnceLock::new();
+    LIBRARIES.get_or_init(|| {
+        let names = interrexx_api::library_names::host_api_libraries();
+        let rexx = Path::new(env!("CARGO_BIN_EXE_rexx"));
+        let build = env!("INTERREXX_CLI_BUILD")
+            .parse()
+            .expect("the launcher build ID");
+        let interpreter = interrexx_api::load::cli_library_path(rexx, build)
+            .expect("the interpreter library that matches the launcher");
+        [
+            (interpreter, names.librexx),
+            (cdylibs::librexxapi(), names.librexxapi),
+        ]
+    })
+}
+
 /// A directory beside `run` holding `rexx` and `rexxc`, this crate's own, so
 /// a test running either as a command runs the side under test; the
 /// oracle's side gets its own `bin` directory instead.
@@ -796,13 +815,8 @@ pub fn interpreter_bin(run: &Path) -> PathBuf {
     fs::create_dir_all(&bin).expect("the interpreter bin directory");
     place(&bin.join("rexx"), env!("CARGO_BIN_EXE_rexx"));
     place(&bin.join("rexxc"), env!("CARGO_BIN_EXE_rexxc"));
-    let names = interrexx_api::library_names::host_api_libraries();
-    for (source, name) in [
-        (cdylibs::librexx(), names.librexx),
-        (cdylibs::librexxapi(), names.librexxapi),
-    ] {
-        cdylibs::stage_library(&source, &bin.join(name))
-            .expect("the CLI library beside the binary");
+    for (source, name) in launcher_libraries() {
+        cdylibs::stage_library(source, &bin.join(name)).expect("the CLI library beside the binary");
     }
     let samples = bin.parent().expect("a parent").join("samples");
     match std::os::unix::fs::symlink(oracle::oracle_root().join("samples"), &samples) {

@@ -570,6 +570,14 @@ pub extern "system" fn RexxSetProcessMessages(_turn_on: i32) -> i32 {
     1
 }
 
+/// Private build identity used to select the interpreter in a Cargo target.
+#[unsafe(no_mangle)]
+pub extern "C" fn interrexx_cli_build_v1() -> u64 {
+    interrexx::launcher::CLI_BUILD_ID
+        .parse()
+        .expect("the interpreter build ID")
+}
+
 /// Private CLI entry point.
 ///
 /// # Safety

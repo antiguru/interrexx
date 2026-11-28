@@ -29,8 +29,8 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 /// Runs the private CLI entry in the interpreter shipped with the launcher.
-pub fn run_cli(arguments: &[u8]) -> std::io::Result<u8> {
-    let path = cli_library_path(&std::env::current_exe()?)?;
+pub fn run_cli(arguments: &[u8], build: u64) -> std::io::Result<u8> {
+    let path = cli_library_path(&std::env::current_exe()?, build)?;
     // SAFETY: the path is absolute and names the interpreter installed with
     // the launcher. Package lookup also needs the library's public C symbols.
     #[cfg(unix)]
@@ -72,45 +72,79 @@ pub fn run_cli(arguments: &[u8]) -> std::io::Result<u8> {
     }
 }
 
-fn cli_library_path(executable: &Path) -> std::io::Result<PathBuf> {
+/// Resolves the installed interpreter or the matching Cargo companion.
+#[doc(hidden)]
+pub fn cli_library_path(executable: &Path, build: u64) -> std::io::Result<PathBuf> {
     let name = crate::library_names::host_api_libraries().librexx;
     let beside = executable.with_file_name(name);
+    #[cfg(windows)]
+    {
+        let _ = build;
+        Ok(beside)
+    }
     #[cfg(unix)]
-    if !beside.try_exists()? {
-        let cargo_name = format!(
-            "{}rexx{}",
-            std::env::consts::DLL_PREFIX,
-            std::env::consts::DLL_SUFFIX
-        );
-        let development = executable.with_file_name(&cargo_name);
-        if development.try_exists()? {
-            return Ok(development);
+    {
+        if beside.try_exists()? {
+            return Ok(beside);
         }
-        if let Some(prefix) = executable.parent().and_then(Path::parent) {
+        let dir = executable.parent().expect("an executable has a directory");
+        if let Some(prefix) = dir.parent() {
             let installed = prefix.join("lib").join(name);
             if installed.try_exists()? {
                 return Ok(installed);
             }
         }
-        // Cargo's test builds put cdylibs in the build target directory,
-        // including when nextest relocates its archive.
-        let dir = executable.parent().expect("an executable has a directory");
-        let build = dir
+        let cargo_name = format!(
+            "{}rexx{}",
+            std::env::consts::DLL_PREFIX,
+            std::env::consts::DLL_SUFFIX
+        );
+        let development = dir.join(&cargo_name);
+        if companion_build(&development) == Some(build) {
+            return Ok(development);
+        }
+        // Nextest archives the cdylib in the Cargo unit that built it. A
+        // reused target can also hold libraries from unrelated units.
+        let cargo_build = dir
             .ancestors()
             .find(|path| path.file_name().is_some_and(|name| name == "build"))
             .map_or_else(|| dir.join("build"), Path::to_path_buf);
-        if let Ok(entries) = build.join("interrexx-capi").read_dir()
-            && let Some((_, path)) = entries
-                .filter_map(|entry| {
-                    let path = entry.ok()?.path().join("out").join(&cargo_name);
-                    Some((path.metadata().ok()?.modified().ok()?, path))
-                })
-                .max()
+        let candidates = cargo_build.join("interrexx-capi").read_dir();
+        if let Some(path) = candidates
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path().join("out").join(&cargo_name))
+            .filter(|candidate| companion_build(candidate) == Some(build))
+            .min()
         {
             return Ok(path);
         }
+        Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!(
+                "no matching interpreter library beside {}",
+                executable.display()
+            ),
+        ))
     }
-    Ok(beside)
+}
+
+#[cfg(unix)]
+fn companion_build(path: &Path) -> Option<u64> {
+    // SAFETY: Cargo candidates are absolute paths under the executable's
+    // build directory. Keep their symbols local until a match is selected.
+    unsafe {
+        let library = PlatformLibrary::open(
+            Some(path),
+            libloading::os::unix::RTLD_LAZY | libloading::os::unix::RTLD_LOCAL,
+        )
+        .ok()?;
+        let identity = library
+            .get::<extern "C" fn() -> u64>(b"interrexx_cli_build_v1\0")
+            .ok()?;
+        Some(identity())
+    }
 }
 
 /// The C signature of the stub the `RexxMethodN` macros generate.

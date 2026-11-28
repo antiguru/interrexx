@@ -8,7 +8,10 @@ fn main() -> ExitCode {
         arguments.extend(argument.into_encoded_bytes());
         arguments.push(0);
     }
-    match interrexx_api::load::run_cli(&arguments) {
+    let build = env!("INTERREXX_CLI_BUILD")
+        .parse()
+        .expect("the launcher build ID");
+    match interrexx_api::load::run_cli(&arguments, build) {
         Ok(status) => ExitCode::from(status),
         Err(error) => {
             eprintln!("rexx: {error}");
