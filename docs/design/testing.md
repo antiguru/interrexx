@@ -101,10 +101,10 @@ fresh copy with its own API service.
 ## Generate a conformance summary
 
 From the checkout root, render the inventories at the current commit with
-`python3 rust/scripts/conformance_summary.py > conformance.md`. This needs only
-Python and Git. The report includes the ooRexx gitlink, ooTest revision, recorded
-built-in probe statuses, and the reasons for suite exclusions and corpus
-programs outside the differential.
+`rexx rust/scripts/conformance_summary.rex > conformance.md`. Use a built
+interrexx `rexx` and Git. The report includes the ooRexx gitlink, ooTest
+revision, recorded built-in probe statuses, and the reasons for suite
+exclusions and corpus programs outside the differential.
 
 To add observations, run the gates from the same clean checkout and record
 `git rev-parse HEAD` with their output. The differential corpus test binary
@@ -116,7 +116,7 @@ of shards describe only that subset. For `--suite-report`, use the
 restricted suite run is reported as selected groups.
 
 ```sh
-python3 rust/scripts/conformance_summary.py \
+rexx rust/scripts/conformance_summary.rex \
     --run-commit "$(cat results/commit)" \
     --corpus-log results/corpus.log \
     --suite-report results/tests.tsv > conformance.md
@@ -126,6 +126,10 @@ Either results input can be omitted independently. The run commit is supplied
 by the caller because the gate records do not contain it. The renderer checks
 it against the inventory commit, checks the suite revision when supplied, and
 prints the tracked inventory separately from observed results.
+
+Run `bash rust/scripts/conformance_summary_tests.sh` under the same memory
+cap as the interpreter tests. Set `REXX` to select a specific built
+interpreter.
 
 ## The BSF4ooRexx suite
 
