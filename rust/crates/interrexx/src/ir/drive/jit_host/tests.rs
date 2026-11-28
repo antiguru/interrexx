@@ -404,6 +404,30 @@ fn a_method_send_in_a_loop_body_resumes_with_live_operands() {
 }
 
 #[test]
+fn a_native_wait_resumes_the_compiled_caller_when_woken() {
+    reset_compiled_runs();
+    let wait_at = super::THRESHOLD + 1000;
+    let limit = wait_at + 1000;
+    let source = format!(
+        "sem = .EventSemaphore~new; m = 0; x = ''\n\
+         do i = 1 to {limit}\n\
+           a = i // 7; b = a * 3; c = b - i; d = c + a\n\
+           m = m + d; e = m // 11; g = e - b; h = g + c; k = h // 5\n\
+           if i = {wait_at} then x = i + sem~wait(0.001) + 3\n\
+         end\n\
+         if x \\= {wait_at} + 3 | i \\= {limit} + 1 then bad = 1 / 0"
+    );
+    let outcome = crate::execute(
+        "jit-resumed-native-wait.rex",
+        source.into_bytes(),
+        false,
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(10)),
+    );
+    assert_eq!(outcome.exit_code, 0, "{outcome:?}");
+    assert_eq!(super::COMPILED_RESUMES.with(std::cell::Cell::get), 1);
+}
+
+#[test]
 fn exclusive_or_in_while_runs_in_generated_code() {
     check_header_constant("while (i <= LIMIT) && (i < 0)");
 }
