@@ -98,6 +98,39 @@ fresh copy with its own API service.
   memory cap. The suite revision is pinned in `rust/corpus/suite-revision.txt` and asserted.
 * ooRexx's results are reported beside interrexx's and never gate.
 
+## Generate a conformance summary
+
+From the checkout root, render the inventories at the current commit with
+`rexx rust/scripts/conformance_summary.rex > conformance.md`. Use a built
+interrexx `rexx` and Git. The report includes the ooRexx gitlink, ooTest
+revision, recorded built-in probe statuses, and the reasons for suite
+exclusions and corpus programs outside the differential.
+
+To add observations, run the gates from the same clean checkout and record
+`git rev-parse HEAD` with their output. The differential corpus test binary
+writes its strict shard reports to stderr. Save that stream for
+`--corpus-log` when running with `REXX_CORPUS_GATE=1`. Reports from a subset
+of shards describe only that subset. For `--suite-report`, use the
+`tests.tsv` written by `REXX_SUITE_GATE=1` beside the suite table. Set
+`REXX_SUITE_TABLE` to a fresh path if you need to keep several runs. A
+restricted suite run is reported as selected groups.
+
+```sh
+rexx rust/scripts/conformance_summary.rex \
+    --run-commit "$(cat results/commit)" \
+    --corpus-log results/corpus.log \
+    --suite-report results/tests.tsv > conformance.md
+```
+
+Either results input can be omitted independently. The run commit is supplied
+by the caller because the gate records do not contain it. The renderer checks
+it against the inventory commit, checks the suite revision when supplied, and
+prints the tracked inventory separately from observed results.
+
+Run `bash rust/scripts/conformance_summary_tests.sh` under the same memory
+cap as the interpreter tests. Set `REXX` to select a specific built
+interpreter.
+
 ## The BSF4ooRexx suite
 
 The `bsf4oorexx` CI job runs `scripts/run-bsf4oorexx.sh`: it exports BSF4ooRexx from its svn
