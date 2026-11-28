@@ -64,6 +64,10 @@ typedef struct _RexxRoutineEntry RexxRoutineEntry;
 typedef struct _RexxMethodEntry RexxMethodEntry;
 typedef struct _RexxPackageEntry RexxPackageEntry;
 
+/**
+ * The type code, flags, and stored value of a native argument or result.
+ * See r[native.header.descriptors].
+ */
 struct _ValueDescriptor {
     union {
         RexxArrayObject value_ARGLIST;
@@ -164,6 +168,9 @@ struct _ValueDescriptor {
 #endif
 };
 
+/**
+ * The condition fields written by `DecodeConditionInfo`, with text in object handles.
+ */
 typedef struct {
     wholenumber_t code;
     wholenumber_t rc;
@@ -176,11 +183,17 @@ typedef struct {
     RexxArrayObject additional;
 } RexxCondition;
 
+/**
+ * A system exit callback and the exit code it serves.
+ */
 struct _RexxContextExit {
     RexxContextExitHandler *handler;
     int sysexit_code;
 };
 
+/**
+ * A row of a native package routine table. See r[native.header.tables].
+ */
 struct _RexxRoutineEntry {
     int style;
     int reserved1;
@@ -190,6 +203,9 @@ struct _RexxRoutineEntry {
     int reserved3;
 };
 
+/**
+ * A row of a native package method table. See r[native.header.tables].
+ */
 struct _RexxMethodEntry {
     int style;
     int reserved1;
@@ -199,6 +215,10 @@ struct _RexxMethodEntry {
     int reserved3;
 };
 
+/**
+ * The descriptor a native library returns from `RexxGetPackage`.
+ * See r[native.header.package].
+ */
 struct _RexxPackageEntry {
     int size;
     int apiVersion;
@@ -211,26 +231,47 @@ struct _RexxPackageEntry {
     RexxMethodEntry *methods;
 };
 
+/**
+ * `RexxContextEnvironment`: a command environment's handler and name, an
+ * entry of the `DIRECT_ENVIRONMENTS` option.
+ */
 typedef struct {
     RexxContextCommandHandler *handler;
     const char *name;
 } RexxContextEnvironment;
 
+/**
+ * `RexxRedirectingEnvironment`: a redirecting command environment's
+ * handler and name, an entry of the `REDIRECTING_ENVIRONMENTS` option.
+ */
 typedef struct {
     RexxRedirectingCommandHandler *handler;
     const char *name;
 } RexxRedirectingEnvironment;
 
+/**
+ * `RexxRegisteredEnvironment`: the name a subcommand handler is
+ * registered under and the environment name it serves, an entry of the
+ * `REGISTERED_ENVIRONMENTS` option.
+ */
 typedef struct {
     const char *registeredName;
     const char *name;
 } RexxRegisteredEnvironment;
 
+/**
+ * `RexxLibraryPackage`: a package's name and its table, the value of the
+ * `REGISTER_LIBRARY` option.
+ */
 typedef struct {
     const char *registeredName;
     RexxPackageEntry *table;
 } RexxLibraryPackage;
 
+/**
+ * `RexxOption`: one option of a new interpreter instance, its name and a
+ * value of the type the name implies.
+ */
 typedef struct {
     const char *optionName;
     ValueDescriptor option;

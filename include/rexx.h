@@ -103,21 +103,33 @@ typedef struct _SHVBLOCK SHVBLOCK;
 typedef struct _RexxQueueTime RexxQueueTime;
 typedef struct _RexxConditionData RexxConditionData;
 
+/**
+ * A counted byte string with a writable buffer. See r[native.header.rxstring].
+ */
 struct _RXSTRING {
     size_t strlength;
     char *strptr;
 };
 
+/**
+ * A counted byte string with a read-only buffer. See r[native.header.rxstring].
+ */
 struct _CONSTRXSTRING {
     size_t strlength;
     const char *strptr;
 };
 
+/**
+ * A classic system exit registration name and the exit code it serves.
+ */
 struct _RXSYSEXIT {
     const char *sysexit_name;
     int sysexit_code;
 };
 
+/**
+ * One variable-pool operation, with a link to the next request.
+ */
 struct _SHVBLOCK {
     SHVBLOCK *shvnext;
     CONSTRXSTRING shvname;
@@ -128,6 +140,9 @@ struct _SHVBLOCK {
     unsigned char shvret;
 };
 
+/**
+ * The timestamp returned by the extended queue pull. See r[native.header.queue-time].
+ */
 struct _RexxQueueTime {
     uint16_t hours;
     uint16_t minutes;
@@ -141,6 +156,11 @@ struct _RexxQueueTime {
     uint32_t yearday;
 };
 
+/**
+ * `RexxConditionData`: a condition's code, return code, message, error
+ * text, line and program, with the texts as strings. No function of the
+ * interface takes or fills one. See r[native.calls.condition-data].
+ */
 struct _RexxConditionData {
     wholenumber_t code;
     wholenumber_t rc;
@@ -196,6 +216,9 @@ typedef struct _RXSIODTR_PARM RXSIODTR_PARM;
 typedef struct _RXHLTTST_PARM RXHLTTST_PARM;
 typedef struct _RXTRCTST_PARM RXTRCTST_PARM;
 
+/**
+ * The function name, arguments, and return buffer of a classic function exit.
+ */
 struct _RXFNCCAL_PARM {
     RXFNC_FLAGS rxfnc_flags;
     const char *rxfnc_name;
@@ -207,6 +230,9 @@ struct _RXFNCCAL_PARM {
     RXSTRING rxfnc_retc;
 };
 
+/**
+ * The function name, argument objects, and result object of an object function exit.
+ */
 struct _RXOFNCCAL_PARM {
     RXOFNC_FLAGS rxfnc_flags;
     CONSTRXSTRING rxfnc_name;
@@ -215,6 +241,9 @@ struct _RXOFNCCAL_PARM {
     RexxObjectPtr rxfnc_retc;
 };
 
+/**
+ * The function name, argument objects, and result object of an object function exit.
+ */
 struct _RXEXFCAL_PARM {
     RXEXF_FLAGS rxfnc_flags;
     CONSTRXSTRING rxfnc_name;
@@ -223,6 +252,9 @@ struct _RXEXFCAL_PARM {
     RexxObjectPtr rxfnc_retc;
 };
 
+/**
+ * The command environment, command text, and result of a command exit.
+ */
 struct _RXCMDHST_PARM {
     RXCMD_FLAGS rxcmd_flags;
     const char *rxcmd_address;
@@ -233,54 +265,90 @@ struct _RXCMDHST_PARM {
     RXSTRING rxcmd_retc;
 };
 
+/**
+ * The line and insertion mode of a queue push exit.
+ */
 struct _RXMSQPSH_PARM {
     RXMSQ_FLAGS rxmsq_flags;
     CONSTRXSTRING rxmsq_value;
 };
 
+/**
+ * The text passed to a SAY or trace output exit.
+ */
 struct _RXSIOSAY_PARM {
     CONSTRXSTRING rxsio_string;
 };
 
+/**
+ * The text passed to a SAY or trace output exit.
+ */
 struct _RXSIOTRC_PARM {
     CONSTRXSTRING rxsio_string;
 };
 
+/**
+ * The variable name and replacement value of a NOVALUE exit.
+ */
 struct _RXVARNOVALUE_PARM {
     RexxStringObject variable_name;
     RexxObjectPtr value;
 };
 
+/**
+ * The selector, variable name, and value of a VALUE exit.
+ */
 struct _RXVALCALL_PARM {
     RexxStringObject selector;
     RexxStringObject variable_name;
     RexxObjectPtr value;
 };
 
+/**
+ * `RXMSQPLL_PARM`: the line a queue exit pulls.
+ */
 struct _RXMSQPLL_PARM {
     RXSTRING rxmsq_retc;
 };
 
+/**
+ * `RXMSQSIZ_PARM`: the number of lines a queue exit reports.
+ */
 struct _RXMSQSIZ_PARM {
     size_t rxmsq_size;
 };
 
+/**
+ * `RXMSQNAM_PARM`: the queue name a queue exit sets.
+ */
 struct _RXMSQNAM_PARM {
     RXSTRING rxmsq_name;
 };
 
+/**
+ * `RXSIOTRD_PARM`: the line a terminal read exit answers.
+ */
 struct _RXSIOTRD_PARM {
     RXSTRING rxsiotrd_retc;
 };
 
+/**
+ * `RXSIODTR_PARM`: the line a debug read exit answers.
+ */
 struct _RXSIODTR_PARM {
     RXSTRING rxsiodtr_retc;
 };
 
+/**
+ * `RXHLTTST_PARM`: the flag a halt test exit sets.
+ */
 struct _RXHLTTST_PARM {
     RXHLT_FLAGS rxhlt_flags;
 };
 
+/**
+ * `RXTRCTST_PARM`: the flag a trace test exit sets.
+ */
 struct _RXTRCTST_PARM {
     RXTRC_FLAGS rxtrc_flags;
 };
