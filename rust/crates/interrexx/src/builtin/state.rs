@@ -137,14 +137,16 @@ pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<Obj
     Ok(crate::eval::logical(true))
 }
 
-/// `ERRORTEXT(n)`: the message for the error number or error code `n`, or the
-/// null string when the catalogue has no entry (`r[bif.errortext.n]`).
+/// `ERRORTEXT(n)` and `ERRORTEXT(n, values)`: the message for the error
+/// number or error code `n`, or the null string when the catalogue has no
+/// entry (`r[bif.errortext.n]`).
 ///
 /// A whole number is an error number, 0-99. Anything else holding a period is
 /// an error code: the part before the first period is the error number and
 /// the part after it the subcode, 0-999, each a whole number as written, so
 /// `40.1` and `40.001` are both subcode 1 and `40.10` is subcode 10. A
-/// subcode's message keeps its `&n` places.
+/// subcode's message keeps its `&n` places unless `values` fills them
+/// (`r[bif.errortext.values]`).
 pub(crate) fn errortext(
     interp: &mut Interp,
     name: &[u8],
@@ -177,13 +179,47 @@ pub(crate) fn errortext(
         }
         Err(other) => return Err(other),
     };
+    // The values are read whether or not the code has a message, after the
+    // code itself (`r[bif.errortext.values]`).
+    let values = match super::arg(args, 2) {
+        Some(value) => Some(errortext_values(interp, name, value)?),
+        None => None,
+    };
     let text = u16::try_from(major)
         .ok()
         .zip(u16::try_from(minor).ok())
         .and_then(|(major, minor)| interrexx_inventory::errors::lookup(major, minor))
         .map(|message| message.text)
         .unwrap_or_default();
-    Ok(interp.text(text.as_bytes()))
+    Ok(match values {
+        Some(values) => {
+            let filled = interrexx_inventory::errors::substitute_leading(text, &values);
+            interp.text_built(filled)
+        }
+        None => interp.text(text.as_bytes()),
+    })
+}
+
+/// The values argument of `ERRORTEXT` as one rendering per item, an empty
+/// slot as `None`: a string is an array of that one item, an array holds its
+/// own, and anything else is refused. No item is converted by a `STRING`
+/// method (`r[bif.errortext.values]`).
+fn errortext_values(
+    interp: &mut Interp,
+    name: &[u8],
+    value: ObjRef,
+) -> Result<Vec<Option<Vec<u8>>>, Failure> {
+    if interp.is_string_valued(value) {
+        return Ok(vec![Some(interp.to_text(value).into_owned())]);
+    }
+    let Some(slots) = interp.single_dimensional_slots(value) else {
+        let found = interp.string_value_text(value)?;
+        return Err(Raised::argument_not_an_array(name, 2, &found).into());
+    };
+    slots
+        .into_iter()
+        .map(|slot| slot.map(|item| interp.string_value_text(item)).transpose())
+        .collect()
 }
 
 /// `SOURCELINE()`: the program's line count, or `SOURCELINE(n)`: line `n`.

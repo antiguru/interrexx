@@ -54,6 +54,31 @@ pub(super) fn collection_store(interp: &Interp, receiver: ObjRef) -> ObjRef {
     }
 }
 
+impl Interp {
+    /// The slots of `value` when it is a single-dimensional array or an
+    /// instance of an `Array` subclass, trailing empty ones included, and
+    /// `None` for anything else, a `Queue` and a `CircularQueue`, which keep
+    /// their items in an array of their own, included. Nothing is sent to
+    /// `value`.
+    pub(crate) fn single_dimensional_slots(
+        &mut self,
+        value: ObjRef,
+    ) -> Option<Vec<Option<ObjRef>>> {
+        let plain_array = self.object_model().array;
+        let is_array = self.array_body(value).is_some()
+            || self
+                .class_of_value(value)
+                .is_some_and(|held| self.classes().is_a(held, plain_array));
+        if !is_array {
+            return None;
+        }
+        let (slots, dimensions) = self.array_body(collection_store(self, value))?;
+        dimensions
+            .is_none_or(|held| held.len() == 1)
+            .then(|| slots.to_vec())
+    }
+}
+
 /// [`array_slots`] as an owned copy, for a caller that renders the slots and
 /// so needs `interp` back.
 pub(super) fn array_slots_owned(

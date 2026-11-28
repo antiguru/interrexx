@@ -65,7 +65,34 @@ pub mod errors {
     /// `text` with `&1`, `&2`, ... replaced by the values of the same
     /// position. A position with no value stays as written.
     pub fn substitute<V: AsRef<[u8]>>(text: &str, values: &[V]) -> Vec<u8> {
+        fill_places(text, |_, index| {
+            values.get(index).map(|value| value.as_ref().to_vec())
+        })
+    }
+
+    /// `text` with its first `values.len()` places filled from `values`
+    /// (`r[bif.errortext.values]`): each of them, counted along the text, takes
+    /// the value at the position its digit names, or nothing where that value
+    /// is absent; every place after those stays as written.
+    pub fn substitute_leading<V: AsRef<[u8]>>(text: &str, values: &[Option<V>]) -> Vec<u8> {
+        fill_places(text, |occurrence, index| {
+            (occurrence < values.len()).then(|| {
+                values
+                    .get(index)
+                    .and_then(|value| value.as_ref())
+                    .map(|value| value.as_ref().to_vec())
+                    .unwrap_or_default()
+            })
+        })
+    }
+
+    /// The places of `text`, an `&` and a digit 1-9, each replaced by what
+    /// `fill` answers for its occurrence number and its zero-based position
+    /// number, or kept as written for `None`. What was put in is not scanned
+    /// again.
+    fn fill_places(text: &str, mut fill: impl FnMut(usize, usize) -> Option<Vec<u8>>) -> Vec<u8> {
         let mut out = Vec::with_capacity(text.len());
+        let mut occurrence = 0;
         let mut bytes = text.as_bytes().iter().copied().peekable();
         while let Some(byte) = bytes.next() {
             if byte != b'&' {
@@ -75,10 +102,11 @@ pub mod errors {
             match bytes.peek().copied() {
                 Some(digit @ b'1'..=b'9') => {
                     bytes.next();
-                    match values.get(usize::from(digit - b'1')) {
-                        Some(value) => out.extend_from_slice(value.as_ref()),
+                    match fill(occurrence, usize::from(digit - b'1')) {
+                        Some(value) => out.extend_from_slice(&value),
                         None => out.extend_from_slice(&[b'&', digit]),
                     }
+                    occurrence += 1;
                 }
                 _ => out.push(b'&'),
             }

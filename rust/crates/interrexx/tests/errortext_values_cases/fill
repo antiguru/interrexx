@@ -1,0 +1,126 @@
+# Which places an array fills: the first as many as its size, counted along
+# the message, each with the item at the index its digit names. 40.912 has
+# its places in the order of their numbers, 10.2 and 97.4 not.
+
+# fewer, as many and more items than places
+program
+say fills('40.912', .array~of('AAA'))
+say fills('40.912', .array~of('AAA', 'BBB'))
+say fills('40.912', .array~of('AAA', 'BBB', 'CCC'))
+say fills('40.912', .array~of('AAA', 'BBB', 'CCC', 'DDD', 'EEE'))
+say fills('40.912', .array~new)
+----
+ok
+ok
+ok
+ok
+ok
+
+# messages whose places are not in the order of their numbers
+program
+say fills('97.4', .array~of('AAA'))
+say fills('97.4', .array~of('AAA', 'BBB'))
+say fills('10.2', .array~of('AAA'))
+say fills('10.2', .array~of('AAA', 'BBB'))
+say fills('10.2', .array~of('AAA', 'BBB', 'CCC'))
+say fills('40.44', .array~of('AAA', 'BBB', 'CCC'))
+say fills('40.44', .array~of('AAA', 'BBB', 'CCC', 'DDD'))
+----
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+
+# the size counts positions with no item
+program
+a = .array~new
+a[2] = 'BBB'
+say fills('40.912', a)
+b = .array~new
+b[3] = 'CCC'
+say fills('40.912', b)
+c = .array~of('AAA', 'BBB', 'CCC')
+c~remove(3)
+say fills('40.912', c)
+say fills('97.4', c)
+say fills('40.912', .array~new(5))
+say fills('40.912', .array~new(2))
+----
+ok
+ok
+ok
+ok
+ok
+ok
+
+# a string is an array of one item, a number is a string
+program
+say fills('40.912', 'AAA') (errortext('40.912', 'AAA') == errortext('40.912', .array~of('AAA')))
+say fills('97.4', 'AAA') (errortext('97.4', 'AAA') == errortext('97.4', .array~of('AAA')))
+say errortext('40.912', '') == errortext('40.912', .array~of(''))
+say errortext('40.912', 5) == errortext('40.912', .array~of(5))
+say errortext('40.912', 1.50) == errortext('40.912', .array~of('1.50'))
+say errortext('40.912', .st~new('AAA')) == errortext('40.912', 'AAA')
+::class st subclass string
+----
+ok 1
+ok 1
+1
+1
+1
+1
+
+# items are not read for places again
+program
+say fills('40.912', .array~of('&2', '&1', '&3'))
+say fills('97.4', .array~of('&2', '&1'))
+----
+ok
+ok
+
+# an instance of an Array subclass is an array
+program
+say fills('40.912', .sub~of('AAA', 'BBB'))
+say fills('40.912', .sub~new)
+::class sub subclass array
+----
+ok
+ok
+
+# what is put in for an item
+program
+say fills('40.912', .array~of(.nil, .mutablebuffer~new('MMM'), 3.10))
+say pos('The NIL object', errortext('40.912', .array~of(.nil, .nil, .nil))) > 0
+say pos('MMM', errortext('40.912', .array~of('MMM', 'MMM', 'MMM'))) > 0
+say countstr('an Array', errortext('40.912', .array~of(.array~of(1), .array~of(2), .array~of(3))))
+say countstr('3.10', errortext('40.912', .array~of(3.10, 3.10, 3.10)))
+say countstr('a ZQ', errortext('40.912', .array~of(.zq~new, .zq~new, .zq~new)))
+::class zq
+::method string
+  say 'STRING sent'
+  return 'zq'
+----
+ok
+1
+1
+3
+3
+3
+
+# a code with no message, a message with no places, and the value omitted
+program
+say '['errortext('60.1', 'AAA')']' '['errortext('40.10', .array~of('x'))']'
+say (errortext(40, 'AAA') == errortext(40)) (errortext(4, .array~of('x')) == errortext(4))
+say (errortext('40.912', ) == errortext('40.912')) (errortext(40, ) == errortext(40))
+signal on syntax name e
+x = substr('abc', 0)
+e: c = condition('o')
+say c~code (errortext(c~code, c~additional) == c~message)
+----
+[] []
+1 1
+1 1
+40.14 1

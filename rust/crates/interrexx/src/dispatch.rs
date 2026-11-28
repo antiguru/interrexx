@@ -3091,7 +3091,7 @@ impl Interp {
     /// Whether `receiver` is a string, a number or an instance of a `String`
     /// subclass, which is what a `String` method works on.
     #[inline]
-    fn is_string_valued(&self, receiver: ObjRef) -> bool {
+    pub(crate) fn is_string_valued(&self, receiver: ObjRef) -> bool {
         match receiver.decode() {
             Decoded::Text(_) | Decoded::SmallInt(_) => true,
             Decoded::Nil => false,

@@ -732,6 +732,20 @@ impl Raised {
         )
     }
 
+    /// 40.912: a builtin's argument is neither a single-dimensional array nor a
+    /// string. `found` is the object's own rendering.
+    pub(crate) fn argument_not_an_array(routine: &[u8], position: usize, found: &[u8]) -> Raised {
+        Raised::syntax(
+            40,
+            912,
+            vec![
+                routine.to_vec(),
+                position.to_string().into_bytes(),
+                found.to_vec(),
+            ],
+        )
+    }
+
     /// 40.904: a builtin's option argument is not one of the letters that
     /// builtin accepts. `valid` is substituted verbatim, so its own quoting
     /// is the caller's to supply.
