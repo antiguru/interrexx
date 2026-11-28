@@ -1774,6 +1774,12 @@ impl Raised {
         ))
     }
 
+    /// The traceback line of an internal package routine called under an
+    /// external binding (r[dir.routine.external.traceback]).
+    pub(crate) fn external_routine_line(name: &[u8]) -> Vec<u8> {
+        built_in_frame_line([b"Compiled routine \"".as_slice(), name, b"\"."].concat())
+    }
+
     /// 101.20: the traceback line of a built-in method, laid out as
     /// [`Raised::compiled_routine_line`]'s.
     pub(crate) fn compiled_method_line(name: &[u8], scope: &str) -> Vec<u8> {

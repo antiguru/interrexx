@@ -386,6 +386,11 @@ e: say arg(1) '=>' condition('o')~code
 ::frob => 99.916
 ```
 
+r[dir.routine.external.traceback]
+When a call by name to a routine declared with `EXTERNAL "LIBRARY REXX ..."`
+raises an error in that routine, the error report's traceback names the
+binding as a compiled routine.
+
 ## Deviations
 
 r[dir.routine.deviation.143]
