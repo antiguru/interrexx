@@ -1,8 +1,11 @@
 """Controls for the test entry preflight."""
 
+from contextlib import redirect_stderr
+from io import StringIO
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import test_preflight as preflight
 
@@ -56,6 +59,19 @@ class Prerequisites(unittest.TestCase):
         self.assertIn("ootest/ooTest.frm", missing)
         self.assertIn("oodocs/rexxref/en-US/fundclasses.xml", missing)
         self.assertNotIn("build/lib/librxmath.so", missing)
+
+    def test_missing_tool_blocks_command_with_all_standalone_inputs_present(self):
+        stderr = StringIO()
+        with (
+            patch.object(preflight, "missing_inputs", return_value=[]),
+            patch.object(preflight.shutil, "which",
+                         side_effect=lambda name: None if name == "c++" else f"/bin/{name}"),
+            patch.object(preflight.os, "execvp") as execute,
+            redirect_stderr(stderr),
+        ):
+            self.assertEqual(preflight.main(["--standalone", "--", "cargo", "nextest"]), 1)
+        self.assertIn("Rust test tools missing from PATH: c++", stderr.getvalue())
+        execute.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -5,21 +5,21 @@ and the reasons for them are in `docs/design/decisions.md`; read it before propo
 
 ## Setup
 
-A regular build and test run need no submodule and no ooRexx build. `cargo build` and
-`cargo nextest run --workspace --profile standalone` read only files of this repository, plus the
-ooTest (`ootest/`) and ooRexx documentation (`oodocs/`) checkouts, and the tools some tests run:
-`svn` and a C and a C++ compiler. `python3 rust/scripts/test_preflight.py --standalone`
-lists whichever of the two checkouts is missing and prints the `svn checkout` commands that fetch
-them; it checks the checkouts only, not the tools. `test_preflight.py --standalone -- COMMAND` runs
-the command only if nothing is missing.
+A regular build uses the files in this repository. The `standalone` nextest profile additionally
+needs the ooTest and language reference checkouts. From the repository root,
+`scripts/setup-third-party.sh --standalone` fetches the pinned revisions into `ootest/` and
+`oodocs/rexxref/` without building ooRexx or initializing the submodule.
+`python3 rust/scripts/test_preflight.py --standalone` checks those inputs and looks for `svn`,
+`cc`, `c++`, and `g++` on `PATH`. With `-- COMMAND`, the preflight runs the command only when
+its checks pass.
 
 The submodule and the oracle are needed only for the upstream tier of the tests and for the oracle
 comparisons (`docs/design/testing.md`). `scripts/setup-third-party.sh` checks out the pinned
 `third_party/ooRexx` submodule, builds it as `third_party/oracle` (CMake `Release`), and checks out
-ooTest and the documentation at a fixed revision. Then `python3 rust/scripts/test_preflight.py`
-lists the checkouts and the oracle's `build/lib` libraries that are missing; it does not look at
-`third_party/ooRexx` or `third_party/oracle`. `test_preflight.py -- COMMAND` runs the command only
-if nothing is missing.
+ooTest and the documentation at a fixed revision. The script links the oracle into `build/`.
+`python3 rust/scripts/test_preflight.py` checks the tools and checkouts, plus the oracle
+libraries it finds in `build/lib/`. CMake is needed for the setup step, and `clang` and
+`clang++` are needed for the separate interface checks below.
 
 Three tables are generated from the pinned sources and checked in: `classes.tsv`, `errors.tsv`
 and `builtins.txt`, in the `data/` directories of `interrexx-classes` and `interrexx-inventory`.

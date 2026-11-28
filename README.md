@@ -34,12 +34,16 @@ The package installs `rexx`, `rexxc`, `rexx-ir`, `rxapi`, `rxqueue` and `rxsubco
 
 ## Testing
 
-The regular tests need no ooRexx build and no submodule. They need the ooTest and ooRexx
-documentation checkouts, `svn` (the extractor tests read a checkout's revision) and a C and a C++ compiler (the ABI dump and the link test
-compile against `include/`). The preflight script lists the checkouts that are missing and prints
-the commands that fetch them:
+The regular tests on a fresh clone need the ooTest and ooRexx language reference checkouts.
+Fetch both at their pinned revisions from the repository root with
+`scripts/setup-third-party.sh --standalone`. Setup reuses existing checkouts at their current
+revisions. It needs `svn` and skips the ooRexx submodule and build. The preflight checks the
+input files and looks for `svn`, `cc`, `c++`, and `g++` on `PATH`. Some Linux tests also
+need `/usr/bin/time` and a non-root user.
+Run the tests under the memory cap described in [Developing interrexx](docs/developing.md#running-oorexx-and-interrexx).
 
 ```sh
+scripts/setup-third-party.sh --standalone
 python3 rust/scripts/test_preflight.py --standalone
 cd rust
 cargo nextest run --workspace --profile standalone
@@ -62,7 +66,8 @@ Install nextest with `cargo install cargo-nextest --locked` or from a prebuilt b
 `cargo test --workspace` has no filter, so on a checkout without the submodule it also runs the
 upstream tier, which fails.
 
-`docs/developing.md` covers running the tests and both interpreters safely; `docs/design/`
+See [Contributing](CONTRIBUTING.md) for a smaller first test run and the pull request rules.
+[Developing interrexx](docs/developing.md) covers the full checks, and `docs/design/`
 describes the implementation.
 
 ## License

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Check checkout-local inputs before running Rust workspace gates.
+"""Check inputs and external tools before running Rust workspace gates.
 
-`--standalone` checks only what the `standalone` nextest profile needs: the ooTest and
-documentation checkouts. The oracle's `build/lib` libraries belong to the upstream tier.
+`--standalone` omits the oracle's `build/lib` libraries from the input check.
 """
 
 import os
 from pathlib import Path
+import shutil
 import sys
 
 
@@ -24,6 +24,7 @@ SUITE_DIRS = tuple(f"ootest/ooRexx/{name}" for name in (
 DOCS = tuple(f"oodocs/rexxref/en-US/{name}.xml" for name in (
     "provide", "fundclasses", "collclasses", "utilityclasses", "streamclasses",
 ))
+TOOLS = ("svn", "cc", "c++", "g++")
 
 
 def missing_inputs(root, standalone=False):
@@ -34,14 +35,6 @@ def missing_inputs(root, standalone=False):
                 path for path in SUITE_DIRS if not (root / path).is_dir()]
 
 
-CHECKOUTS = (
-    "  svn checkout -r 13532 https://svn.code.sf.net/p/oorexx/code-0/test/trunk ootest\n"
-    "  svn checkout -r 13532 https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref oodocs/rexxref\n"
-)
-BUILD = (
-    "  systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 cmake -S . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release\n"
-    "  systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 cmake --build build --target rxregexp rxmath orxmethod orxfunction rxsock -j4\n"
-)
 USAGE = "usage: test_preflight.py [--standalone] [-- COMMAND ARG ...]"
 
 
@@ -54,17 +47,18 @@ def main(argv):
         print(USAGE, file=sys.stderr)
         return 2
     missing = missing_inputs(root, standalone)
+    missing_tools = [name for name in TOOLS if shutil.which(name) is None]
+    if missing_tools:
+        print(f"Rust test tools missing from PATH: {', '.join(missing_tools)}",
+              file=sys.stderr)
     if missing:
         print(f"Rust test prerequisites missing in {root}:", file=sys.stderr)
         for path in missing:
             print(f"  {root / path}", file=sys.stderr)
-        if standalone:
-            print("Run from the checkout root:\n" + CHECKOUTS +
-                  "Then rerun: python3 rust/scripts/test_preflight.py --standalone", file=sys.stderr)
-        else:
-            print("Run from the checkout root, under a memory cap:\n" + BUILD + CHECKOUTS +
-                  "Keep these checkout-local libraries separate from the read-only oracle build.\n"
-                  "Then rerun: python3 rust/scripts/test_preflight.py", file=sys.stderr)
+        option = " --standalone" if standalone else ""
+        print(f"Run from the checkout root:\n  scripts/setup-third-party.sh{option}\n"
+              f"Then rerun: python3 rust/scripts/test_preflight.py{option}", file=sys.stderr)
+    if missing or missing_tools:
         return 1
     if argv:
         os.execvp(argv[1], argv[1:])
