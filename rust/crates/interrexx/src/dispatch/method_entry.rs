@@ -37,12 +37,7 @@ impl Interp {
             && self.switch.is_none()
             && !self.trace_switchable
             && !self.clause_exits
-            && self.activity.pending_traps.is_empty()
-            && self.activity.guard_waits.is_empty()
-            && self.activity.splits_owed == 0
-            && self.activity.deferred_level.is_none()
-            && !self.activity.routing_trace
-            && !self.activity.rerun_pending()
+            && self.activity.leaf_method_is_quiet()
             && self.uninit_ready.is_empty()
             && matches!(
                 self.trace_mode(),
