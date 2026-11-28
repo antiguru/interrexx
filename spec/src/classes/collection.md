@@ -274,7 +274,8 @@ collections and of `Array`, `List`, `Queue` and `CircularQueue`; a Relation's
 `uniqueIndexes` for an index object stored in more than one entry; and the check
 of a Set's or Bag's `put` and `[]=` that the index equals the item, when both are
 the same object. An object is found at its own entry whatever its `==` answers.
-Any other stored object is compared with `==` as the page of the class says.
+A bare Stem or VariableReference that would receive the comparison matches
+only itself. Other comparisons use `==` as the page of the class says.
 
 ```rexx
 x = .liar~new
@@ -305,6 +306,41 @@ found 1 0
 1 2 2
 1 2
 0 0 5
+```
+
+```rexx
+s. = .matching~new
+x = .matching~new
+r = >x
+a = .array~of(1, s., r)
+say 'search' .array~of(1)~hasItem(s.) .array~of(1)~hasItem(r)
+say 'same' a~index(s.) a~index(r)
+t = .table~new
+.local~hash = s.~hashCode
+t[.collision~new] = 'value'
+say 'collision' t~hasIndex(s.)
+sub = .extended~new
+sub~put(.matching~new)
+say 'subclass' .array~of(1)~hasItem(sub)
+say 'operator' (r == 1)
+::class matching
+::method '=='
+  say 'default =='
+  return 1
+::class collision
+::method hashCode
+  return .local~hash
+::class extended subclass stem
+```
+
+```output
+search 0 0
+same 2 3
+collision 0
+default ==
+subclass 1
+default ==
+operator 1
 ```
 
 r[class.collection.items]
