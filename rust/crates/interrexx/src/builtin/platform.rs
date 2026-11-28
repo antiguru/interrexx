@@ -284,47 +284,38 @@ pub(crate) fn beep(
     if args.len() > 2 {
         return Err(Raised::too_many_internal_arguments(2).into());
     }
-    // Both conversions, then frequency's range before duration's, and all
-    // before the bell: `beep(1,1)` raises on the frequency and sounds nothing.
-    let frequency = whole_number(interp, args, 1)?;
-    let duration = whole_number(interp, args, 2)?;
-    in_range(frequency, "frequency", MIN_FREQUENCY, MAX_FREQUENCY)?;
-    in_range(duration, "duration", MIN_DURATION, MAX_DURATION)?;
+    // Finish checking the frequency before reading the duration.
+    check_beep_argument(interp, args, 1, "frequency", MIN_FREQUENCY, MAX_FREQUENCY)?;
+    check_beep_argument(interp, args, 2, "duration", MIN_DURATION, MAX_DURATION)?;
     interp.write_out(&[0x07]);
     Ok(interp.text(b""))
 }
 
-/// A required BEEP argument is 88.901 when omitted and 88.903 when
-/// it cannot be read as a native whole number.
-fn whole_number(
+/// Checks the native whole number and uses the original argument in a range error.
+fn check_beep_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
     position: usize,
-) -> Result<i64, Failure> {
+    name: &str,
+    minimum: i64,
+    maximum: i64,
+) -> Result<(), Failure> {
     let value = rexxutil::required(args, position)?;
-    if let Some(number) = rexxutil::stems::whole_value(interp, value, -MAX_WHOLENUMBER)? {
-        return Ok(number);
+    match rexxutil::stems::whole_value(interp, value, -MAX_WHOLENUMBER)? {
+        Some(number) if (minimum..=maximum).contains(&number) => Ok(()),
+        Some(_) => {
+            let found = interp.string_value_text(value)?;
+            Err(Raised::native_argument_out_of_range(name, minimum, maximum, &found).into())
+        }
+        None => {
+            let found = interp.string_value_text(value)?;
+            Err(rexxutil::marshalled(Raised::syntax(
+                88,
+                903,
+                vec![position.to_string().into_bytes(), found],
+            )))
+        }
     }
-    let found = interp.string_value_text(value)?;
-    Err(rexxutil::marshalled(Raised::syntax(
-        88,
-        903,
-        vec![position.to_string().into_bytes(), found],
-    )))
-}
-
-/// `BEEP`'s own range check of a converted argument, which names it.
-fn in_range(number: i64, argument: &str, minimum: i64, maximum: i64) -> Result<(), Failure> {
-    if (minimum..=maximum).contains(&number) {
-        return Ok(());
-    }
-    Err(Raised::native_argument_out_of_range(
-        argument,
-        minimum,
-        maximum,
-        number.to_string().as_bytes(),
-    )
-    .into())
 }
 
 /// `VALUE(name, [new], selector)`: the two external pools this crate answers.
