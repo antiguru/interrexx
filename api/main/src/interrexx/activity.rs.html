@@ -569,483 +569,620 @@
 <a href=#569 id=569 data-nosnippet>569</a>        <span class="self">self</span>.rerun_pending
 <a href=#570 id=570 data-nosnippet>570</a>    }
 <a href=#571 id=571 data-nosnippet>571</a>
-<a href=#572 id=572 data-nosnippet>572</a>    <span class="doccomment">/// Sets [`Activity::rerun_indent`], answering the one it replaces.
-<a href=#573 id=573 data-nosnippet>573</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>replace_rerun_indent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, indent: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
-<a href=#574 id=574 data-nosnippet>574</a>        <span class="kw">let </span>old = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.rerun_indent, indent);
-<a href=#575 id=575 data-nosnippet>575</a>        <span class="self">self</span>.rerun_pending = <span class="self">self</span>.rerun_indent.is_some() || <span class="self">self</span>.rerun_failure_indent.is_some();
-<a href=#576 id=576 data-nosnippet>576</a>        old
-<a href=#577 id=577 data-nosnippet>577</a>    }
-<a href=#578 id=578 data-nosnippet>578</a>
-<a href=#579 id=579 data-nosnippet>579</a>    <span class="doccomment">/// The clause a re-run's indent also applies to in an error report.
-<a href=#580 id=580 data-nosnippet>580</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>rerun_failure_indent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(ActivationId, usize, usize)&gt; {
-<a href=#581 id=581 data-nosnippet>581</a>        <span class="self">self</span>.rerun_failure_indent
-<a href=#582 id=582 data-nosnippet>582</a>    }
-<a href=#583 id=583 data-nosnippet>583</a>
-<a href=#584 id=584 data-nosnippet>584</a>    <span class="doccomment">/// Sets [`Activity::rerun_failure_indent`].
-<a href=#585 id=585 data-nosnippet>585</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_rerun_failure_indent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, at: <span class="prelude-ty">Option</span>&lt;(ActivationId, usize, usize)&gt;) {
-<a href=#586 id=586 data-nosnippet>586</a>        <span class="self">self</span>.rerun_failure_indent = at;
-<a href=#587 id=587 data-nosnippet>587</a>        <span class="self">self</span>.rerun_pending = <span class="self">self</span>.rerun_indent.is_some() || <span class="self">self</span>.rerun_failure_indent.is_some();
-<a href=#588 id=588 data-nosnippet>588</a>    }
-<a href=#589 id=589 data-nosnippet>589</a>
-<a href=#590 id=590 data-nosnippet>590</a>    <span class="doccomment">/// `name` for an invocation's calling convention, shared with the last
-<a href=#591 id=591 data-nosnippet>591</a>    /// invocation's when the bytes are the same.
-<a href=#592 id=592 data-nosnippet>592</a>    </span><span class="attr">#[inline]
-<a href=#593 id=593 data-nosnippet>593</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>invocation_name(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>[u8]) -&gt; Rc&lt;[u8]&gt; {
-<a href=#594 id=594 data-nosnippet>594</a>        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.last_name {
-<a href=#595 id=595 data-nosnippet>595</a>            <span class="prelude-val">Some</span>(last) <span class="kw">if </span><span class="kw-2">**</span>last == <span class="kw-2">*</span>name =&gt; Rc::clone(last),
-<a href=#596 id=596 data-nosnippet>596</a>            <span class="kw">_ </span>=&gt; <span class="self">self</span>.new_invocation_name(name),
-<a href=#597 id=597 data-nosnippet>597</a>        }
-<a href=#598 id=598 data-nosnippet>598</a>    }
-<a href=#599 id=599 data-nosnippet>599</a>
-<a href=#600 id=600 data-nosnippet>600</a>    <span class="doccomment">/// [`Activity::invocation_name`] for a name other than the last one.
-<a href=#601 id=601 data-nosnippet>601</a>    </span><span class="attr">#[cold]
-<a href=#602 id=602 data-nosnippet>602</a>    #[inline(never)]
-<a href=#603 id=603 data-nosnippet>603</a>    </span><span class="kw">fn </span>new_invocation_name(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>[u8]) -&gt; Rc&lt;[u8]&gt; {
-<a href=#604 id=604 data-nosnippet>604</a>        <span class="kw">let </span>shared: Rc&lt;[u8]&gt; = Rc::from(name);
-<a href=#605 id=605 data-nosnippet>605</a>        <span class="self">self</span>.last_name = <span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>shared));
-<a href=#606 id=606 data-nosnippet>606</a>        shared
-<a href=#607 id=607 data-nosnippet>607</a>    }
-<a href=#608 id=608 data-nosnippet>608</a>
-<a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new() -&gt; Activity {
-<a href=#610 id=610 data-nosnippet>610</a>        Activity {
-<a href=#611 id=611 data-nosnippet>611</a>            builtin_answered_nothing: <span class="bool-val">false</span>,
-<a href=#612 id=612 data-nosnippet>612</a>            value_buffer: Vec::new(),
-<a href=#613 id=613 data-nosnippet>613</a>            running: <span class="prelude-val">None</span>,
-<a href=#614 id=614 data-nosnippet>614</a>            suspended: Vec::new(),
-<a href=#615 id=615 data-nosnippet>615</a>            spare_activations: Vec::new(),
-<a href=#616 id=616 data-nosnippet>616</a>            spare_exposed: <span class="prelude-val">None</span>,
-<a href=#617 id=617 data-nosnippet>617</a>            thread: <span class="prelude-val">None</span>,
-<a href=#618 id=618 data-nosnippet>618</a>            attached: <span class="bool-val">false</span>,
-<a href=#619 id=619 data-nosnippet>619</a>            native_handles: Vec::new(),
-<a href=#620 id=620 data-nosnippet>620</a>            native_spares: Vec::new(),
-<a href=#621 id=621 data-nosnippet>621</a>            internal_levels: Vec::new(),
-<a href=#622 id=622 data-nosnippet>622</a>            internal_depth: <span class="number">0</span>,
-<a href=#623 id=623 data-nosnippet>623</a>            method_levels: Vec::new(),
-<a href=#624 id=624 data-nosnippet>624</a>            deferred_level: <span class="prelude-val">None</span>,
-<a href=#625 id=625 data-nosnippet>625</a>            clause_state: ClauseState::new(),
-<a href=#626 id=626 data-nosnippet>626</a>            flat_loops: Vec::new(),
-<a href=#627 id=627 data-nosnippet>627</a>            flat_top: <span class="prelude-val">None</span>,
-<a href=#628 id=628 data-nosnippet>628</a>            loop_objects: Vec::new(),
-<a href=#629 id=629 data-nosnippet>629</a>            flat_spares: Vec::new(),
-<a href=#630 id=630 data-nosnippet>630</a>            frames: Vec::new(),
-<a href=#631 id=631 data-nosnippet>631</a>            call_tails: Vec::new(),
-<a href=#632 id=632 data-nosnippet>632</a>            parked_calls: Vec::new(),
-<a href=#633 id=633 data-nosnippet>633</a>            parked_keeps: Vec::new(),
-<a href=#634 id=634 data-nosnippet>634</a>            parked_levels: Vec::new(),
-<a href=#635 id=635 data-nosnippet>635</a>            replied_level: <span class="prelude-val">None</span>,
-<a href=#636 id=636 data-nosnippet>636</a>            native_tails: Vec::new(),
-<a href=#637 id=637 data-nosnippet>637</a>            pending_traps: VecDeque::new(),
-<a href=#638 id=638 data-nosnippet>638</a>            pending_additional: <span class="prelude-val">None</span>,
-<a href=#639 id=639 data-nosnippet>639</a>            native_frames_owed: Vec::new(),
-<a href=#640 id=640 data-nosnippet>640</a>            reraised_object: <span class="prelude-val">None</span>,
-<a href=#641 id=641 data-nosnippet>641</a>            traceback_object: <span class="prelude-val">None</span>,
-<a href=#642 id=642 data-nosnippet>642</a>            reraise_leaving: <span class="number">0</span>,
-<a href=#643 id=643 data-nosnippet>643</a>            <span class="attr">#[cfg(unix)]
-<a href=#644 id=644 data-nosnippet>644</a>            </span>rxunixsys_errno: <span class="number">0</span>,
-<a href=#645 id=645 data-nosnippet>645</a>            <span class="attr">#[cfg(any(unix, windows))]
-<a href=#646 id=646 data-nosnippet>646</a>            </span>rxsock_errno: <span class="number">0</span>,
-<a href=#647 id=647 data-nosnippet>647</a>            <span class="attr">#[cfg(any(unix, windows))]
-<a href=#648 id=648 data-nosnippet>648</a>            </span>socket_wait: <span class="prelude-val">None</span>,
-<a href=#649 id=649 data-nosnippet>649</a>            propagate_absorb: <span class="number">0</span>,
-<a href=#650 id=650 data-nosnippet>650</a>            pending_result: <span class="prelude-val">None</span>,
-<a href=#651 id=651 data-nosnippet>651</a>            pending_description: <span class="prelude-val">None</span>,
-<a href=#652 id=652 data-nosnippet>652</a>            pending_rc: <span class="prelude-val">None</span>,
-<a href=#653 id=653 data-nosnippet>653</a>            rerun_indent: <span class="prelude-val">None</span>,
-<a href=#654 id=654 data-nosnippet>654</a>            rerun_failure_indent: <span class="prelude-val">None</span>,
-<a href=#655 id=655 data-nosnippet>655</a>            rerun_pending: <span class="bool-val">false</span>,
-<a href=#656 id=656 data-nosnippet>656</a>            activation_indent: <span class="number">0</span>,
-<a href=#657 id=657 data-nosnippet>657</a>            failure_site: <span class="prelude-val">None</span>,
-<a href=#658 id=658 data-nosnippet>658</a>            failure_sites: Vec::new(),
-<a href=#659 id=659 data-nosnippet>659</a>            failure_frame: <span class="prelude-val">None</span>,
-<a href=#660 id=660 data-nosnippet>660</a>            failure_frames: Vec::new(),
-<a href=#661 id=661 data-nosnippet>661</a>            failure_origin: <span class="prelude-val">None</span>,
-<a href=#662 id=662 data-nosnippet>662</a>            failure_propagated: <span class="bool-val">false</span>,
-<a href=#663 id=663 data-nosnippet>663</a>            failure_reraised: <span class="bool-val">false</span>,
-<a href=#664 id=664 data-nosnippet>664</a>            native_reraise: <span class="bool-val">false</span>,
-<a href=#665 id=665 data-nosnippet>665</a>            native_reported_on_return: <span class="bool-val">false</span>,
-<a href=#666 id=666 data-nosnippet>666</a>            input_dispatch: <span class="prelude-val">None</span>,
-<a href=#667 id=667 data-nosnippet>667</a>            api_bases: Vec::new(),
-<a href=#668 id=668 data-nosnippet>668</a>            input_dispatch_trapped: <span class="bool-val">false</span>,
-<a href=#669 id=669 data-nosnippet>669</a>            input_dispatch_syntax: <span class="prelude-val">None</span>,
-<a href=#670 id=670 data-nosnippet>670</a>            clause_line_override: <span class="prelude-val">None</span>,
-<a href=#671 id=671 data-nosnippet>671</a>            fragment_depth: <span class="number">0</span>,
-<a href=#672 id=672 data-nosnippet>672</a>            debug_stop_owed: <span class="prelude-val">None</span>,
-<a href=#673 id=673 data-nosnippet>673</a>            fragments: Vec::new(),
-<a href=#674 id=674 data-nosnippet>674</a>            fragment_clause: <span class="number">0</span>,
-<a href=#675 id=675 data-nosnippet>675</a>            routing_trace: <span class="bool-val">false</span>,
-<a href=#676 id=676 data-nosnippet>676</a>            delivering: <span class="bool-val">false</span>,
-<a href=#677 id=677 data-nosnippet>677</a>            delivers_for: <span class="prelude-val">None</span>,
-<a href=#678 id=678 data-nosnippet>678</a>            delivery_clauses: <span class="number">0</span>,
-<a href=#679 id=679 data-nosnippet>679</a>            depth_base: <span class="number">0</span>,
-<a href=#680 id=680 data-nosnippet>680</a>            guarded_slices: <span class="number">0</span>,
-<a href=#681 id=681 data-nosnippet>681</a>            depth: <span class="number">0</span>,
-<a href=#682 id=682 data-nosnippet>682</a>            max_depth: <span class="number">0</span>,
-<a href=#683 id=683 data-nosnippet>683</a>            stack_entry: <span class="number">0</span>,
-<a href=#684 id=684 data-nosnippet>684</a>            stack_first: <span class="number">0</span>,
-<a href=#685 id=685 data-nosnippet>685</a>            stack_deepest: <span class="number">0</span>,
-<a href=#686 id=686 data-nosnippet>686</a>            procedure_permitted: <span class="bool-val">false</span>,
-<a href=#687 id=687 data-nosnippet>687</a>            region_procedure_permitted: <span class="bool-val">false</span>,
-<a href=#688 id=688 data-nosnippet>688</a>            call_context: CallContext::default(),
-<a href=#689 id=689 data-nosnippet>689</a>            last_name: <span class="prelude-val">None</span>,
-<a href=#690 id=690 data-nosnippet>690</a>            random_source: <span class="prelude-val">None</span>,
-<a href=#691 id=691 data-nosnippet>691</a>            requires_installing: Vec::new(),
-<a href=#692 id=692 data-nosnippet>692</a>            pin_depth: <span class="number">0</span>,
-<a href=#693 id=693 data-nosnippet>693</a>            driver_pins: <span class="number">0</span>,
-<a href=#694 id=694 data-nosnippet>694</a>            native_park: <span class="prelude-val">None</span>,
-<a href=#695 id=695 data-nosnippet>695</a>            <span class="attr">#[cfg(windows)]
-<a href=#696 id=696 data-nosnippet>696</a>            </span>windows_util_wait: <span class="prelude-val">None</span>,
-<a href=#697 id=697 data-nosnippet>697</a>            native_call: <span class="prelude-val">None</span>,
-<a href=#698 id=698 data-nosnippet>698</a>            blocked: <span class="kw">crate</span>::command::Blocks::default(),
-<a href=#699 id=699 data-nosnippet>699</a>            resuming: <span class="bool-val">false</span>,
-<a href=#700 id=700 data-nosnippet>700</a>            first: <span class="prelude-val">None</span>,
-<a href=#701 id=701 data-nosnippet>701</a>            root_then: <span class="prelude-val">None</span>,
-<a href=#702 id=702 data-nosnippet>702</a>            drive_floor: <span class="prelude-val">None</span>,
-<a href=#703 id=703 data-nosnippet>703</a>            sliced: <span class="prelude-val">None</span>,
-<a href=#704 id=704 data-nosnippet>704</a>            root_end: <span class="prelude-val">None</span>,
-<a href=#705 id=705 data-nosnippet>705</a>            delivery_failure: <span class="prelude-val">None</span>,
-<a href=#706 id=706 data-nosnippet>706</a>            number: <span class="prelude-val">None</span>,
-<a href=#707 id=707 data-nosnippet>707</a>            spawner: <span class="prelude-val">None</span>,
-<a href=#708 id=708 data-nosnippet>708</a>            splits_owed: <span class="number">0</span>,
-<a href=#709 id=709 data-nosnippet>709</a>            failed_sends: Vec::new(),
-<a href=#710 id=710 data-nosnippet>710</a>            guard_waits: Vec::new(),
-<a href=#711 id=711 data-nosnippet>711</a>            guarded_send: <span class="prelude-val">None</span>,
-<a href=#712 id=712 data-nosnippet>712</a>            retraced: <span class="prelude-val">None</span>,
-<a href=#713 id=713 data-nosnippet>713</a>            lock_to_lender: <span class="bool-val">false</span>,
-<a href=#714 id=714 data-nosnippet>714</a>            kept_place: <span class="prelude-val">None</span>,
-<a href=#715 id=715 data-nosnippet>715</a>            running_methods: Vec::new(),
-<a href=#716 id=716 data-nosnippet>716</a>            guard_exec: <span class="prelude-val">None</span>,
-<a href=#717 id=717 data-nosnippet>717</a>            guard_posted: <span class="bool-val">false</span>,
-<a href=#718 id=718 data-nosnippet>718</a>            when_parked: <span class="bool-val">false</span>,
-<a href=#719 id=719 data-nosnippet>719</a>            asleep: <span class="prelude-val">None</span>,
-<a href=#720 id=720 data-nosnippet>720</a>            woken_by_halt: <span class="bool-val">false</span>,
-<a href=#721 id=721 data-nosnippet>721</a>            queue_wait: <span class="prelude-val">None</span>,
-<a href=#722 id=722 data-nosnippet>722</a>            scoped_guard: <span class="prelude-val">None</span>,
-<a href=#723 id=723 data-nosnippet>723</a>            semaphore_wait: <span class="prelude-val">None</span>,
-<a href=#724 id=724 data-nosnippet>724</a>            parked_block: <span class="prelude-val">None</span>,
-<a href=#725 id=725 data-nosnippet>725</a>            parked_socket: <span class="prelude-val">None</span>,
-<a href=#726 id=726 data-nosnippet>726</a>            waiting_traced: <span class="prelude-val">None</span>,
-<a href=#727 id=727 data-nosnippet>727</a>            trace_cache: <span class="kw">crate</span>::trace::TraceCache::of(<span class="kw">crate</span>::trace::TraceMode::OFF, <span class="bool-val">false</span>),
-<a href=#728 id=728 data-nosnippet>728</a>            reading_debug_input: <span class="bool-val">false</span>,
-<a href=#729 id=729 data-nosnippet>729</a>            <span class="attr">#[cfg(feature = <span class="string">"pinning"</span>)]
-<a href=#730 id=730 data-nosnippet>730</a>            </span>pins: <span class="kw">crate</span>::pinning::PinStack::default(),
-<a href=#731 id=731 data-nosnippet>731</a>            <span class="attr">#[cfg(feature = <span class="string">"sharing"</span>)]
-<a href=#732 id=732 data-nosnippet>732</a>            </span>sharing_tag: <span class="number">0</span>,
-<a href=#733 id=733 data-nosnippet>733</a>        }
-<a href=#734 id=734 data-nosnippet>734</a>    }
-<a href=#735 id=735 data-nosnippet>735</a>
-<a href=#736 id=736 data-nosnippet>736</a>    <span class="doccomment">/// Appends the program of each activation on this activity's stack, and
-<a href=#737 id=737 data-nosnippet>737</a>    /// of the level the failure being unwound came from.
-<a href=#738 id=738 data-nosnippet>738</a>    ///
-<a href=#739 id=739 data-nosnippet>739</a>    /// A replied activation's continuation holds no activation of its own:
-<a href=#740 id=740 data-nosnippet>740</a>    /// the replying activation stays on this stack, and so in this walk,
-<a href=#741 id=741 data-nosnippet>741</a>    /// until it ends and moves into the continuation's activity.
-<a href=#742 id=742 data-nosnippet>742</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>running_programs(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw">crate</span>::plan::ProgramId&gt;) {
-<a href=#743 id=743 data-nosnippet>743</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">crate</span>::plan::Package::Program(program), <span class="kw">_</span>)) = <span class="self">self</span>.failure_origin {
-<a href=#744 id=744 data-nosnippet>744</a>            out.push(program);
-<a href=#745 id=745 data-nosnippet>745</a>        }
-<a href=#746 id=746 data-nosnippet>746</a>        out.extend(
-<a href=#747 id=747 data-nosnippet>747</a>            <span class="self">self</span>.running
-<a href=#748 id=748 data-nosnippet>748</a>                .iter()
-<a href=#749 id=749 data-nosnippet>749</a>                .map(std::ops::Deref::deref)
-<a href=#750 id=750 data-nosnippet>750</a>                .chain(<span class="self">self</span>.suspended.iter().map(Box::as_ref))
-<a href=#751 id=751 data-nosnippet>751</a>                .map(|activation| activation.program_id),
-<a href=#752 id=752 data-nosnippet>752</a>        );
-<a href=#753 id=753 data-nosnippet>753</a>    }
-<a href=#754 id=754 data-nosnippet>754</a>
-<a href=#755 id=755 data-nosnippet>755</a>    <span class="doccomment">/// Calls `visit` on every activation on the activity's stack.
-<a href=#756 id=756 data-nosnippet>756</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>for_each_activation_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, visit: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>FnMut(<span class="kw-2">&amp;mut </span>Activation)) {
-<a href=#757 id=757 data-nosnippet>757</a>        <span class="kw">for </span>activation <span class="kw">in </span><span class="self">self</span>.running.iter_mut().chain(<span class="self">self</span>.suspended.iter_mut()) {
-<a href=#758 id=758 data-nosnippet>758</a>            visit(activation);
-<a href=#759 id=759 data-nosnippet>759</a>        }
-<a href=#760 id=760 data-nosnippet>760</a>    }
-<a href=#761 id=761 data-nosnippet>761</a>
-<a href=#762 id=762 data-nosnippet>762</a>    <span class="doccomment">/// Appends the program and directive of every activation on the
-<a href=#763 id=763 data-nosnippet>763</a>    /// activity's stack, the ones [`Activity::running_programs`] names.
-<a href=#764 id=764 data-nosnippet>764</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>running_bodies(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;(<span class="kw">crate</span>::plan::ProgramId, <span class="prelude-ty">Option</span>&lt;usize&gt;)&gt;) {
-<a href=#765 id=765 data-nosnippet>765</a>        out.extend(
-<a href=#766 id=766 data-nosnippet>766</a>            <span class="self">self</span>.running
-<a href=#767 id=767 data-nosnippet>767</a>                .iter()
-<a href=#768 id=768 data-nosnippet>768</a>                .map(std::ops::Deref::deref)
-<a href=#769 id=769 data-nosnippet>769</a>                .chain(<span class="self">self</span>.suspended.iter().map(Box::as_ref))
-<a href=#770 id=770 data-nosnippet>770</a>                .map(|activation| (activation.program_id, activation.body)),
-<a href=#771 id=771 data-nosnippet>771</a>        );
-<a href=#772 id=772 data-nosnippet>772</a>    }
-<a href=#773 id=773 data-nosnippet>773</a>
-<a href=#774 id=774 data-nosnippet>774</a>    <span class="doccomment">/// Appends every method other than a Rexx body that runs on this
-<a href=#775 id=775 data-nosnippet>775</a>    /// activity or waits on it to run: one on its Rust stack, a native call
-<a href=#776 id=776 data-nosnippet>776</a>    /// away on another thread, and a send parked for its guard lock.
-<a href=#777 id=777 data-nosnippet>777</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>running_methods(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;interrexx_classes::MethodId&gt;) {
-<a href=#778 id=778 data-nosnippet>778</a>        out.extend(<span class="self">self</span>.running_methods.iter().copied());
-<a href=#779 id=779 data-nosnippet>779</a>        out.extend(<span class="self">self</span>.native_call.as_ref().and_then(|call| call.method()));
-<a href=#780 id=780 data-nosnippet>780</a>        out.extend(<span class="self">self</span>.guarded_send.as_ref().map(|send| send.method()));
-<a href=#781 id=781 data-nosnippet>781</a>    }
-<a href=#782 id=782 data-nosnippet>782</a>
-<a href=#783 id=783 data-nosnippet>783</a>    <span class="doccomment">/// Appends every `ObjRef` the activity must hand the collector to `out`,
-<a href=#784 id=784 data-nosnippet>784</a>    /// and names every field that does not need to be handed over.
-<a href=#785 id=785 data-nosnippet>785</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>object_roots(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;ObjRef&gt;) {
-<a href=#786 id=786 data-nosnippet>786</a>        <span class="kw">let </span>Activity {
-<a href=#787 id=787 data-nosnippet>787</a>            <span class="comment">// Every push site roots the value as a temp before it lands here.
-<a href=#788 id=788 data-nosnippet>788</a>            </span>value_buffer: <span class="kw">_</span>,
-<a href=#789 id=789 data-nosnippet>789</a>            builtin_answered_nothing: <span class="kw">_</span>,
-<a href=#790 id=790 data-nosnippet>790</a>            running,
-<a href=#791 id=791 data-nosnippet>791</a>            trace_cache: <span class="kw">_</span>,
-<a href=#792 id=792 data-nosnippet>792</a>            reading_debug_input: <span class="kw">_</span>,
-<a href=#793 id=793 data-nosnippet>793</a>            suspended,
-<a href=#794 id=794 data-nosnippet>794</a>            <span class="comment">// A finished activation's leftovers, overwritten at reuse and read
-<a href=#795 id=795 data-nosnippet>795</a>            // by nothing in between.
-<a href=#796 id=796 data-nosnippet>796</a>            </span>spare_activations: <span class="kw">_</span>,
-<a href=#797 id=797 data-nosnippet>797</a>            <span class="comment">// Empty whenever it is kept.
-<a href=#798 id=798 data-nosnippet>798</a>            </span>spare_exposed: <span class="kw">_</span>,
-<a href=#799 id=799 data-nosnippet>799</a>            <span class="comment">// Handles for constants that are not heap objects, and the
-<a href=#800 id=800 data-nosnippet>800</a>            // innermost native call, whose frame `native_handles` roots.
-<a href=#801 id=801 data-nosnippet>801</a>            </span>thread: <span class="kw">_</span>,
-<a href=#802 id=802 data-nosnippet>802</a>            attached: <span class="kw">_</span>,
-<a href=#803 id=803 data-nosnippet>803</a>            native_handles,
-<a href=#804 id=804 data-nosnippet>804</a>            <span class="comment">// A pop clears the buffers that held objects, and a push
-<a href=#805 id=805 data-nosnippet>805</a>            // overwrites the handle fields before anything reads them, so a
-<a href=#806 id=806 data-nosnippet>806</a>            // spare names nothing to root.
-<a href=#807 id=807 data-nosnippet>807</a>            </span>native_spares: <span class="kw">_</span>,
-<a href=#808 id=808 data-nosnippet>808</a>            <span class="comment">// A running call's arguments are its caller's temps, and a slot
-<a href=#809 id=809 data-nosnippet>809</a>            // above the depth holds an emptied buffer.
-<a href=#810 id=810 data-nosnippet>810</a>            </span>internal_levels,
-<a href=#811 id=811 data-nosnippet>811</a>            internal_depth,
-<a href=#812 id=812 data-nosnippet>812</a>            method_levels,
-<a href=#813 id=813 data-nosnippet>813</a>            deferred_level,
-<a href=#814 id=814 data-nosnippet>814</a>            clause_state: <span class="kw">_</span>,
-<a href=#815 id=815 data-nosnippet>815</a>            <span class="comment">// The `DO OVER` snapshot sits in a register held for the loop's
-<a href=#816 id=816 data-nosnippet>816</a>            // lifetime, and `RootSet` reaches a register as a temp.
-<a href=#817 id=817 data-nosnippet>817</a>            </span>flat_loops: <span class="kw">_</span>,
-<a href=#818 id=818 data-nosnippet>818</a>            flat_top: <span class="kw">_</span>,
-<a href=#819 id=819 data-nosnippet>819</a>            loop_objects,
-<a href=#820 id=820 data-nosnippet>820</a>            frames: <span class="kw">_</span>,
-<a href=#821 id=821 data-nosnippet>821</a>            <span class="comment">// A saved convention is the caller's, whose arguments and
-<a href=#822 id=822 data-nosnippet>822</a>            // receiver that caller's temps and registers root; a lent argument
-<a href=#823 id=823 data-nosnippet>823</a>            // stack holds values its caller's registers root; a parked level's
-<a href=#824 id=824 data-nosnippet>824</a>            // registers stay reserved in the arena.
-<a href=#825 id=825 data-nosnippet>825</a>            </span>call_tails: <span class="kw">_</span>,
-<a href=#826 id=826 data-nosnippet>826</a>            parked_calls: <span class="kw">_</span>,
-<a href=#827 id=827 data-nosnippet>827</a>            <span class="comment">// A kept copy is pinned while its call runs.
-<a href=#828 id=828 data-nosnippet>828</a>            </span>parked_keeps: <span class="kw">_</span>,
-<a href=#829 id=829 data-nosnippet>829</a>            parked_levels: <span class="kw">_</span>,
-<a href=#830 id=830 data-nosnippet>830</a>            <span class="comment">// Its registers are the record's parked values.
-<a href=#831 id=831 data-nosnippet>831</a>            </span>replied_level: <span class="kw">_</span>,
-<a href=#832 id=832 data-nosnippet>832</a>            native_tails,
-<a href=#833 id=833 data-nosnippet>833</a>            <span class="comment">// Overwritten at reuse, as `spare_activations` is.
-<a href=#834 id=834 data-nosnippet>834</a>            </span>flat_spares: <span class="kw">_</span>,
-<a href=#835 id=835 data-nosnippet>835</a>            pending_traps,
-<a href=#836 id=836 data-nosnippet>836</a>            pending_additional,
-<a href=#837 id=837 data-nosnippet>837</a>            native_frames_owed,
-<a href=#838 id=838 data-nosnippet>838</a>            reraised_object,
-<a href=#839 id=839 data-nosnippet>839</a>            traceback_object,
-<a href=#840 id=840 data-nosnippet>840</a>            reraise_leaving: <span class="kw">_</span>,
-<a href=#841 id=841 data-nosnippet>841</a>            <span class="attr">#[cfg(unix)]
-<a href=#842 id=842 data-nosnippet>842</a>                </span>rxunixsys_errno: <span class="kw">_</span>,
-<a href=#843 id=843 data-nosnippet>843</a>            <span class="attr">#[cfg(any(unix, windows))]
-<a href=#844 id=844 data-nosnippet>844</a>                </span>rxsock_errno: <span class="kw">_</span>,
-<a href=#845 id=845 data-nosnippet>845</a>            <span class="attr">#[cfg(any(unix, windows))]
-<a href=#846 id=846 data-nosnippet>846</a>                </span>socket_wait: <span class="kw">_</span>,
-<a href=#847 id=847 data-nosnippet>847</a>            propagate_absorb: <span class="kw">_</span>,
-<a href=#848 id=848 data-nosnippet>848</a>            pending_result,
-<a href=#849 id=849 data-nosnippet>849</a>            pending_description,
-<a href=#850 id=850 data-nosnippet>850</a>            pending_rc,
-<a href=#851 id=851 data-nosnippet>851</a>            rerun_indent: <span class="kw">_</span>,
-<a href=#852 id=852 data-nosnippet>852</a>            rerun_failure_indent: <span class="kw">_</span>,
-<a href=#853 id=853 data-nosnippet>853</a>            rerun_pending: <span class="kw">_</span>,
-<a href=#854 id=854 data-nosnippet>854</a>            activation_indent: <span class="kw">_</span>,
-<a href=#855 id=855 data-nosnippet>855</a>            failure_site: <span class="kw">_</span>,
-<a href=#856 id=856 data-nosnippet>856</a>            failure_sites: <span class="kw">_</span>,
-<a href=#857 id=857 data-nosnippet>857</a>            failure_frame,
-<a href=#858 id=858 data-nosnippet>858</a>            failure_frames,
-<a href=#859 id=859 data-nosnippet>859</a>            <span class="comment">// A package identity and a line.
-<a href=#860 id=860 data-nosnippet>860</a>            </span>failure_origin: <span class="kw">_</span>,
-<a href=#861 id=861 data-nosnippet>861</a>            failure_propagated: <span class="kw">_</span>,
-<a href=#862 id=862 data-nosnippet>862</a>            failure_reraised: <span class="kw">_</span>,
-<a href=#863 id=863 data-nosnippet>863</a>            <span class="comment">// Flags and an activation identity.
-<a href=#864 id=864 data-nosnippet>864</a>            </span>native_reraise: <span class="kw">_</span>,
-<a href=#865 id=865 data-nosnippet>865</a>            native_reported_on_return: <span class="kw">_</span>,
-<a href=#866 id=866 data-nosnippet>866</a>            input_dispatch: <span class="kw">_</span>,
-<a href=#867 id=867 data-nosnippet>867</a>            <span class="comment">// Activation identities and native rows.
-<a href=#868 id=868 data-nosnippet>868</a>            </span>api_bases: <span class="kw">_</span>,
-<a href=#869 id=869 data-nosnippet>869</a>            input_dispatch_trapped: <span class="kw">_</span>,
-<a href=#870 id=870 data-nosnippet>870</a>            <span class="comment">// A condition, whose ADDITIONAL `pending_additional` roots.
-<a href=#871 id=871 data-nosnippet>871</a>            </span>input_dispatch_syntax: <span class="kw">_</span>,
-<a href=#872 id=872 data-nosnippet>872</a>            clause_line_override: <span class="kw">_</span>,
-<a href=#873 id=873 data-nosnippet>873</a>            fragment_depth: <span class="kw">_</span>,
-<a href=#874 id=874 data-nosnippet>874</a>            debug_stop_owed: <span class="kw">_</span>,
-<a href=#875 id=875 data-nosnippet>875</a>            fragments: <span class="kw">_</span>,
-<a href=#876 id=876 data-nosnippet>876</a>            fragment_clause: <span class="kw">_</span>,
-<a href=#877 id=877 data-nosnippet>877</a>            routing_trace: <span class="kw">_</span>,
-<a href=#878 id=878 data-nosnippet>878</a>            delivering: <span class="kw">_</span>,
-<a href=#879 id=879 data-nosnippet>879</a>            delivers_for: <span class="kw">_</span>,
-<a href=#880 id=880 data-nosnippet>880</a>            delivery_clauses: <span class="kw">_</span>,
-<a href=#881 id=881 data-nosnippet>881</a>            depth_base: <span class="kw">_</span>,
-<a href=#882 id=882 data-nosnippet>882</a>            guarded_slices: <span class="kw">_</span>,
-<a href=#883 id=883 data-nosnippet>883</a>            depth: <span class="kw">_</span>,
-<a href=#884 id=884 data-nosnippet>884</a>            max_depth: <span class="kw">_</span>,
-<a href=#885 id=885 data-nosnippet>885</a>            stack_entry: <span class="kw">_</span>,
-<a href=#886 id=886 data-nosnippet>886</a>            stack_first: <span class="kw">_</span>,
-<a href=#887 id=887 data-nosnippet>887</a>            stack_deepest: <span class="kw">_</span>,
-<a href=#888 id=888 data-nosnippet>888</a>            procedure_permitted: <span class="kw">_</span>,
-<a href=#889 id=889 data-nosnippet>889</a>            region_procedure_permitted: <span class="kw">_</span>,
-<a href=#890 id=890 data-nosnippet>890</a>            <span class="comment">// A running call's arguments and receiver are the caller's temps;
-<a href=#891 id=891 data-nosnippet>891</a>            // `CallContext::object_roots` is the parked case's other route.
-<a href=#892 id=892 data-nosnippet>892</a>            </span>call_context: <span class="kw">_</span>,
-<a href=#893 id=893 data-nosnippet>893</a>            last_name: <span class="kw">_</span>,
-<a href=#894 id=894 data-nosnippet>894</a>            random_source: <span class="kw">_</span>,
-<a href=#895 id=895 data-nosnippet>895</a>            requires_installing: <span class="kw">_</span>,
-<a href=#896 id=896 data-nosnippet>896</a>            pin_depth: <span class="kw">_</span>,
-<a href=#897 id=897 data-nosnippet>897</a>            driver_pins: <span class="kw">_</span>,
-<a href=#898 id=898 data-nosnippet>898</a>            native_park,
-<a href=#899 id=899 data-nosnippet>899</a>            native_call,
-<a href=#900 id=900 data-nosnippet>900</a>            blocked,
-<a href=#901 id=901 data-nosnippet>901</a>            resuming: <span class="kw">_</span>,
-<a href=#902 id=902 data-nosnippet>902</a>            first,
-<a href=#903 id=903 data-nosnippet>903</a>            root_then,
-<a href=#904 id=904 data-nosnippet>904</a>            drive_floor: <span class="kw">_</span>,
-<a href=#905 id=905 data-nosnippet>905</a>            sliced: <span class="kw">_</span>,
-<a href=#906 id=906 data-nosnippet>906</a>            root_end,
-<a href=#907 id=907 data-nosnippet>907</a>            delivery_failure,
-<a href=#908 id=908 data-nosnippet>908</a>            number: <span class="kw">_</span>,
-<a href=#909 id=909 data-nosnippet>909</a>            spawner,
-<a href=#910 id=910 data-nosnippet>910</a>            splits_owed: <span class="kw">_</span>,
-<a href=#911 id=911 data-nosnippet>911</a>            failed_sends,
-<a href=#912 id=912 data-nosnippet>912</a>            <span class="comment">// Each key's object is its waiting activation's receiver.
-<a href=#913 id=913 data-nosnippet>913</a>            </span>guard_waits: <span class="kw">_</span>,
-<a href=#914 id=914 data-nosnippet>914</a>            guarded_send,
-<a href=#915 id=915 data-nosnippet>915</a>            retraced,
-<a href=#916 id=916 data-nosnippet>916</a>            lock_to_lender: <span class="kw">_</span>,
-<a href=#917 id=917 data-nosnippet>917</a>            kept_place: <span class="kw">_</span>,
-<a href=#918 id=918 data-nosnippet>918</a>            running_methods: <span class="kw">_</span>,
-<a href=#919 id=919 data-nosnippet>919</a>            guard_exec,
-<a href=#920 id=920 data-nosnippet>920</a>            guard_posted: <span class="kw">_</span>,
-<a href=#921 id=921 data-nosnippet>921</a>            when_parked: <span class="kw">_</span>,
-<a href=#922 id=922 data-nosnippet>922</a>            asleep: <span class="kw">_</span>,
-<a href=#923 id=923 data-nosnippet>923</a>            <span class="attr">#[cfg(windows)]
-<a href=#924 id=924 data-nosnippet>924</a>                </span>windows_util_wait: <span class="kw">_</span>,
-<a href=#925 id=925 data-nosnippet>925</a>            woken_by_halt: <span class="kw">_</span>,
-<a href=#926 id=926 data-nosnippet>926</a>            queue_wait: <span class="kw">_</span>,
-<a href=#927 id=927 data-nosnippet>927</a>            scoped_guard: <span class="kw">_</span>,
-<a href=#928 id=928 data-nosnippet>928</a>            semaphore_wait: <span class="kw">_</span>,
-<a href=#929 id=929 data-nosnippet>929</a>            parked_block: <span class="kw">_</span>,
-<a href=#930 id=930 data-nosnippet>930</a>            parked_socket: <span class="kw">_</span>,
-<a href=#931 id=931 data-nosnippet>931</a>            waiting_traced: <span class="kw">_</span>,
-<a href=#932 id=932 data-nosnippet>932</a>            <span class="attr">#[cfg(feature = <span class="string">"pinning"</span>)]
-<a href=#933 id=933 data-nosnippet>933</a>                </span>pins: <span class="kw">_</span>,
-<a href=#934 id=934 data-nosnippet>934</a>            <span class="attr">#[cfg(feature = <span class="string">"sharing"</span>)]
-<a href=#935 id=935 data-nosnippet>935</a>                </span>sharing_tag: <span class="kw">_</span>,
-<a href=#936 id=936 data-nosnippet>936</a>        } = <span class="self">self</span>;
-<a href=#937 id=937 data-nosnippet>937</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(exec) = guard_exec {
-<a href=#938 id=938 data-nosnippet>938</a>            out.extend(exec.watched.iter().flat_map(|var| [var.owner, var.scope]));
-<a href=#939 id=939 data-nosnippet>939</a>        }
-<a href=#940 id=940 data-nosnippet>940</a>        out.extend(loop_objects.iter().map(|(<span class="kw">_</span>, object)| <span class="kw-2">*</span>object));
-<a href=#941 id=941 data-nosnippet>941</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(send) = guarded_send {
-<a href=#942 id=942 data-nosnippet>942</a>            send.object_roots(out);
-<a href=#943 id=943 data-nosnippet>943</a>        }
-<a href=#944 id=944 data-nosnippet>944</a>        out.extend(retraced.iter().flat_map(|key| [key.object, key.scope]));
-<a href=#945 id=945 data-nosnippet>945</a>        <span class="comment">// The raise's own `ADDITIONAL`, alive between the raise and the
-<a href=#946 id=946 data-nosnippet>946</a>        // condition object that will hold it.
-<a href=#947 id=947 data-nosnippet>947</a>        </span>out.extend(<span class="kw-2">*</span>pending_additional);
-<a href=#948 id=948 data-nosnippet>948</a>        blocked.object_roots(out);
-<a href=#949 id=949 data-nosnippet>949</a>        out.extend(native_frames_owed.iter().copied());
-<a href=#950 id=950 data-nosnippet>950</a>        out.extend(<span class="kw-2">*</span>pending_result);
-<a href=#951 id=951 data-nosnippet>951</a>        out.extend(<span class="kw-2">*</span>pending_description);
-<a href=#952 id=952 data-nosnippet>952</a>        out.extend(<span class="kw-2">*</span>pending_rc);
-<a href=#953 id=953 data-nosnippet>953</a>        out.extend(<span class="kw-2">*</span>reraised_object);
-<a href=#954 id=954 data-nosnippet>954</a>        out.extend(<span class="kw-2">*</span>traceback_object);
-<a href=#955 id=955 data-nosnippet>955</a>        out.extend(<span class="kw-2">*</span>failure_frame);
-<a href=#956 id=956 data-nosnippet>956</a>        out.extend(failure_frames.iter().copied());
-<a href=#957 id=957 data-nosnippet>957</a>        out.extend(failed_sends.iter().copied());
-<a href=#958 id=958 data-nosnippet>958</a>        <span class="kw">match </span>spawner {
-<a href=#959 id=959 data-nosnippet>959</a>            <span class="prelude-val">Some</span>(Spawner::Frame {
-<a href=#960 id=960 data-nosnippet>960</a>                frame: <span class="prelude-val">Some</span>((frame, executable)),
-<a href=#961 id=961 data-nosnippet>961</a>                ..
-<a href=#962 id=962 data-nosnippet>962</a>            }) =&gt; out.extend([<span class="kw-2">*</span>frame, <span class="kw-2">*</span>executable]),
-<a href=#963 id=963 data-nosnippet>963</a>            <span class="prelude-val">Some</span>(Spawner::Table(table)) =&gt; out.push(<span class="kw-2">*</span>table),
-<a href=#964 id=964 data-nosnippet>964</a>            <span class="kw">_ </span>=&gt; {}
-<a href=#965 id=965 data-nosnippet>965</a>        }
-<a href=#966 id=966 data-nosnippet>966</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Failure::Exited(value)) = delivery_failure {
-<a href=#967 id=967 data-nosnippet>967</a>            out.extend(<span class="kw-2">*</span>value);
-<a href=#968 id=968 data-nosnippet>968</a>        }
-<a href=#969 id=969 data-nosnippet>969</a>        <span class="kw">match </span>root_end {
-<a href=#970 id=970 data-nosnippet>970</a>            <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="kw">crate</span>::run::Ended::Returned(value) | <span class="kw">crate</span>::run::Ended::Exited(value)))
-<a href=#971 id=971 data-nosnippet>971</a>            | <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(Failure::Exited(value))) =&gt; out.extend(<span class="kw-2">*</span>value),
-<a href=#972 id=972 data-nosnippet>972</a>            <span class="kw">_ </span>=&gt; {}
-<a href=#973 id=973 data-nosnippet>973</a>        }
-<a href=#974 id=974 data-nosnippet>974</a>        <span class="kw">for </span>tail <span class="kw">in </span>native_tails {
-<a href=#975 id=975 data-nosnippet>975</a>            tail.object_roots(out);
-<a href=#976 id=976 data-nosnippet>976</a>        }
-<a href=#977 id=977 data-nosnippet>977</a>        <span class="kw">for </span>level <span class="kw">in </span>method_levels {
-<a href=#978 id=978 data-nosnippet>978</a>            out.push(level.receiver);
-<a href=#979 id=979 data-nosnippet>979</a>            out.extend(level.arguments.iter().flatten().copied());
-<a href=#980 id=980 data-nosnippet>980</a>        }
-<a href=#981 id=981 data-nosnippet>981</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(level) = deferred_level {
-<a href=#982 id=982 data-nosnippet>982</a>            out.push(level.receiver);
-<a href=#983 id=983 data-nosnippet>983</a>            out.extend(level.arguments().iter().flatten().copied());
-<a href=#984 id=984 data-nosnippet>984</a>        }
-<a href=#985 id=985 data-nosnippet>985</a>        out.extend(
-<a href=#986 id=986 data-nosnippet>986</a>            internal_levels[..<span class="kw-2">*</span>internal_depth]
-<a href=#987 id=987 data-nosnippet>987</a>                .iter()
-<a href=#988 id=988 data-nosnippet>988</a>                .map(|level| level.executable)
-<a href=#989 id=989 data-nosnippet>989</a>                .filter(|executable| <span class="kw-2">*</span>executable != ObjRef::NIL),
-<a href=#990 id=990 data-nosnippet>990</a>        );
-<a href=#991 id=991 data-nosnippet>991</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(park) = native_park {
-<a href=#992 id=992 data-nosnippet>992</a>            park.object_roots(out);
-<a href=#993 id=993 data-nosnippet>993</a>        }
-<a href=#994 id=994 data-nosnippet>994</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(call) = native_call {
-<a href=#995 id=995 data-nosnippet>995</a>            call.object_roots(out);
-<a href=#996 id=996 data-nosnippet>996</a>        }
-<a href=#997 id=997 data-nosnippet>997</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw">crate</span>::scheduler::First::Send(send)) = first {
-<a href=#998 id=998 data-nosnippet>998</a>            send.object_roots(out);
-<a href=#999 id=999 data-nosnippet>999</a>        }
-<a href=#1000 id=1000 data-nosnippet>1000</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(then) = root_then {
-<a href=#1001 id=1001 data-nosnippet>1001</a>            then.object_roots(out);
-<a href=#1002 id=1002 data-nosnippet>1002</a>        }
-<a href=#1003 id=1003 data-nosnippet>1003</a>        <span class="comment">// Everything a native call has been handed, and the receiver it is
-<a href=#1004 id=1004 data-nosnippet>1004</a>        // writing object variables through. Held here rather than by the
-<a href=#1005 id=1005 data-nosnippet>1005</a>        // collector's other routes because an extension's handle is the only
-<a href=#1006 id=1006 data-nosnippet>1006</a>        // reference to it: nothing on the Rexx side names an object a native
-<a href=#1007 id=1007 data-nosnippet>1007</a>        // method allocated and has not returned yet.
-<a href=#1008 id=1008 data-nosnippet>1008</a>        </span><span class="kw">for </span>frame <span class="kw">in </span>native_handles {
-<a href=#1009 id=1009 data-nosnippet>1009</a>            frame.object_roots(out);
-<a href=#1010 id=1010 data-nosnippet>1010</a>        }
-<a href=#1011 id=1011 data-nosnippet>1011</a>        <span class="comment">// Each queued trap's condition object. Destructured rather than
-<a href=#1012 id=1012 data-nosnippet>1012</a>        // reached by field: the match above guards `Activity`'s own fields, and
-<a href=#1013 id=1013 data-nosnippet>1013</a>        // an `ObjRef` added inside this `VecDeque` would otherwise arrive
-<a href=#1014 id=1014 data-nosnippet>1014</a>        // unrooted with nothing to say so.
-<a href=#1015 id=1015 data-nosnippet>1015</a>        </span><span class="kw">for </span>PendingTrap {
-<a href=#1016 id=1016 data-nosnippet>1016</a>            condition: <span class="kw">_</span>,
-<a href=#1017 id=1017 data-nosnippet>1017</a>            rc: <span class="kw">_</span>,
-<a href=#1018 id=1018 data-nosnippet>1018</a>            description: <span class="kw">_</span>,
-<a href=#1019 id=1019 data-nosnippet>1019</a>            object,
-<a href=#1020 id=1020 data-nosnippet>1020</a>            activation: <span class="kw">_</span>,
-<a href=#1021 id=1021 data-nosnippet>1021</a>            queued_during_delivery: <span class="kw">_</span>,
-<a href=#1022 id=1022 data-nosnippet>1022</a>            request: <span class="kw">_</span>,
-<a href=#1023 id=1023 data-nosnippet>1023</a>            fragment_depth: <span class="kw">_</span>,
-<a href=#1024 id=1024 data-nosnippet>1024</a>            trace_failure: <span class="kw">_</span>,
-<a href=#1025 id=1025 data-nosnippet>1025</a>        } <span class="kw">in </span>pending_traps
-<a href=#1026 id=1026 data-nosnippet>1026</a>        {
-<a href=#1027 id=1027 data-nosnippet>1027</a>            out.extend(<span class="kw-2">*</span>object);
-<a href=#1028 id=1028 data-nosnippet>1028</a>        }
-<a href=#1029 id=1029 data-nosnippet>1029</a>        <span class="comment">// Everything each activation on the stack holds
-<a href=#1030 id=1030 data-nosnippet>1030</a>        // (`Activation::object_roots`). Among it: the context object, which
-<a href=#1031 id=1031 data-nosnippet>1031</a>        // `Interp::context_object` creates and nothing else refers to; a
-<a href=#1032 id=1032 data-nosnippet>1032</a>        // `REPLY`'s value and moved continuation, until its activation ends;
-<a href=#1033 id=1033 data-nosnippet>1033</a>        // the `Method` object a method no dictionary entry names runs for,
-<a href=#1034 id=1034 data-nosnippet>1034</a>        // which a method that took its own entry back holds nowhere else; the
-<a href=#1035 id=1035 data-nosnippet>1035</a>        // trapped condition's object, which a `CALL ON` handler's activation
-<a href=#1036 id=1036 data-nosnippet>1036</a>        // and every callee that inherits its `CONDITION()` hold once the queue
-<a href=#1037 id=1037 data-nosnippet>1037</a>        // has handed it over; and the streams the builtins opened by name,
-<a href=#1038 id=1038 data-nosnippet>1038</a>        // which only the table holds. Handed over here rather than kept
-<a href=#1039 id=1039 data-nosnippet>1039</a>        // rooted per activation because the alternative is a global root
-<a href=#1040 id=1040 data-nosnippet>1040</a>        // whose key has to be minted, replaced and retired as activations come
-<a href=#1041 id=1041 data-nosnippet>1041</a>        // and go, and this pays only when a collection actually happens.
-<a href=#1042 id=1042 data-nosnippet>1042</a>        </span><span class="kw">for </span>activation <span class="kw">in </span>running
-<a href=#1043 id=1043 data-nosnippet>1043</a>            .iter()
-<a href=#1044 id=1044 data-nosnippet>1044</a>            .map(std::ops::Deref::deref)
-<a href=#1045 id=1045 data-nosnippet>1045</a>            .chain(suspended.iter().map(Box::as_ref))
-<a href=#1046 id=1046 data-nosnippet>1046</a>        {
-<a href=#1047 id=1047 data-nosnippet>1047</a>            activation.object_roots(out);
-<a href=#1048 id=1048 data-nosnippet>1048</a>        }
-<a href=#1049 id=1049 data-nosnippet>1049</a>    }
-<a href=#1050 id=1050 data-nosnippet>1050</a>}
+<a href=#572 id=572 data-nosnippet>572</a>    <span class="doccomment">/// Whether the activity allows a leaf method to skip activation entry.
+<a href=#573 id=573 data-nosnippet>573</a>    /// Name every field so new activity state is reviewed against the shortcut.
+<a href=#574 id=574 data-nosnippet>574</a>    </span><span class="attr">#[inline]
+<a href=#575 id=575 data-nosnippet>575</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>leaf_method_is_quiet(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+<a href=#576 id=576 data-nosnippet>576</a>        <span class="kw">let </span><span class="self">Self </span>{
+<a href=#577 id=577 data-nosnippet>577</a>            pending_traps,
+<a href=#578 id=578 data-nosnippet>578</a>            guard_waits,
+<a href=#579 id=579 data-nosnippet>579</a>            splits_owed,
+<a href=#580 id=580 data-nosnippet>580</a>            deferred_level,
+<a href=#581 id=581 data-nosnippet>581</a>            routing_trace,
+<a href=#582 id=582 data-nosnippet>582</a>            rerun_pending,
+<a href=#583 id=583 data-nosnippet>583</a>            <span class="comment">// State the shortcut does not consult.
+<a href=#584 id=584 data-nosnippet>584</a>            </span>builtin_answered_nothing: <span class="kw">_</span>,
+<a href=#585 id=585 data-nosnippet>585</a>            value_buffer: <span class="kw">_</span>,
+<a href=#586 id=586 data-nosnippet>586</a>            running: <span class="kw">_</span>,
+<a href=#587 id=587 data-nosnippet>587</a>            trace_cache: <span class="kw">_</span>,
+<a href=#588 id=588 data-nosnippet>588</a>            reading_debug_input: <span class="kw">_</span>,
+<a href=#589 id=589 data-nosnippet>589</a>            suspended: <span class="kw">_</span>,
+<a href=#590 id=590 data-nosnippet>590</a>            spare_activations: <span class="kw">_</span>,
+<a href=#591 id=591 data-nosnippet>591</a>            spare_exposed: <span class="kw">_</span>,
+<a href=#592 id=592 data-nosnippet>592</a>            native_handles: <span class="kw">_</span>,
+<a href=#593 id=593 data-nosnippet>593</a>            native_spares: <span class="kw">_</span>,
+<a href=#594 id=594 data-nosnippet>594</a>            internal_levels: <span class="kw">_</span>,
+<a href=#595 id=595 data-nosnippet>595</a>            internal_depth: <span class="kw">_</span>,
+<a href=#596 id=596 data-nosnippet>596</a>            method_levels: <span class="kw">_</span>,
+<a href=#597 id=597 data-nosnippet>597</a>            thread: <span class="kw">_</span>,
+<a href=#598 id=598 data-nosnippet>598</a>            attached: <span class="kw">_</span>,
+<a href=#599 id=599 data-nosnippet>599</a>            clause_state: <span class="kw">_</span>,
+<a href=#600 id=600 data-nosnippet>600</a>            flat_loops: <span class="kw">_</span>,
+<a href=#601 id=601 data-nosnippet>601</a>            flat_top: <span class="kw">_</span>,
+<a href=#602 id=602 data-nosnippet>602</a>            loop_objects: <span class="kw">_</span>,
+<a href=#603 id=603 data-nosnippet>603</a>            frames: <span class="kw">_</span>,
+<a href=#604 id=604 data-nosnippet>604</a>            call_tails: <span class="kw">_</span>,
+<a href=#605 id=605 data-nosnippet>605</a>            parked_calls: <span class="kw">_</span>,
+<a href=#606 id=606 data-nosnippet>606</a>            parked_keeps: <span class="kw">_</span>,
+<a href=#607 id=607 data-nosnippet>607</a>            parked_levels: <span class="kw">_</span>,
+<a href=#608 id=608 data-nosnippet>608</a>            replied_level: <span class="kw">_</span>,
+<a href=#609 id=609 data-nosnippet>609</a>            native_tails: <span class="kw">_</span>,
+<a href=#610 id=610 data-nosnippet>610</a>            flat_spares: <span class="kw">_</span>,
+<a href=#611 id=611 data-nosnippet>611</a>            pending_additional: <span class="kw">_</span>,
+<a href=#612 id=612 data-nosnippet>612</a>            native_frames_owed: <span class="kw">_</span>,
+<a href=#613 id=613 data-nosnippet>613</a>            pending_result: <span class="kw">_</span>,
+<a href=#614 id=614 data-nosnippet>614</a>            pending_description: <span class="kw">_</span>,
+<a href=#615 id=615 data-nosnippet>615</a>            pending_rc: <span class="kw">_</span>,
+<a href=#616 id=616 data-nosnippet>616</a>            reraised_object: <span class="kw">_</span>,
+<a href=#617 id=617 data-nosnippet>617</a>            traceback_object: <span class="kw">_</span>,
+<a href=#618 id=618 data-nosnippet>618</a>            reraise_leaving: <span class="kw">_</span>,
+<a href=#619 id=619 data-nosnippet>619</a>            <span class="attr">#[cfg(unix)]
+<a href=#620 id=620 data-nosnippet>620</a>                </span>rxunixsys_errno: <span class="kw">_</span>,
+<a href=#621 id=621 data-nosnippet>621</a>            <span class="attr">#[cfg(any(unix, windows))]
+<a href=#622 id=622 data-nosnippet>622</a>                </span>rxsock_errno: <span class="kw">_</span>,
+<a href=#623 id=623 data-nosnippet>623</a>            <span class="attr">#[cfg(any(unix, windows))]
+<a href=#624 id=624 data-nosnippet>624</a>                </span>socket_wait: <span class="kw">_</span>,
+<a href=#625 id=625 data-nosnippet>625</a>            propagate_absorb: <span class="kw">_</span>,
+<a href=#626 id=626 data-nosnippet>626</a>            rerun_indent: <span class="kw">_</span>,
+<a href=#627 id=627 data-nosnippet>627</a>            rerun_failure_indent: <span class="kw">_</span>,
+<a href=#628 id=628 data-nosnippet>628</a>            activation_indent: <span class="kw">_</span>,
+<a href=#629 id=629 data-nosnippet>629</a>            failure_site: <span class="kw">_</span>,
+<a href=#630 id=630 data-nosnippet>630</a>            failure_sites: <span class="kw">_</span>,
+<a href=#631 id=631 data-nosnippet>631</a>            failure_frame: <span class="kw">_</span>,
+<a href=#632 id=632 data-nosnippet>632</a>            failure_frames: <span class="kw">_</span>,
+<a href=#633 id=633 data-nosnippet>633</a>            native_reraise: <span class="kw">_</span>,
+<a href=#634 id=634 data-nosnippet>634</a>            native_reported_on_return: <span class="kw">_</span>,
+<a href=#635 id=635 data-nosnippet>635</a>            input_dispatch: <span class="kw">_</span>,
+<a href=#636 id=636 data-nosnippet>636</a>            api_bases: <span class="kw">_</span>,
+<a href=#637 id=637 data-nosnippet>637</a>            input_dispatch_trapped: <span class="kw">_</span>,
+<a href=#638 id=638 data-nosnippet>638</a>            input_dispatch_syntax: <span class="kw">_</span>,
+<a href=#639 id=639 data-nosnippet>639</a>            failure_origin: <span class="kw">_</span>,
+<a href=#640 id=640 data-nosnippet>640</a>            failure_propagated: <span class="kw">_</span>,
+<a href=#641 id=641 data-nosnippet>641</a>            failure_reraised: <span class="kw">_</span>,
+<a href=#642 id=642 data-nosnippet>642</a>            clause_line_override: <span class="kw">_</span>,
+<a href=#643 id=643 data-nosnippet>643</a>            fragment_depth: <span class="kw">_</span>,
+<a href=#644 id=644 data-nosnippet>644</a>            debug_stop_owed: <span class="kw">_</span>,
+<a href=#645 id=645 data-nosnippet>645</a>            fragments: <span class="kw">_</span>,
+<a href=#646 id=646 data-nosnippet>646</a>            fragment_clause: <span class="kw">_</span>,
+<a href=#647 id=647 data-nosnippet>647</a>            delivering: <span class="kw">_</span>,
+<a href=#648 id=648 data-nosnippet>648</a>            delivers_for: <span class="kw">_</span>,
+<a href=#649 id=649 data-nosnippet>649</a>            delivery_clauses: <span class="kw">_</span>,
+<a href=#650 id=650 data-nosnippet>650</a>            depth_base: <span class="kw">_</span>,
+<a href=#651 id=651 data-nosnippet>651</a>            guarded_slices: <span class="kw">_</span>,
+<a href=#652 id=652 data-nosnippet>652</a>            depth: <span class="kw">_</span>,
+<a href=#653 id=653 data-nosnippet>653</a>            max_depth: <span class="kw">_</span>,
+<a href=#654 id=654 data-nosnippet>654</a>            stack_entry: <span class="kw">_</span>,
+<a href=#655 id=655 data-nosnippet>655</a>            stack_first: <span class="kw">_</span>,
+<a href=#656 id=656 data-nosnippet>656</a>            stack_deepest: <span class="kw">_</span>,
+<a href=#657 id=657 data-nosnippet>657</a>            procedure_permitted: <span class="kw">_</span>,
+<a href=#658 id=658 data-nosnippet>658</a>            region_procedure_permitted: <span class="kw">_</span>,
+<a href=#659 id=659 data-nosnippet>659</a>            call_context: <span class="kw">_</span>,
+<a href=#660 id=660 data-nosnippet>660</a>            last_name: <span class="kw">_</span>,
+<a href=#661 id=661 data-nosnippet>661</a>            random_source: <span class="kw">_</span>,
+<a href=#662 id=662 data-nosnippet>662</a>            requires_installing: <span class="kw">_</span>,
+<a href=#663 id=663 data-nosnippet>663</a>            pin_depth: <span class="kw">_</span>,
+<a href=#664 id=664 data-nosnippet>664</a>            driver_pins: <span class="kw">_</span>,
+<a href=#665 id=665 data-nosnippet>665</a>            native_park: <span class="kw">_</span>,
+<a href=#666 id=666 data-nosnippet>666</a>            <span class="attr">#[cfg(windows)]
+<a href=#667 id=667 data-nosnippet>667</a>                </span>windows_util_wait: <span class="kw">_</span>,
+<a href=#668 id=668 data-nosnippet>668</a>            native_call: <span class="kw">_</span>,
+<a href=#669 id=669 data-nosnippet>669</a>            blocked: <span class="kw">_</span>,
+<a href=#670 id=670 data-nosnippet>670</a>            resuming: <span class="kw">_</span>,
+<a href=#671 id=671 data-nosnippet>671</a>            first: <span class="kw">_</span>,
+<a href=#672 id=672 data-nosnippet>672</a>            root_then: <span class="kw">_</span>,
+<a href=#673 id=673 data-nosnippet>673</a>            drive_floor: <span class="kw">_</span>,
+<a href=#674 id=674 data-nosnippet>674</a>            sliced: <span class="kw">_</span>,
+<a href=#675 id=675 data-nosnippet>675</a>            root_end: <span class="kw">_</span>,
+<a href=#676 id=676 data-nosnippet>676</a>            delivery_failure: <span class="kw">_</span>,
+<a href=#677 id=677 data-nosnippet>677</a>            number: <span class="kw">_</span>,
+<a href=#678 id=678 data-nosnippet>678</a>            spawner: <span class="kw">_</span>,
+<a href=#679 id=679 data-nosnippet>679</a>            failed_sends: <span class="kw">_</span>,
+<a href=#680 id=680 data-nosnippet>680</a>            guarded_send: <span class="kw">_</span>,
+<a href=#681 id=681 data-nosnippet>681</a>            retraced: <span class="kw">_</span>,
+<a href=#682 id=682 data-nosnippet>682</a>            lock_to_lender: <span class="kw">_</span>,
+<a href=#683 id=683 data-nosnippet>683</a>            kept_place: <span class="kw">_</span>,
+<a href=#684 id=684 data-nosnippet>684</a>            running_methods: <span class="kw">_</span>,
+<a href=#685 id=685 data-nosnippet>685</a>            guard_exec: <span class="kw">_</span>,
+<a href=#686 id=686 data-nosnippet>686</a>            guard_posted: <span class="kw">_</span>,
+<a href=#687 id=687 data-nosnippet>687</a>            when_parked: <span class="kw">_</span>,
+<a href=#688 id=688 data-nosnippet>688</a>            asleep: <span class="kw">_</span>,
+<a href=#689 id=689 data-nosnippet>689</a>            woken_by_halt: <span class="kw">_</span>,
+<a href=#690 id=690 data-nosnippet>690</a>            queue_wait: <span class="kw">_</span>,
+<a href=#691 id=691 data-nosnippet>691</a>            scoped_guard: <span class="kw">_</span>,
+<a href=#692 id=692 data-nosnippet>692</a>            semaphore_wait: <span class="kw">_</span>,
+<a href=#693 id=693 data-nosnippet>693</a>            parked_block: <span class="kw">_</span>,
+<a href=#694 id=694 data-nosnippet>694</a>            parked_socket: <span class="kw">_</span>,
+<a href=#695 id=695 data-nosnippet>695</a>            waiting_traced: <span class="kw">_</span>,
+<a href=#696 id=696 data-nosnippet>696</a>            <span class="attr">#[cfg(feature = <span class="string">"pinning"</span>)]
+<a href=#697 id=697 data-nosnippet>697</a>                </span>pins: <span class="kw">_</span>,
+<a href=#698 id=698 data-nosnippet>698</a>            <span class="attr">#[cfg(feature = <span class="string">"sharing"</span>)]
+<a href=#699 id=699 data-nosnippet>699</a>                </span>sharing_tag: <span class="kw">_</span>,
+<a href=#700 id=700 data-nosnippet>700</a>        } = <span class="self">self</span>;
+<a href=#701 id=701 data-nosnippet>701</a>        pending_traps.is_empty()
+<a href=#702 id=702 data-nosnippet>702</a>            &amp;&amp; guard_waits.is_empty()
+<a href=#703 id=703 data-nosnippet>703</a>            &amp;&amp; <span class="kw-2">*</span>splits_owed == <span class="number">0
+<a href=#704 id=704 data-nosnippet>704</a>            </span>&amp;&amp; deferred_level.is_none()
+<a href=#705 id=705 data-nosnippet>705</a>            &amp;&amp; !<span class="kw-2">*</span>routing_trace
+<a href=#706 id=706 data-nosnippet>706</a>            &amp;&amp; !<span class="kw-2">*</span>rerun_pending
+<a href=#707 id=707 data-nosnippet>707</a>    }
+<a href=#708 id=708 data-nosnippet>708</a>
+<a href=#709 id=709 data-nosnippet>709</a>    <span class="doccomment">/// Sets [`Activity::rerun_indent`], answering the one it replaces.
+<a href=#710 id=710 data-nosnippet>710</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>replace_rerun_indent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, indent: <span class="prelude-ty">Option</span>&lt;usize&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#711 id=711 data-nosnippet>711</a>        <span class="kw">let </span>old = std::mem::replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>.rerun_indent, indent);
+<a href=#712 id=712 data-nosnippet>712</a>        <span class="self">self</span>.rerun_pending = <span class="self">self</span>.rerun_indent.is_some() || <span class="self">self</span>.rerun_failure_indent.is_some();
+<a href=#713 id=713 data-nosnippet>713</a>        old
+<a href=#714 id=714 data-nosnippet>714</a>    }
+<a href=#715 id=715 data-nosnippet>715</a>
+<a href=#716 id=716 data-nosnippet>716</a>    <span class="doccomment">/// The clause a re-run's indent also applies to in an error report.
+<a href=#717 id=717 data-nosnippet>717</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>rerun_failure_indent(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;(ActivationId, usize, usize)&gt; {
+<a href=#718 id=718 data-nosnippet>718</a>        <span class="self">self</span>.rerun_failure_indent
+<a href=#719 id=719 data-nosnippet>719</a>    }
+<a href=#720 id=720 data-nosnippet>720</a>
+<a href=#721 id=721 data-nosnippet>721</a>    <span class="doccomment">/// Sets [`Activity::rerun_failure_indent`].
+<a href=#722 id=722 data-nosnippet>722</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_rerun_failure_indent(<span class="kw-2">&amp;mut </span><span class="self">self</span>, at: <span class="prelude-ty">Option</span>&lt;(ActivationId, usize, usize)&gt;) {
+<a href=#723 id=723 data-nosnippet>723</a>        <span class="self">self</span>.rerun_failure_indent = at;
+<a href=#724 id=724 data-nosnippet>724</a>        <span class="self">self</span>.rerun_pending = <span class="self">self</span>.rerun_indent.is_some() || <span class="self">self</span>.rerun_failure_indent.is_some();
+<a href=#725 id=725 data-nosnippet>725</a>    }
+<a href=#726 id=726 data-nosnippet>726</a>
+<a href=#727 id=727 data-nosnippet>727</a>    <span class="doccomment">/// `name` for an invocation's calling convention, shared with the last
+<a href=#728 id=728 data-nosnippet>728</a>    /// invocation's when the bytes are the same.
+<a href=#729 id=729 data-nosnippet>729</a>    </span><span class="attr">#[inline]
+<a href=#730 id=730 data-nosnippet>730</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>invocation_name(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>[u8]) -&gt; Rc&lt;[u8]&gt; {
+<a href=#731 id=731 data-nosnippet>731</a>        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.last_name {
+<a href=#732 id=732 data-nosnippet>732</a>            <span class="prelude-val">Some</span>(last) <span class="kw">if </span><span class="kw-2">**</span>last == <span class="kw-2">*</span>name =&gt; Rc::clone(last),
+<a href=#733 id=733 data-nosnippet>733</a>            <span class="kw">_ </span>=&gt; <span class="self">self</span>.new_invocation_name(name),
+<a href=#734 id=734 data-nosnippet>734</a>        }
+<a href=#735 id=735 data-nosnippet>735</a>    }
+<a href=#736 id=736 data-nosnippet>736</a>
+<a href=#737 id=737 data-nosnippet>737</a>    <span class="doccomment">/// [`Activity::invocation_name`] for a name other than the last one.
+<a href=#738 id=738 data-nosnippet>738</a>    </span><span class="attr">#[cold]
+<a href=#739 id=739 data-nosnippet>739</a>    #[inline(never)]
+<a href=#740 id=740 data-nosnippet>740</a>    </span><span class="kw">fn </span>new_invocation_name(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>[u8]) -&gt; Rc&lt;[u8]&gt; {
+<a href=#741 id=741 data-nosnippet>741</a>        <span class="kw">let </span>shared: Rc&lt;[u8]&gt; = Rc::from(name);
+<a href=#742 id=742 data-nosnippet>742</a>        <span class="self">self</span>.last_name = <span class="prelude-val">Some</span>(Rc::clone(<span class="kw-2">&amp;</span>shared));
+<a href=#743 id=743 data-nosnippet>743</a>        shared
+<a href=#744 id=744 data-nosnippet>744</a>    }
+<a href=#745 id=745 data-nosnippet>745</a>
+<a href=#746 id=746 data-nosnippet>746</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new() -&gt; Activity {
+<a href=#747 id=747 data-nosnippet>747</a>        Activity {
+<a href=#748 id=748 data-nosnippet>748</a>            builtin_answered_nothing: <span class="bool-val">false</span>,
+<a href=#749 id=749 data-nosnippet>749</a>            value_buffer: Vec::new(),
+<a href=#750 id=750 data-nosnippet>750</a>            running: <span class="prelude-val">None</span>,
+<a href=#751 id=751 data-nosnippet>751</a>            suspended: Vec::new(),
+<a href=#752 id=752 data-nosnippet>752</a>            spare_activations: Vec::new(),
+<a href=#753 id=753 data-nosnippet>753</a>            spare_exposed: <span class="prelude-val">None</span>,
+<a href=#754 id=754 data-nosnippet>754</a>            thread: <span class="prelude-val">None</span>,
+<a href=#755 id=755 data-nosnippet>755</a>            attached: <span class="bool-val">false</span>,
+<a href=#756 id=756 data-nosnippet>756</a>            native_handles: Vec::new(),
+<a href=#757 id=757 data-nosnippet>757</a>            native_spares: Vec::new(),
+<a href=#758 id=758 data-nosnippet>758</a>            internal_levels: Vec::new(),
+<a href=#759 id=759 data-nosnippet>759</a>            internal_depth: <span class="number">0</span>,
+<a href=#760 id=760 data-nosnippet>760</a>            method_levels: Vec::new(),
+<a href=#761 id=761 data-nosnippet>761</a>            deferred_level: <span class="prelude-val">None</span>,
+<a href=#762 id=762 data-nosnippet>762</a>            clause_state: ClauseState::new(),
+<a href=#763 id=763 data-nosnippet>763</a>            flat_loops: Vec::new(),
+<a href=#764 id=764 data-nosnippet>764</a>            flat_top: <span class="prelude-val">None</span>,
+<a href=#765 id=765 data-nosnippet>765</a>            loop_objects: Vec::new(),
+<a href=#766 id=766 data-nosnippet>766</a>            flat_spares: Vec::new(),
+<a href=#767 id=767 data-nosnippet>767</a>            frames: Vec::new(),
+<a href=#768 id=768 data-nosnippet>768</a>            call_tails: Vec::new(),
+<a href=#769 id=769 data-nosnippet>769</a>            parked_calls: Vec::new(),
+<a href=#770 id=770 data-nosnippet>770</a>            parked_keeps: Vec::new(),
+<a href=#771 id=771 data-nosnippet>771</a>            parked_levels: Vec::new(),
+<a href=#772 id=772 data-nosnippet>772</a>            replied_level: <span class="prelude-val">None</span>,
+<a href=#773 id=773 data-nosnippet>773</a>            native_tails: Vec::new(),
+<a href=#774 id=774 data-nosnippet>774</a>            pending_traps: VecDeque::new(),
+<a href=#775 id=775 data-nosnippet>775</a>            pending_additional: <span class="prelude-val">None</span>,
+<a href=#776 id=776 data-nosnippet>776</a>            native_frames_owed: Vec::new(),
+<a href=#777 id=777 data-nosnippet>777</a>            reraised_object: <span class="prelude-val">None</span>,
+<a href=#778 id=778 data-nosnippet>778</a>            traceback_object: <span class="prelude-val">None</span>,
+<a href=#779 id=779 data-nosnippet>779</a>            reraise_leaving: <span class="number">0</span>,
+<a href=#780 id=780 data-nosnippet>780</a>            <span class="attr">#[cfg(unix)]
+<a href=#781 id=781 data-nosnippet>781</a>            </span>rxunixsys_errno: <span class="number">0</span>,
+<a href=#782 id=782 data-nosnippet>782</a>            <span class="attr">#[cfg(any(unix, windows))]
+<a href=#783 id=783 data-nosnippet>783</a>            </span>rxsock_errno: <span class="number">0</span>,
+<a href=#784 id=784 data-nosnippet>784</a>            <span class="attr">#[cfg(any(unix, windows))]
+<a href=#785 id=785 data-nosnippet>785</a>            </span>socket_wait: <span class="prelude-val">None</span>,
+<a href=#786 id=786 data-nosnippet>786</a>            propagate_absorb: <span class="number">0</span>,
+<a href=#787 id=787 data-nosnippet>787</a>            pending_result: <span class="prelude-val">None</span>,
+<a href=#788 id=788 data-nosnippet>788</a>            pending_description: <span class="prelude-val">None</span>,
+<a href=#789 id=789 data-nosnippet>789</a>            pending_rc: <span class="prelude-val">None</span>,
+<a href=#790 id=790 data-nosnippet>790</a>            rerun_indent: <span class="prelude-val">None</span>,
+<a href=#791 id=791 data-nosnippet>791</a>            rerun_failure_indent: <span class="prelude-val">None</span>,
+<a href=#792 id=792 data-nosnippet>792</a>            rerun_pending: <span class="bool-val">false</span>,
+<a href=#793 id=793 data-nosnippet>793</a>            activation_indent: <span class="number">0</span>,
+<a href=#794 id=794 data-nosnippet>794</a>            failure_site: <span class="prelude-val">None</span>,
+<a href=#795 id=795 data-nosnippet>795</a>            failure_sites: Vec::new(),
+<a href=#796 id=796 data-nosnippet>796</a>            failure_frame: <span class="prelude-val">None</span>,
+<a href=#797 id=797 data-nosnippet>797</a>            failure_frames: Vec::new(),
+<a href=#798 id=798 data-nosnippet>798</a>            failure_origin: <span class="prelude-val">None</span>,
+<a href=#799 id=799 data-nosnippet>799</a>            failure_propagated: <span class="bool-val">false</span>,
+<a href=#800 id=800 data-nosnippet>800</a>            failure_reraised: <span class="bool-val">false</span>,
+<a href=#801 id=801 data-nosnippet>801</a>            native_reraise: <span class="bool-val">false</span>,
+<a href=#802 id=802 data-nosnippet>802</a>            native_reported_on_return: <span class="bool-val">false</span>,
+<a href=#803 id=803 data-nosnippet>803</a>            input_dispatch: <span class="prelude-val">None</span>,
+<a href=#804 id=804 data-nosnippet>804</a>            api_bases: Vec::new(),
+<a href=#805 id=805 data-nosnippet>805</a>            input_dispatch_trapped: <span class="bool-val">false</span>,
+<a href=#806 id=806 data-nosnippet>806</a>            input_dispatch_syntax: <span class="prelude-val">None</span>,
+<a href=#807 id=807 data-nosnippet>807</a>            clause_line_override: <span class="prelude-val">None</span>,
+<a href=#808 id=808 data-nosnippet>808</a>            fragment_depth: <span class="number">0</span>,
+<a href=#809 id=809 data-nosnippet>809</a>            debug_stop_owed: <span class="prelude-val">None</span>,
+<a href=#810 id=810 data-nosnippet>810</a>            fragments: Vec::new(),
+<a href=#811 id=811 data-nosnippet>811</a>            fragment_clause: <span class="number">0</span>,
+<a href=#812 id=812 data-nosnippet>812</a>            routing_trace: <span class="bool-val">false</span>,
+<a href=#813 id=813 data-nosnippet>813</a>            delivering: <span class="bool-val">false</span>,
+<a href=#814 id=814 data-nosnippet>814</a>            delivers_for: <span class="prelude-val">None</span>,
+<a href=#815 id=815 data-nosnippet>815</a>            delivery_clauses: <span class="number">0</span>,
+<a href=#816 id=816 data-nosnippet>816</a>            depth_base: <span class="number">0</span>,
+<a href=#817 id=817 data-nosnippet>817</a>            guarded_slices: <span class="number">0</span>,
+<a href=#818 id=818 data-nosnippet>818</a>            depth: <span class="number">0</span>,
+<a href=#819 id=819 data-nosnippet>819</a>            max_depth: <span class="number">0</span>,
+<a href=#820 id=820 data-nosnippet>820</a>            stack_entry: <span class="number">0</span>,
+<a href=#821 id=821 data-nosnippet>821</a>            stack_first: <span class="number">0</span>,
+<a href=#822 id=822 data-nosnippet>822</a>            stack_deepest: <span class="number">0</span>,
+<a href=#823 id=823 data-nosnippet>823</a>            procedure_permitted: <span class="bool-val">false</span>,
+<a href=#824 id=824 data-nosnippet>824</a>            region_procedure_permitted: <span class="bool-val">false</span>,
+<a href=#825 id=825 data-nosnippet>825</a>            call_context: CallContext::default(),
+<a href=#826 id=826 data-nosnippet>826</a>            last_name: <span class="prelude-val">None</span>,
+<a href=#827 id=827 data-nosnippet>827</a>            random_source: <span class="prelude-val">None</span>,
+<a href=#828 id=828 data-nosnippet>828</a>            requires_installing: Vec::new(),
+<a href=#829 id=829 data-nosnippet>829</a>            pin_depth: <span class="number">0</span>,
+<a href=#830 id=830 data-nosnippet>830</a>            driver_pins: <span class="number">0</span>,
+<a href=#831 id=831 data-nosnippet>831</a>            native_park: <span class="prelude-val">None</span>,
+<a href=#832 id=832 data-nosnippet>832</a>            <span class="attr">#[cfg(windows)]
+<a href=#833 id=833 data-nosnippet>833</a>            </span>windows_util_wait: <span class="prelude-val">None</span>,
+<a href=#834 id=834 data-nosnippet>834</a>            native_call: <span class="prelude-val">None</span>,
+<a href=#835 id=835 data-nosnippet>835</a>            blocked: <span class="kw">crate</span>::command::Blocks::default(),
+<a href=#836 id=836 data-nosnippet>836</a>            resuming: <span class="bool-val">false</span>,
+<a href=#837 id=837 data-nosnippet>837</a>            first: <span class="prelude-val">None</span>,
+<a href=#838 id=838 data-nosnippet>838</a>            root_then: <span class="prelude-val">None</span>,
+<a href=#839 id=839 data-nosnippet>839</a>            drive_floor: <span class="prelude-val">None</span>,
+<a href=#840 id=840 data-nosnippet>840</a>            sliced: <span class="prelude-val">None</span>,
+<a href=#841 id=841 data-nosnippet>841</a>            root_end: <span class="prelude-val">None</span>,
+<a href=#842 id=842 data-nosnippet>842</a>            delivery_failure: <span class="prelude-val">None</span>,
+<a href=#843 id=843 data-nosnippet>843</a>            number: <span class="prelude-val">None</span>,
+<a href=#844 id=844 data-nosnippet>844</a>            spawner: <span class="prelude-val">None</span>,
+<a href=#845 id=845 data-nosnippet>845</a>            splits_owed: <span class="number">0</span>,
+<a href=#846 id=846 data-nosnippet>846</a>            failed_sends: Vec::new(),
+<a href=#847 id=847 data-nosnippet>847</a>            guard_waits: Vec::new(),
+<a href=#848 id=848 data-nosnippet>848</a>            guarded_send: <span class="prelude-val">None</span>,
+<a href=#849 id=849 data-nosnippet>849</a>            retraced: <span class="prelude-val">None</span>,
+<a href=#850 id=850 data-nosnippet>850</a>            lock_to_lender: <span class="bool-val">false</span>,
+<a href=#851 id=851 data-nosnippet>851</a>            kept_place: <span class="prelude-val">None</span>,
+<a href=#852 id=852 data-nosnippet>852</a>            running_methods: Vec::new(),
+<a href=#853 id=853 data-nosnippet>853</a>            guard_exec: <span class="prelude-val">None</span>,
+<a href=#854 id=854 data-nosnippet>854</a>            guard_posted: <span class="bool-val">false</span>,
+<a href=#855 id=855 data-nosnippet>855</a>            when_parked: <span class="bool-val">false</span>,
+<a href=#856 id=856 data-nosnippet>856</a>            asleep: <span class="prelude-val">None</span>,
+<a href=#857 id=857 data-nosnippet>857</a>            woken_by_halt: <span class="bool-val">false</span>,
+<a href=#858 id=858 data-nosnippet>858</a>            queue_wait: <span class="prelude-val">None</span>,
+<a href=#859 id=859 data-nosnippet>859</a>            scoped_guard: <span class="prelude-val">None</span>,
+<a href=#860 id=860 data-nosnippet>860</a>            semaphore_wait: <span class="prelude-val">None</span>,
+<a href=#861 id=861 data-nosnippet>861</a>            parked_block: <span class="prelude-val">None</span>,
+<a href=#862 id=862 data-nosnippet>862</a>            parked_socket: <span class="prelude-val">None</span>,
+<a href=#863 id=863 data-nosnippet>863</a>            waiting_traced: <span class="prelude-val">None</span>,
+<a href=#864 id=864 data-nosnippet>864</a>            trace_cache: <span class="kw">crate</span>::trace::TraceCache::of(<span class="kw">crate</span>::trace::TraceMode::OFF, <span class="bool-val">false</span>),
+<a href=#865 id=865 data-nosnippet>865</a>            reading_debug_input: <span class="bool-val">false</span>,
+<a href=#866 id=866 data-nosnippet>866</a>            <span class="attr">#[cfg(feature = <span class="string">"pinning"</span>)]
+<a href=#867 id=867 data-nosnippet>867</a>            </span>pins: <span class="kw">crate</span>::pinning::PinStack::default(),
+<a href=#868 id=868 data-nosnippet>868</a>            <span class="attr">#[cfg(feature = <span class="string">"sharing"</span>)]
+<a href=#869 id=869 data-nosnippet>869</a>            </span>sharing_tag: <span class="number">0</span>,
+<a href=#870 id=870 data-nosnippet>870</a>        }
+<a href=#871 id=871 data-nosnippet>871</a>    }
+<a href=#872 id=872 data-nosnippet>872</a>
+<a href=#873 id=873 data-nosnippet>873</a>    <span class="doccomment">/// Appends the program of each activation on this activity's stack, and
+<a href=#874 id=874 data-nosnippet>874</a>    /// of the level the failure being unwound came from.
+<a href=#875 id=875 data-nosnippet>875</a>    ///
+<a href=#876 id=876 data-nosnippet>876</a>    /// A replied activation's continuation holds no activation of its own:
+<a href=#877 id=877 data-nosnippet>877</a>    /// the replying activation stays on this stack, and so in this walk,
+<a href=#878 id=878 data-nosnippet>878</a>    /// until it ends and moves into the continuation's activity.
+<a href=#879 id=879 data-nosnippet>879</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>running_programs(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw">crate</span>::plan::ProgramId&gt;) {
+<a href=#880 id=880 data-nosnippet>880</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">crate</span>::plan::Package::Program(program), <span class="kw">_</span>)) = <span class="self">self</span>.failure_origin {
+<a href=#881 id=881 data-nosnippet>881</a>            out.push(program);
+<a href=#882 id=882 data-nosnippet>882</a>        }
+<a href=#883 id=883 data-nosnippet>883</a>        out.extend(
+<a href=#884 id=884 data-nosnippet>884</a>            <span class="self">self</span>.running
+<a href=#885 id=885 data-nosnippet>885</a>                .iter()
+<a href=#886 id=886 data-nosnippet>886</a>                .map(std::ops::Deref::deref)
+<a href=#887 id=887 data-nosnippet>887</a>                .chain(<span class="self">self</span>.suspended.iter().map(Box::as_ref))
+<a href=#888 id=888 data-nosnippet>888</a>                .map(|activation| activation.program_id),
+<a href=#889 id=889 data-nosnippet>889</a>        );
+<a href=#890 id=890 data-nosnippet>890</a>    }
+<a href=#891 id=891 data-nosnippet>891</a>
+<a href=#892 id=892 data-nosnippet>892</a>    <span class="doccomment">/// Calls `visit` on every activation on the activity's stack.
+<a href=#893 id=893 data-nosnippet>893</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>for_each_activation_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, visit: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>FnMut(<span class="kw-2">&amp;mut </span>Activation)) {
+<a href=#894 id=894 data-nosnippet>894</a>        <span class="kw">for </span>activation <span class="kw">in </span><span class="self">self</span>.running.iter_mut().chain(<span class="self">self</span>.suspended.iter_mut()) {
+<a href=#895 id=895 data-nosnippet>895</a>            visit(activation);
+<a href=#896 id=896 data-nosnippet>896</a>        }
+<a href=#897 id=897 data-nosnippet>897</a>    }
+<a href=#898 id=898 data-nosnippet>898</a>
+<a href=#899 id=899 data-nosnippet>899</a>    <span class="doccomment">/// Appends the program and directive of every activation on the
+<a href=#900 id=900 data-nosnippet>900</a>    /// activity's stack, the ones [`Activity::running_programs`] names.
+<a href=#901 id=901 data-nosnippet>901</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>running_bodies(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;(<span class="kw">crate</span>::plan::ProgramId, <span class="prelude-ty">Option</span>&lt;usize&gt;)&gt;) {
+<a href=#902 id=902 data-nosnippet>902</a>        out.extend(
+<a href=#903 id=903 data-nosnippet>903</a>            <span class="self">self</span>.running
+<a href=#904 id=904 data-nosnippet>904</a>                .iter()
+<a href=#905 id=905 data-nosnippet>905</a>                .map(std::ops::Deref::deref)
+<a href=#906 id=906 data-nosnippet>906</a>                .chain(<span class="self">self</span>.suspended.iter().map(Box::as_ref))
+<a href=#907 id=907 data-nosnippet>907</a>                .map(|activation| (activation.program_id, activation.body)),
+<a href=#908 id=908 data-nosnippet>908</a>        );
+<a href=#909 id=909 data-nosnippet>909</a>    }
+<a href=#910 id=910 data-nosnippet>910</a>
+<a href=#911 id=911 data-nosnippet>911</a>    <span class="doccomment">/// Appends every method other than a Rexx body that runs on this
+<a href=#912 id=912 data-nosnippet>912</a>    /// activity or waits on it to run: one on its Rust stack, a native call
+<a href=#913 id=913 data-nosnippet>913</a>    /// away on another thread, and a send parked for its guard lock.
+<a href=#914 id=914 data-nosnippet>914</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>running_methods(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;interrexx_classes::MethodId&gt;) {
+<a href=#915 id=915 data-nosnippet>915</a>        out.extend(<span class="self">self</span>.running_methods.iter().copied());
+<a href=#916 id=916 data-nosnippet>916</a>        out.extend(<span class="self">self</span>.native_call.as_ref().and_then(|call| call.method()));
+<a href=#917 id=917 data-nosnippet>917</a>        out.extend(<span class="self">self</span>.guarded_send.as_ref().map(|send| send.method()));
+<a href=#918 id=918 data-nosnippet>918</a>    }
+<a href=#919 id=919 data-nosnippet>919</a>
+<a href=#920 id=920 data-nosnippet>920</a>    <span class="doccomment">/// Appends every `ObjRef` the activity must hand the collector to `out`,
+<a href=#921 id=921 data-nosnippet>921</a>    /// and names every field that does not need to be handed over.
+<a href=#922 id=922 data-nosnippet>922</a>    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>object_roots(<span class="kw-2">&amp;</span><span class="self">self</span>, out: <span class="kw-2">&amp;mut </span>Vec&lt;ObjRef&gt;) {
+<a href=#923 id=923 data-nosnippet>923</a>        <span class="kw">let </span>Activity {
+<a href=#924 id=924 data-nosnippet>924</a>            <span class="comment">// Every push site roots the value as a temp before it lands here.
+<a href=#925 id=925 data-nosnippet>925</a>            </span>value_buffer: <span class="kw">_</span>,
+<a href=#926 id=926 data-nosnippet>926</a>            builtin_answered_nothing: <span class="kw">_</span>,
+<a href=#927 id=927 data-nosnippet>927</a>            running,
+<a href=#928 id=928 data-nosnippet>928</a>            trace_cache: <span class="kw">_</span>,
+<a href=#929 id=929 data-nosnippet>929</a>            reading_debug_input: <span class="kw">_</span>,
+<a href=#930 id=930 data-nosnippet>930</a>            suspended,
+<a href=#931 id=931 data-nosnippet>931</a>            <span class="comment">// A finished activation's leftovers, overwritten at reuse and read
+<a href=#932 id=932 data-nosnippet>932</a>            // by nothing in between.
+<a href=#933 id=933 data-nosnippet>933</a>            </span>spare_activations: <span class="kw">_</span>,
+<a href=#934 id=934 data-nosnippet>934</a>            <span class="comment">// Empty whenever it is kept.
+<a href=#935 id=935 data-nosnippet>935</a>            </span>spare_exposed: <span class="kw">_</span>,
+<a href=#936 id=936 data-nosnippet>936</a>            <span class="comment">// Handles for constants that are not heap objects, and the
+<a href=#937 id=937 data-nosnippet>937</a>            // innermost native call, whose frame `native_handles` roots.
+<a href=#938 id=938 data-nosnippet>938</a>            </span>thread: <span class="kw">_</span>,
+<a href=#939 id=939 data-nosnippet>939</a>            attached: <span class="kw">_</span>,
+<a href=#940 id=940 data-nosnippet>940</a>            native_handles,
+<a href=#941 id=941 data-nosnippet>941</a>            <span class="comment">// A pop clears the buffers that held objects, and a push
+<a href=#942 id=942 data-nosnippet>942</a>            // overwrites the handle fields before anything reads them, so a
+<a href=#943 id=943 data-nosnippet>943</a>            // spare names nothing to root.
+<a href=#944 id=944 data-nosnippet>944</a>            </span>native_spares: <span class="kw">_</span>,
+<a href=#945 id=945 data-nosnippet>945</a>            <span class="comment">// A running call's arguments are its caller's temps, and a slot
+<a href=#946 id=946 data-nosnippet>946</a>            // above the depth holds an emptied buffer.
+<a href=#947 id=947 data-nosnippet>947</a>            </span>internal_levels,
+<a href=#948 id=948 data-nosnippet>948</a>            internal_depth,
+<a href=#949 id=949 data-nosnippet>949</a>            method_levels,
+<a href=#950 id=950 data-nosnippet>950</a>            deferred_level,
+<a href=#951 id=951 data-nosnippet>951</a>            clause_state: <span class="kw">_</span>,
+<a href=#952 id=952 data-nosnippet>952</a>            <span class="comment">// The `DO OVER` snapshot sits in a register held for the loop's
+<a href=#953 id=953 data-nosnippet>953</a>            // lifetime, and `RootSet` reaches a register as a temp.
+<a href=#954 id=954 data-nosnippet>954</a>            </span>flat_loops: <span class="kw">_</span>,
+<a href=#955 id=955 data-nosnippet>955</a>            flat_top: <span class="kw">_</span>,
+<a href=#956 id=956 data-nosnippet>956</a>            loop_objects,
+<a href=#957 id=957 data-nosnippet>957</a>            frames: <span class="kw">_</span>,
+<a href=#958 id=958 data-nosnippet>958</a>            <span class="comment">// A saved convention is the caller's, whose arguments and
+<a href=#959 id=959 data-nosnippet>959</a>            // receiver that caller's temps and registers root; a lent argument
+<a href=#960 id=960 data-nosnippet>960</a>            // stack holds values its caller's registers root; a parked level's
+<a href=#961 id=961 data-nosnippet>961</a>            // registers stay reserved in the arena.
+<a href=#962 id=962 data-nosnippet>962</a>            </span>call_tails: <span class="kw">_</span>,
+<a href=#963 id=963 data-nosnippet>963</a>            parked_calls: <span class="kw">_</span>,
+<a href=#964 id=964 data-nosnippet>964</a>            <span class="comment">// A kept copy is pinned while its call runs.
+<a href=#965 id=965 data-nosnippet>965</a>            </span>parked_keeps: <span class="kw">_</span>,
+<a href=#966 id=966 data-nosnippet>966</a>            parked_levels: <span class="kw">_</span>,
+<a href=#967 id=967 data-nosnippet>967</a>            <span class="comment">// Its registers are the record's parked values.
+<a href=#968 id=968 data-nosnippet>968</a>            </span>replied_level: <span class="kw">_</span>,
+<a href=#969 id=969 data-nosnippet>969</a>            native_tails,
+<a href=#970 id=970 data-nosnippet>970</a>            <span class="comment">// Overwritten at reuse, as `spare_activations` is.
+<a href=#971 id=971 data-nosnippet>971</a>            </span>flat_spares: <span class="kw">_</span>,
+<a href=#972 id=972 data-nosnippet>972</a>            pending_traps,
+<a href=#973 id=973 data-nosnippet>973</a>            pending_additional,
+<a href=#974 id=974 data-nosnippet>974</a>            native_frames_owed,
+<a href=#975 id=975 data-nosnippet>975</a>            reraised_object,
+<a href=#976 id=976 data-nosnippet>976</a>            traceback_object,
+<a href=#977 id=977 data-nosnippet>977</a>            reraise_leaving: <span class="kw">_</span>,
+<a href=#978 id=978 data-nosnippet>978</a>            <span class="attr">#[cfg(unix)]
+<a href=#979 id=979 data-nosnippet>979</a>                </span>rxunixsys_errno: <span class="kw">_</span>,
+<a href=#980 id=980 data-nosnippet>980</a>            <span class="attr">#[cfg(any(unix, windows))]
+<a href=#981 id=981 data-nosnippet>981</a>                </span>rxsock_errno: <span class="kw">_</span>,
+<a href=#982 id=982 data-nosnippet>982</a>            <span class="attr">#[cfg(any(unix, windows))]
+<a href=#983 id=983 data-nosnippet>983</a>                </span>socket_wait: <span class="kw">_</span>,
+<a href=#984 id=984 data-nosnippet>984</a>            propagate_absorb: <span class="kw">_</span>,
+<a href=#985 id=985 data-nosnippet>985</a>            pending_result,
+<a href=#986 id=986 data-nosnippet>986</a>            pending_description,
+<a href=#987 id=987 data-nosnippet>987</a>            pending_rc,
+<a href=#988 id=988 data-nosnippet>988</a>            rerun_indent: <span class="kw">_</span>,
+<a href=#989 id=989 data-nosnippet>989</a>            rerun_failure_indent: <span class="kw">_</span>,
+<a href=#990 id=990 data-nosnippet>990</a>            rerun_pending: <span class="kw">_</span>,
+<a href=#991 id=991 data-nosnippet>991</a>            activation_indent: <span class="kw">_</span>,
+<a href=#992 id=992 data-nosnippet>992</a>            failure_site: <span class="kw">_</span>,
+<a href=#993 id=993 data-nosnippet>993</a>            failure_sites: <span class="kw">_</span>,
+<a href=#994 id=994 data-nosnippet>994</a>            failure_frame,
+<a href=#995 id=995 data-nosnippet>995</a>            failure_frames,
+<a href=#996 id=996 data-nosnippet>996</a>            <span class="comment">// A package identity and a line.
+<a href=#997 id=997 data-nosnippet>997</a>            </span>failure_origin: <span class="kw">_</span>,
+<a href=#998 id=998 data-nosnippet>998</a>            failure_propagated: <span class="kw">_</span>,
+<a href=#999 id=999 data-nosnippet>999</a>            failure_reraised: <span class="kw">_</span>,
+<a href=#1000 id=1000 data-nosnippet>1000</a>            <span class="comment">// Flags and an activation identity.
+<a href=#1001 id=1001 data-nosnippet>1001</a>            </span>native_reraise: <span class="kw">_</span>,
+<a href=#1002 id=1002 data-nosnippet>1002</a>            native_reported_on_return: <span class="kw">_</span>,
+<a href=#1003 id=1003 data-nosnippet>1003</a>            input_dispatch: <span class="kw">_</span>,
+<a href=#1004 id=1004 data-nosnippet>1004</a>            <span class="comment">// Activation identities and native rows.
+<a href=#1005 id=1005 data-nosnippet>1005</a>            </span>api_bases: <span class="kw">_</span>,
+<a href=#1006 id=1006 data-nosnippet>1006</a>            input_dispatch_trapped: <span class="kw">_</span>,
+<a href=#1007 id=1007 data-nosnippet>1007</a>            <span class="comment">// A condition, whose ADDITIONAL `pending_additional` roots.
+<a href=#1008 id=1008 data-nosnippet>1008</a>            </span>input_dispatch_syntax: <span class="kw">_</span>,
+<a href=#1009 id=1009 data-nosnippet>1009</a>            clause_line_override: <span class="kw">_</span>,
+<a href=#1010 id=1010 data-nosnippet>1010</a>            fragment_depth: <span class="kw">_</span>,
+<a href=#1011 id=1011 data-nosnippet>1011</a>            debug_stop_owed: <span class="kw">_</span>,
+<a href=#1012 id=1012 data-nosnippet>1012</a>            fragments: <span class="kw">_</span>,
+<a href=#1013 id=1013 data-nosnippet>1013</a>            fragment_clause: <span class="kw">_</span>,
+<a href=#1014 id=1014 data-nosnippet>1014</a>            routing_trace: <span class="kw">_</span>,
+<a href=#1015 id=1015 data-nosnippet>1015</a>            delivering: <span class="kw">_</span>,
+<a href=#1016 id=1016 data-nosnippet>1016</a>            delivers_for: <span class="kw">_</span>,
+<a href=#1017 id=1017 data-nosnippet>1017</a>            delivery_clauses: <span class="kw">_</span>,
+<a href=#1018 id=1018 data-nosnippet>1018</a>            depth_base: <span class="kw">_</span>,
+<a href=#1019 id=1019 data-nosnippet>1019</a>            guarded_slices: <span class="kw">_</span>,
+<a href=#1020 id=1020 data-nosnippet>1020</a>            depth: <span class="kw">_</span>,
+<a href=#1021 id=1021 data-nosnippet>1021</a>            max_depth: <span class="kw">_</span>,
+<a href=#1022 id=1022 data-nosnippet>1022</a>            stack_entry: <span class="kw">_</span>,
+<a href=#1023 id=1023 data-nosnippet>1023</a>            stack_first: <span class="kw">_</span>,
+<a href=#1024 id=1024 data-nosnippet>1024</a>            stack_deepest: <span class="kw">_</span>,
+<a href=#1025 id=1025 data-nosnippet>1025</a>            procedure_permitted: <span class="kw">_</span>,
+<a href=#1026 id=1026 data-nosnippet>1026</a>            region_procedure_permitted: <span class="kw">_</span>,
+<a href=#1027 id=1027 data-nosnippet>1027</a>            <span class="comment">// A running call's arguments and receiver are the caller's temps;
+<a href=#1028 id=1028 data-nosnippet>1028</a>            // `CallContext::object_roots` is the parked case's other route.
+<a href=#1029 id=1029 data-nosnippet>1029</a>            </span>call_context: <span class="kw">_</span>,
+<a href=#1030 id=1030 data-nosnippet>1030</a>            last_name: <span class="kw">_</span>,
+<a href=#1031 id=1031 data-nosnippet>1031</a>            random_source: <span class="kw">_</span>,
+<a href=#1032 id=1032 data-nosnippet>1032</a>            requires_installing: <span class="kw">_</span>,
+<a href=#1033 id=1033 data-nosnippet>1033</a>            pin_depth: <span class="kw">_</span>,
+<a href=#1034 id=1034 data-nosnippet>1034</a>            driver_pins: <span class="kw">_</span>,
+<a href=#1035 id=1035 data-nosnippet>1035</a>            native_park,
+<a href=#1036 id=1036 data-nosnippet>1036</a>            native_call,
+<a href=#1037 id=1037 data-nosnippet>1037</a>            blocked,
+<a href=#1038 id=1038 data-nosnippet>1038</a>            resuming: <span class="kw">_</span>,
+<a href=#1039 id=1039 data-nosnippet>1039</a>            first,
+<a href=#1040 id=1040 data-nosnippet>1040</a>            root_then,
+<a href=#1041 id=1041 data-nosnippet>1041</a>            drive_floor: <span class="kw">_</span>,
+<a href=#1042 id=1042 data-nosnippet>1042</a>            sliced: <span class="kw">_</span>,
+<a href=#1043 id=1043 data-nosnippet>1043</a>            root_end,
+<a href=#1044 id=1044 data-nosnippet>1044</a>            delivery_failure,
+<a href=#1045 id=1045 data-nosnippet>1045</a>            number: <span class="kw">_</span>,
+<a href=#1046 id=1046 data-nosnippet>1046</a>            spawner,
+<a href=#1047 id=1047 data-nosnippet>1047</a>            splits_owed: <span class="kw">_</span>,
+<a href=#1048 id=1048 data-nosnippet>1048</a>            failed_sends,
+<a href=#1049 id=1049 data-nosnippet>1049</a>            <span class="comment">// Each key's object is its waiting activation's receiver.
+<a href=#1050 id=1050 data-nosnippet>1050</a>            </span>guard_waits: <span class="kw">_</span>,
+<a href=#1051 id=1051 data-nosnippet>1051</a>            guarded_send,
+<a href=#1052 id=1052 data-nosnippet>1052</a>            retraced,
+<a href=#1053 id=1053 data-nosnippet>1053</a>            lock_to_lender: <span class="kw">_</span>,
+<a href=#1054 id=1054 data-nosnippet>1054</a>            kept_place: <span class="kw">_</span>,
+<a href=#1055 id=1055 data-nosnippet>1055</a>            running_methods: <span class="kw">_</span>,
+<a href=#1056 id=1056 data-nosnippet>1056</a>            guard_exec,
+<a href=#1057 id=1057 data-nosnippet>1057</a>            guard_posted: <span class="kw">_</span>,
+<a href=#1058 id=1058 data-nosnippet>1058</a>            when_parked: <span class="kw">_</span>,
+<a href=#1059 id=1059 data-nosnippet>1059</a>            asleep: <span class="kw">_</span>,
+<a href=#1060 id=1060 data-nosnippet>1060</a>            <span class="attr">#[cfg(windows)]
+<a href=#1061 id=1061 data-nosnippet>1061</a>                </span>windows_util_wait: <span class="kw">_</span>,
+<a href=#1062 id=1062 data-nosnippet>1062</a>            woken_by_halt: <span class="kw">_</span>,
+<a href=#1063 id=1063 data-nosnippet>1063</a>            queue_wait: <span class="kw">_</span>,
+<a href=#1064 id=1064 data-nosnippet>1064</a>            scoped_guard: <span class="kw">_</span>,
+<a href=#1065 id=1065 data-nosnippet>1065</a>            semaphore_wait: <span class="kw">_</span>,
+<a href=#1066 id=1066 data-nosnippet>1066</a>            parked_block: <span class="kw">_</span>,
+<a href=#1067 id=1067 data-nosnippet>1067</a>            parked_socket: <span class="kw">_</span>,
+<a href=#1068 id=1068 data-nosnippet>1068</a>            waiting_traced: <span class="kw">_</span>,
+<a href=#1069 id=1069 data-nosnippet>1069</a>            <span class="attr">#[cfg(feature = <span class="string">"pinning"</span>)]
+<a href=#1070 id=1070 data-nosnippet>1070</a>                </span>pins: <span class="kw">_</span>,
+<a href=#1071 id=1071 data-nosnippet>1071</a>            <span class="attr">#[cfg(feature = <span class="string">"sharing"</span>)]
+<a href=#1072 id=1072 data-nosnippet>1072</a>                </span>sharing_tag: <span class="kw">_</span>,
+<a href=#1073 id=1073 data-nosnippet>1073</a>        } = <span class="self">self</span>;
+<a href=#1074 id=1074 data-nosnippet>1074</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(exec) = guard_exec {
+<a href=#1075 id=1075 data-nosnippet>1075</a>            out.extend(exec.watched.iter().flat_map(|var| [var.owner, var.scope]));
+<a href=#1076 id=1076 data-nosnippet>1076</a>        }
+<a href=#1077 id=1077 data-nosnippet>1077</a>        out.extend(loop_objects.iter().map(|(<span class="kw">_</span>, object)| <span class="kw-2">*</span>object));
+<a href=#1078 id=1078 data-nosnippet>1078</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(send) = guarded_send {
+<a href=#1079 id=1079 data-nosnippet>1079</a>            send.object_roots(out);
+<a href=#1080 id=1080 data-nosnippet>1080</a>        }
+<a href=#1081 id=1081 data-nosnippet>1081</a>        out.extend(retraced.iter().flat_map(|key| [key.object, key.scope]));
+<a href=#1082 id=1082 data-nosnippet>1082</a>        <span class="comment">// The raise's own `ADDITIONAL`, alive between the raise and the
+<a href=#1083 id=1083 data-nosnippet>1083</a>        // condition object that will hold it.
+<a href=#1084 id=1084 data-nosnippet>1084</a>        </span>out.extend(<span class="kw-2">*</span>pending_additional);
+<a href=#1085 id=1085 data-nosnippet>1085</a>        blocked.object_roots(out);
+<a href=#1086 id=1086 data-nosnippet>1086</a>        out.extend(native_frames_owed.iter().copied());
+<a href=#1087 id=1087 data-nosnippet>1087</a>        out.extend(<span class="kw-2">*</span>pending_result);
+<a href=#1088 id=1088 data-nosnippet>1088</a>        out.extend(<span class="kw-2">*</span>pending_description);
+<a href=#1089 id=1089 data-nosnippet>1089</a>        out.extend(<span class="kw-2">*</span>pending_rc);
+<a href=#1090 id=1090 data-nosnippet>1090</a>        out.extend(<span class="kw-2">*</span>reraised_object);
+<a href=#1091 id=1091 data-nosnippet>1091</a>        out.extend(<span class="kw-2">*</span>traceback_object);
+<a href=#1092 id=1092 data-nosnippet>1092</a>        out.extend(<span class="kw-2">*</span>failure_frame);
+<a href=#1093 id=1093 data-nosnippet>1093</a>        out.extend(failure_frames.iter().copied());
+<a href=#1094 id=1094 data-nosnippet>1094</a>        out.extend(failed_sends.iter().copied());
+<a href=#1095 id=1095 data-nosnippet>1095</a>        <span class="kw">match </span>spawner {
+<a href=#1096 id=1096 data-nosnippet>1096</a>            <span class="prelude-val">Some</span>(Spawner::Frame {
+<a href=#1097 id=1097 data-nosnippet>1097</a>                frame: <span class="prelude-val">Some</span>((frame, executable)),
+<a href=#1098 id=1098 data-nosnippet>1098</a>                ..
+<a href=#1099 id=1099 data-nosnippet>1099</a>            }) =&gt; out.extend([<span class="kw-2">*</span>frame, <span class="kw-2">*</span>executable]),
+<a href=#1100 id=1100 data-nosnippet>1100</a>            <span class="prelude-val">Some</span>(Spawner::Table(table)) =&gt; out.push(<span class="kw-2">*</span>table),
+<a href=#1101 id=1101 data-nosnippet>1101</a>            <span class="kw">_ </span>=&gt; {}
+<a href=#1102 id=1102 data-nosnippet>1102</a>        }
+<a href=#1103 id=1103 data-nosnippet>1103</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Failure::Exited(value)) = delivery_failure {
+<a href=#1104 id=1104 data-nosnippet>1104</a>            out.extend(<span class="kw-2">*</span>value);
+<a href=#1105 id=1105 data-nosnippet>1105</a>        }
+<a href=#1106 id=1106 data-nosnippet>1106</a>        <span class="kw">match </span>root_end {
+<a href=#1107 id=1107 data-nosnippet>1107</a>            <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="kw">crate</span>::run::Ended::Returned(value) | <span class="kw">crate</span>::run::Ended::Exited(value)))
+<a href=#1108 id=1108 data-nosnippet>1108</a>            | <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(Failure::Exited(value))) =&gt; out.extend(<span class="kw-2">*</span>value),
+<a href=#1109 id=1109 data-nosnippet>1109</a>            <span class="kw">_ </span>=&gt; {}
+<a href=#1110 id=1110 data-nosnippet>1110</a>        }
+<a href=#1111 id=1111 data-nosnippet>1111</a>        <span class="kw">for </span>tail <span class="kw">in </span>native_tails {
+<a href=#1112 id=1112 data-nosnippet>1112</a>            tail.object_roots(out);
+<a href=#1113 id=1113 data-nosnippet>1113</a>        }
+<a href=#1114 id=1114 data-nosnippet>1114</a>        <span class="kw">for </span>level <span class="kw">in </span>method_levels {
+<a href=#1115 id=1115 data-nosnippet>1115</a>            out.push(level.receiver);
+<a href=#1116 id=1116 data-nosnippet>1116</a>            out.extend(level.arguments.iter().flatten().copied());
+<a href=#1117 id=1117 data-nosnippet>1117</a>        }
+<a href=#1118 id=1118 data-nosnippet>1118</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(level) = deferred_level {
+<a href=#1119 id=1119 data-nosnippet>1119</a>            out.push(level.receiver);
+<a href=#1120 id=1120 data-nosnippet>1120</a>            out.extend(level.arguments().iter().flatten().copied());
+<a href=#1121 id=1121 data-nosnippet>1121</a>        }
+<a href=#1122 id=1122 data-nosnippet>1122</a>        out.extend(
+<a href=#1123 id=1123 data-nosnippet>1123</a>            internal_levels[..<span class="kw-2">*</span>internal_depth]
+<a href=#1124 id=1124 data-nosnippet>1124</a>                .iter()
+<a href=#1125 id=1125 data-nosnippet>1125</a>                .map(|level| level.executable)
+<a href=#1126 id=1126 data-nosnippet>1126</a>                .filter(|executable| <span class="kw-2">*</span>executable != ObjRef::NIL),
+<a href=#1127 id=1127 data-nosnippet>1127</a>        );
+<a href=#1128 id=1128 data-nosnippet>1128</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(park) = native_park {
+<a href=#1129 id=1129 data-nosnippet>1129</a>            park.object_roots(out);
+<a href=#1130 id=1130 data-nosnippet>1130</a>        }
+<a href=#1131 id=1131 data-nosnippet>1131</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(call) = native_call {
+<a href=#1132 id=1132 data-nosnippet>1132</a>            call.object_roots(out);
+<a href=#1133 id=1133 data-nosnippet>1133</a>        }
+<a href=#1134 id=1134 data-nosnippet>1134</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw">crate</span>::scheduler::First::Send(send)) = first {
+<a href=#1135 id=1135 data-nosnippet>1135</a>            send.object_roots(out);
+<a href=#1136 id=1136 data-nosnippet>1136</a>        }
+<a href=#1137 id=1137 data-nosnippet>1137</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(then) = root_then {
+<a href=#1138 id=1138 data-nosnippet>1138</a>            then.object_roots(out);
+<a href=#1139 id=1139 data-nosnippet>1139</a>        }
+<a href=#1140 id=1140 data-nosnippet>1140</a>        <span class="comment">// Everything a native call has been handed, and the receiver it is
+<a href=#1141 id=1141 data-nosnippet>1141</a>        // writing object variables through. Held here rather than by the
+<a href=#1142 id=1142 data-nosnippet>1142</a>        // collector's other routes because an extension's handle is the only
+<a href=#1143 id=1143 data-nosnippet>1143</a>        // reference to it: nothing on the Rexx side names an object a native
+<a href=#1144 id=1144 data-nosnippet>1144</a>        // method allocated and has not returned yet.
+<a href=#1145 id=1145 data-nosnippet>1145</a>        </span><span class="kw">for </span>frame <span class="kw">in </span>native_handles {
+<a href=#1146 id=1146 data-nosnippet>1146</a>            frame.object_roots(out);
+<a href=#1147 id=1147 data-nosnippet>1147</a>        }
+<a href=#1148 id=1148 data-nosnippet>1148</a>        <span class="comment">// Each queued trap's condition object. Destructured rather than
+<a href=#1149 id=1149 data-nosnippet>1149</a>        // reached by field: the match above guards `Activity`'s own fields, and
+<a href=#1150 id=1150 data-nosnippet>1150</a>        // an `ObjRef` added inside this `VecDeque` would otherwise arrive
+<a href=#1151 id=1151 data-nosnippet>1151</a>        // unrooted with nothing to say so.
+<a href=#1152 id=1152 data-nosnippet>1152</a>        </span><span class="kw">for </span>PendingTrap {
+<a href=#1153 id=1153 data-nosnippet>1153</a>            condition: <span class="kw">_</span>,
+<a href=#1154 id=1154 data-nosnippet>1154</a>            rc: <span class="kw">_</span>,
+<a href=#1155 id=1155 data-nosnippet>1155</a>            description: <span class="kw">_</span>,
+<a href=#1156 id=1156 data-nosnippet>1156</a>            object,
+<a href=#1157 id=1157 data-nosnippet>1157</a>            activation: <span class="kw">_</span>,
+<a href=#1158 id=1158 data-nosnippet>1158</a>            queued_during_delivery: <span class="kw">_</span>,
+<a href=#1159 id=1159 data-nosnippet>1159</a>            request: <span class="kw">_</span>,
+<a href=#1160 id=1160 data-nosnippet>1160</a>            fragment_depth: <span class="kw">_</span>,
+<a href=#1161 id=1161 data-nosnippet>1161</a>            trace_failure: <span class="kw">_</span>,
+<a href=#1162 id=1162 data-nosnippet>1162</a>        } <span class="kw">in </span>pending_traps
+<a href=#1163 id=1163 data-nosnippet>1163</a>        {
+<a href=#1164 id=1164 data-nosnippet>1164</a>            out.extend(<span class="kw-2">*</span>object);
+<a href=#1165 id=1165 data-nosnippet>1165</a>        }
+<a href=#1166 id=1166 data-nosnippet>1166</a>        <span class="comment">// Everything each activation on the stack holds
+<a href=#1167 id=1167 data-nosnippet>1167</a>        // (`Activation::object_roots`). Among it: the context object, which
+<a href=#1168 id=1168 data-nosnippet>1168</a>        // `Interp::context_object` creates and nothing else refers to; a
+<a href=#1169 id=1169 data-nosnippet>1169</a>        // `REPLY`'s value and moved continuation, until its activation ends;
+<a href=#1170 id=1170 data-nosnippet>1170</a>        // the `Method` object a method no dictionary entry names runs for,
+<a href=#1171 id=1171 data-nosnippet>1171</a>        // which a method that took its own entry back holds nowhere else; the
+<a href=#1172 id=1172 data-nosnippet>1172</a>        // trapped condition's object, which a `CALL ON` handler's activation
+<a href=#1173 id=1173 data-nosnippet>1173</a>        // and every callee that inherits its `CONDITION()` hold once the queue
+<a href=#1174 id=1174 data-nosnippet>1174</a>        // has handed it over; and the streams the builtins opened by name,
+<a href=#1175 id=1175 data-nosnippet>1175</a>        // which only the table holds. Handed over here rather than kept
+<a href=#1176 id=1176 data-nosnippet>1176</a>        // rooted per activation because the alternative is a global root
+<a href=#1177 id=1177 data-nosnippet>1177</a>        // whose key has to be minted, replaced and retired as activations come
+<a href=#1178 id=1178 data-nosnippet>1178</a>        // and go, and this pays only when a collection actually happens.
+<a href=#1179 id=1179 data-nosnippet>1179</a>        </span><span class="kw">for </span>activation <span class="kw">in </span>running
+<a href=#1180 id=1180 data-nosnippet>1180</a>            .iter()
+<a href=#1181 id=1181 data-nosnippet>1181</a>            .map(std::ops::Deref::deref)
+<a href=#1182 id=1182 data-nosnippet>1182</a>            .chain(suspended.iter().map(Box::as_ref))
+<a href=#1183 id=1183 data-nosnippet>1183</a>        {
+<a href=#1184 id=1184 data-nosnippet>1184</a>            activation.object_roots(out);
+<a href=#1185 id=1185 data-nosnippet>1185</a>        }
+<a href=#1186 id=1186 data-nosnippet>1186</a>    }
+<a href=#1187 id=1187 data-nosnippet>1187</a>}
 </code></pre></div></section></main></body></html>

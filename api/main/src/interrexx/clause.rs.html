@@ -559,7 +559,7 @@
 <a href=#559 id=559 data-nosnippet>559</a>    <span class="kw">static </span>COUNTDOWN_VISITS: std::cell::Cell&lt;usize&gt; = <span class="kw">const </span>{ std::cell::Cell::new(<span class="number">0</span>) };
 <a href=#560 id=560 data-nosnippet>560</a>}
 <a href=#561 id=561 data-nosnippet>561</a>
-<a href=#562 id=562 data-nosnippet>562</a><span class="attr">#[cfg(all(test, feature = <span class="string">"jit"</span>))]
+<a href=#562 id=562 data-nosnippet>562</a><span class="attr">#[cfg(test)]
 <a href=#563 id=563 data-nosnippet>563</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>countdown_visits() -&gt; usize {
 <a href=#564 id=564 data-nosnippet>564</a>    COUNTDOWN_VISITS.with(std::cell::Cell::get)
 <a href=#565 id=565 data-nosnippet>565</a>}
