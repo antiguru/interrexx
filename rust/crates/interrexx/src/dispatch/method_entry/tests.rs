@@ -120,30 +120,111 @@ say o~answer
     assert_eq!(trace.matches("<I< Method \"ANSWER\"").count(), 2, "{trace}");
 }
 
+fn leaf_countdown_visits(body: &str, options: &str) -> (usize, usize) {
+    let before = crate::clause::countdown_visits();
+    let inlined_before = INLINED_METHODS.with(std::cell::Cell::get);
+    let outcome = crate::execute(
+        "/leaf-countdown.rex",
+        format!(
+            "o = .probe~new\n\
+             do 5000\n\
+               o~answer\n\
+             end\n\
+             say 'done'\n\
+             ::class probe\n\
+             ::method answer\n\
+             {body}\n\
+             {options}"
+        )
+        .into_bytes(),
+        false,
+        crate::Invocation::none(),
+    );
+    assert_eq!(outcome.exit_code, 0, "{outcome:?}");
+    assert_eq!(outcome.stdout, b"done\n");
+    (
+        crate::clause::countdown_visits() - before,
+        INLINED_METHODS.with(std::cell::Cell::get) - inlined_before,
+    )
+}
+
 #[test]
 fn an_inlined_literal_return_counts_as_one_clause() {
-    let visits = |options| {
-        let before = crate::clause::countdown_visits();
-        let outcome = crate::execute(
-            "/leaf-countdown.rex",
-            format!(
-                "o = .probe~new\n\
-                 do 5000\n\
-                   result = o~answer\n\
-                 end\n\
-                 say result\n\
-                 ::class probe\n\
-                 ::method answer\n\
-                   return 'okay'\n\
-                 {options}"
-            )
-            .into_bytes(),
-            false,
-            crate::Invocation::none(),
-        );
-        assert_eq!(outcome.exit_code, 0, "{outcome:?}");
-        assert_eq!(outcome.stdout, b"okay\n");
-        crate::clause::countdown_visits() - before
+    let (inlined, _) = leaf_countdown_visits("return 'okay'", "");
+    let (ordinary, _) = leaf_countdown_visits("return 'okay'", "::options digits 9");
+    assert_eq!(inlined, ordinary);
+}
+
+#[test]
+fn an_inlined_empty_method_counts_no_clause() {
+    let (inlined, fast_sends) = leaf_countdown_visits("", "");
+    let (ordinary, ordinary_sends) = leaf_countdown_visits("", "::options digits 9");
+    assert_eq!(fast_sends, ordinary_sends + 5000);
+    assert_eq!(inlined, ordinary);
+}
+
+#[test]
+fn a_literal_return_checks_the_deadline_in_its_own_activation() {
+    use super::*;
+    use crate::clause::Deadline;
+    use std::time::Duration;
+
+    let mut interp = Interp::new();
+    let program = Rc::new(
+        interrexx_parse::parse_program(
+            b"return .probe~new\n::class probe\n::method answer\n  return 'okay'\n".to_vec(),
+        )
+        .expect("the program parses"),
+    );
+    let program_id = interp.load_program(Rc::clone(&program));
+    interp
+        .install_directives(program_id, &program)
+        .expect("the class installs");
+    let plan = interp.plan_for(
+        BodyKey {
+            program: program_id,
+            directive: None,
+        },
+        &program.main,
+        &program.symbols,
+        &program.source,
+    );
+    let frame = interp.roots.push_slots(plan.len());
+    let id = interp.next_activation_id();
+    interp.push_activation(Activation::new(id, program, program_id, plan, frame));
+    let receiver = interp
+        .run_activation()
+        .expect("the caller runs")
+        .value()
+        .expect("the caller returns an instance");
+    interp.roots.activity_mut().push_temp(receiver);
+
+    let memo = Cell::new(None);
+    let send = |interp: &mut Interp| {
+        interp.begin_send_at(receiver, b"ANSWER", &memo, &[], interp.caller())
     };
-    assert_eq!(visits(""), visits("::options digits 9"));
+    interp.clause_countdown = 2;
+    let started = send(&mut interp).expect("the quiet send runs");
+    assert!(matches!(started, Started::Ran(Some(_))));
+    assert_eq!(interp.clause_countdown, 1);
+    assert!(memo.get().is_some());
+
+    // The return clause would run the countdown. Send entry must leave the
+    // deadline check for the callee's clause, through ordinary dispatch.
+    interp.deadline = Some(Deadline::starting_now(Duration::ZERO));
+    let depth = interp.activation_depth();
+    let before = crate::clause::countdown_visits();
+    let started = send(&mut interp).expect("entry leaves the deadline check to the callee");
+    assert!(matches!(started, Started::Entered));
+    assert_eq!(interp.activation_depth(), depth + 1);
+    assert_eq!(crate::clause::countdown_visits(), before);
+    assert!(!interp.deadline_expired());
+
+    assert!(matches!(
+        interp.complete_send(started),
+        Err(Failure::Deadline)
+    ));
+    assert!(interp.deadline_expired());
+    assert_eq!(crate::clause::countdown_visits(), before + 1);
+    assert_eq!(interp.activation_depth(), depth);
 }
