@@ -2764,9 +2764,10 @@ impl Interp {
         }
         self.with_idle_activity(id, Interp::pop_attached_frame);
         let table = &mut self.activities;
-        let Some(idle) = table.idle[id.index()].take() else {
+        let Some(mut idle) = table.idle[id.index()].take() else {
             unreachable!("an attached handle names an idle activity");
         };
+        table.pool_frames(&mut idle.roots);
         table.ready.retain(|ready| *ready != id);
         table.free.push(id.0);
         if table.pooled.len() <= MAX_POOLED {
