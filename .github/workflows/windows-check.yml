@@ -91,6 +91,8 @@ jobs:
           if ($LASTEXITCODE -ne 1 -or $diagnostic -notmatch 'no matching interpreter library') {
             throw "Expected rejection of a mismatched DLL, got: $diagnostic"
           }
+          Write-Host 'The staged launcher rejected a mismatched DLL.'
+          exit 0
 
       - uses: actions/upload-artifact@v7
         with:
